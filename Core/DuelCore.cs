@@ -18,10 +18,7 @@ class DuelCore : Core
 	private static GameConstants.State _state = GameConstants.State.UNINITIALIZED;
 	public static GameConstants.State State
 	{
-		get
-		{
-			return _state;
-		}
+		get => _state;
 		set
 		{
 			Log($"STATE: {_state} -> {value}");

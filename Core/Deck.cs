@@ -12,10 +12,7 @@ class Deck
 
 	}
 
-	public int Size
-	{
-		get => cards.Count;
-	}
+	public int Size => cards.Count;
 
 	internal void Add(Card c)
 	{
