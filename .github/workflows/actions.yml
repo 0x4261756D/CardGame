@@ -1,0 +1,64 @@
+# This workflow will build a .NET project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
+
+name: .NET
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  ban-linq:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Grep
+        run: grep -R "Linq" --exclude-dir=.git/
+  build:
+    strategy:
+      matrix:
+        dir: ['Core', 'Client', 'Server']
+        os: ['ubuntu-latest', 'windows-latest']
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.dir }}
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.x
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build --no-restore
+  fix-formatting:
+    strategy:
+      matrix: { dir: ['Core', 'Client', 'Server'] }
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ matrix.dir }}
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install .NET Core
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore
+        run: dotnet restore
+      - name: Format
+        run: dotnet format
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5.0.0
+        with:
+          commit_message: Fix formatting
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
