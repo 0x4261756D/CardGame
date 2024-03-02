@@ -38,7 +38,7 @@ class EverlastingProgress : Quest
 		{
 			if(card.Keywords.Remove(Keyword.Brittle))
 			{
-				RegisterTemporaryLingeringEffect(LingeringEffectInfo.Create(effect: BuffEffect, referrer: card));
+				RegisterLocationTemporaryLingeringEffect(LingeringEffectInfo.Create(effect: BuffEffect, referrer: card));
 			}
 		}
 	}

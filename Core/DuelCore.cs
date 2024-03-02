@@ -57,7 +57,7 @@ class DuelCore : Core
 	private readonly Dictionary<int, List<StateReachedTrigger>> stateReachedTriggers = [];
 	private readonly List<StateReachedTrigger> alwaysActiveStateReachedTriggers = [];
 	private readonly Dictionary<int, LingeringEffectList> lingeringEffects = [];
-	private readonly Dictionary<int, LingeringEffectList> temporaryLingeringEffects = [];
+	private readonly Dictionary<int, LingeringEffectList> locationTemporaryLingeringEffects = [];
 	private readonly LingeringEffectList alwaysActiveLingeringEffects;
 	private readonly Dictionary<int, List<ActivatedEffectInfo>> activatedEffects = [];
 	private readonly Dictionary<int, List<Trigger>> dealsDamageTriggers = [];
@@ -153,7 +153,7 @@ class DuelCore : Core
 		Card.RegisterDeathTrigger = RegisterDeathTriggerImpl;
 		Card.RegisterGenericDeathTrigger = RegisterGenericDeathTriggerImpl;
 		Card.RegisterLingeringEffect = RegisterLingeringEffectImpl;
-		Card.RegisterTemporaryLingeringEffect = RegisterTemporaryLingeringEffectImpl;
+		Card.RegisterLocationTemporaryLingeringEffect = RegisterLocationTemporaryLingeringEffectImpl;
 		Card.RegisterActivatedEffect = RegisterActivatedEffectImpl;
 		Card.RegisterTokenCreationTrigger = RegisterTokenCreationTriggerImpl;
 		Card.GetGrave = GetGraveImpl;
@@ -329,7 +329,7 @@ class DuelCore : Core
 						}
 					}
 				}
-				if(temporaryLingeringEffects.TryGetValue(card.uid, out LingeringEffectList? handTempInfos))
+				if(locationTemporaryLingeringEffects.TryGetValue(card.uid, out LingeringEffectList? handTempInfos))
 				{
 					foreach(LingeringEffectInfo info in handTempInfos)
 					{
@@ -370,7 +370,7 @@ class DuelCore : Core
 						}
 					}
 				}
-				if(temporaryLingeringEffects.TryGetValue(card.uid, out LingeringEffectList? fieldTempInfos))
+				if(locationTemporaryLingeringEffects.TryGetValue(card.uid, out LingeringEffectList? fieldTempInfos))
 				{
 					foreach(LingeringEffectInfo info in fieldTempInfos)
 					{
@@ -405,7 +405,7 @@ class DuelCore : Core
 					infos.Add(info.timestamp, info);
 				}
 			}
-			if(temporaryLingeringEffects.TryGetValue(player.quest.uid, out LingeringEffectList? questTempInfos))
+			if(locationTemporaryLingeringEffects.TryGetValue(player.quest.uid, out LingeringEffectList? questTempInfos))
 			{
 				foreach(LingeringEffectInfo info in questTempInfos)
 				{
@@ -807,7 +807,7 @@ class DuelCore : Core
 								}
 								if(creature.Keywords.ContainsKey(Keyword.Decaying))
 								{
-									RegisterTemporaryLingeringEffectImpl(info: LingeringEffectInfo.Create(effect: (target) => target.Life -= 1, referrer: creature));
+									RegisterLocationTemporaryLingeringEffectImpl(info: LingeringEffectInfo.Create(effect: (target) => target.Life -= 1, referrer: creature));
 									if(creature.Life == 0 && creature.Location.HasFlag(GameConstants.Location.Field))
 									{
 										DestroyImpl(creature);
@@ -882,7 +882,7 @@ class DuelCore : Core
 		{
 			players[source.Controller].dealtSpellDamages[turn] -= amount;
 		}
-		RegisterTemporaryLingeringEffectImpl(info: LingeringEffectInfo.Create(effect: (tg) => tg.Life += amount, referrer: target));
+		RegisterLocationTemporaryLingeringEffectImpl(info: LingeringEffectInfo.Create(effect: (tg) => tg.Life += amount, referrer: target));
 	}
 	public void CreatureChangePowerImpl(Creature target, int amount, Card source)
 	{
@@ -890,7 +890,7 @@ class DuelCore : Core
 		{
 			return;
 		}
-		RegisterTemporaryLingeringEffectImpl(info: LingeringEffectInfo.Create(effect: (tg) => tg.Power += amount, referrer: target));
+		RegisterLocationTemporaryLingeringEffectImpl(info: LingeringEffectInfo.Create(effect: (tg) => tg.Power += amount, referrer: target));
 	}
 
 	private void DealDamage(int player, int amount, Card source)
@@ -1564,10 +1564,12 @@ class DuelCore : Core
 			lingeringEffects[info.referrer.uid].Add(info);
 		}
 	}
-	public void RegisterTemporaryLingeringEffectImpl(LingeringEffectInfo info)
+	public void RegisterLocationTemporaryLingeringEffectImpl(LingeringEffectInfo info)
 	{
-		_ = temporaryLingeringEffects.TryAdd(info.referrer.uid, new(this));
-		temporaryLingeringEffects[info.referrer.uid].Add(info);
+		_ = locationTemporaryLingeringEffects.TryAdd(info.referrer.uid, new(this));
+		locationTemporaryLingeringEffects[info.referrer.uid].Add(info);
+	}
+
 	}
 	public void RegisterActivatedEffectImpl(ActivatedEffectInfo info)
 	{
@@ -1715,7 +1717,7 @@ class DuelCore : Core
 	}
 	private void RegisterControllerChange(Card card, GameConstants.Location influenceLocation = ~(GameConstants.Location.Grave | GameConstants.Location.Deck))
 	{
-		RegisterTemporaryLingeringEffectImpl(info: LingeringEffectInfo.Create(effect: (target) => target.Controller = 1 - target.Controller, referrer: card, influenceLocation: influenceLocation));
+		RegisterLocationTemporaryLingeringEffectImpl(info: LingeringEffectInfo.Create(effect: (target) => target.Controller = 1 - target.Controller, referrer: card, influenceLocation: influenceLocation));
 	}
 	public void DestroyImpl(Creature card)
 	{
@@ -1764,7 +1766,7 @@ class DuelCore : Core
 	}
 	private void RemoveOutdatedTemporaryLingeringEffects(Card card)
 	{
-		temporaryLingeringEffects.GetValueOrDefault(card.uid)?.RemoveAll(info => !info.influenceLocation.HasFlag(card.Location));
+		locationTemporaryLingeringEffects.GetValueOrDefault(card.uid)?.RemoveAll(info => !info.influenceLocation.HasFlag(card.Location));
 	}
 	public bool RemoveCardFromItsLocation(Card card)
 	{

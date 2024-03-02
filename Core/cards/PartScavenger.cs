@@ -26,7 +26,7 @@ class PartScavenger : Creature
 
 	private void DeathEffect(Creature _)
 	{
-		RegisterTemporaryLingeringEffect(info: LingeringEffectInfo.Create(effect: BoostEffect, referrer: this));
+		RegisterLocationTemporaryLingeringEffect(info: LingeringEffectInfo.Create(effect: BoostEffect, referrer: this));
 	}
 
 	private void BoostEffect(Creature target)

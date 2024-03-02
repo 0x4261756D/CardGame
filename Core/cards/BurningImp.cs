@@ -26,7 +26,7 @@ class BurningImp : Creature
 
 	public void BuffEffect(Card castCard)
 	{
-		RegisterTemporaryLingeringEffect(info: LingeringEffectInfo.Create(effect: Buff, referrer: this));
+		RegisterLocationTemporaryLingeringEffect(info: LingeringEffectInfo.Create(effect: Buff, referrer: this));
 	}
 
 	public void Buff(Creature target)

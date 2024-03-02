@@ -24,7 +24,7 @@ class BrittleBehemoth : Creature
 
 	public void VictoriousEffect()
 	{
-		RegisterTemporaryLingeringEffect(info: LingeringEffectInfo.Create(effect: BoostEffect, referrer: this));
+		RegisterLocationTemporaryLingeringEffect(info: LingeringEffectInfo.Create(effect: BoostEffect, referrer: this));
 		if(Keywords.Remove(Keyword.Brittle))
 		{
 			RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: ResetBrittleEffect, state: State.TurnEnd, influenceLocation: Location.ALL, oneshot: true), referrer: this);
