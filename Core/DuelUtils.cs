@@ -199,6 +199,7 @@ public delegate void RegisterLocationBasedTriggerDelegate(LocationBasedTrigger t
 public delegate void RegisterStateReachedTriggerDelegate(StateReachedTrigger trigger, Card referrer);
 public delegate void RegisterCreatureTargetingTriggerDelegate(CreatureTargetingTrigger trigger, Card referrer);
 public delegate void RegisterLingeringEffectDelegate(LingeringEffectInfo info);
+public delegate void RegisterStateTemporaryLingeringEffectDelegate(LingeringEffectInfo info, GameConstants.State state);
 public delegate void RegisterActivatedEffectDelegate(ActivatedEffectInfo info);
 public delegate void CastDelegate(int player, Card card);
 public delegate void DrawDelegate(int player, int amount);

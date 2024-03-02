@@ -58,6 +58,7 @@ class DuelCore : Core
 	private readonly List<StateReachedTrigger> alwaysActiveStateReachedTriggers = [];
 	private readonly Dictionary<int, LingeringEffectList> lingeringEffects = [];
 	private readonly Dictionary<int, LingeringEffectList> locationTemporaryLingeringEffects = [];
+	private readonly Dictionary<GameConstants.State, LingeringEffectList> stateTemporaryLingeringEffects = [];
 	private readonly LingeringEffectList alwaysActiveLingeringEffects;
 	private readonly Dictionary<int, List<ActivatedEffectInfo>> activatedEffects = [];
 	private readonly Dictionary<int, List<Trigger>> dealsDamageTriggers = [];
@@ -154,6 +155,7 @@ class DuelCore : Core
 		Card.RegisterGenericDeathTrigger = RegisterGenericDeathTriggerImpl;
 		Card.RegisterLingeringEffect = RegisterLingeringEffectImpl;
 		Card.RegisterLocationTemporaryLingeringEffect = RegisterLocationTemporaryLingeringEffectImpl;
+		Card.RegisterStateTemporaryLingeringEffect = RegisterStateTemporaryLingeringEffectImpl;
 		Card.RegisterActivatedEffect = RegisterActivatedEffectImpl;
 		Card.RegisterTokenCreationTrigger = RegisterTokenCreationTriggerImpl;
 		Card.GetGrave = GetGraveImpl;
@@ -293,6 +295,7 @@ class DuelCore : Core
 		{
 			player.ClearCardModifications();
 		}
+		_ = stateTemporaryLingeringEffects.Remove(State);
 		SortedList<int, LingeringEffectInfo> infos = [];
 		foreach(LingeringEffectInfo info in alwaysActiveLingeringEffects)
 		{
@@ -304,6 +307,25 @@ class DuelCore : Core
 					LingeringEffectInfo.timestampCounter++;
 				}
 				infos.Add(info.timestamp, info);
+			}
+		}
+		foreach(LingeringEffectList list in stateTemporaryLingeringEffects.Values)
+		{
+			foreach(LingeringEffectInfo info in list)
+			{
+				if(info.influenceLocation.HasFlag(info.referrer.Location))
+				{
+					if(info.timestamp == 0)
+					{
+						info.timestamp = LingeringEffectInfo.timestampCounter;
+						LingeringEffectInfo.timestampCounter++;
+					}
+					infos.Add(info.timestamp, info);
+				}
+				else
+				{
+					info.timestamp = 0;
+				}
 			}
 		}
 		foreach(Player player in players)
@@ -1570,6 +1592,10 @@ class DuelCore : Core
 		locationTemporaryLingeringEffects[info.referrer.uid].Add(info);
 	}
 
+	private void RegisterStateTemporaryLingeringEffectImpl(LingeringEffectInfo info, GameConstants.State state)
+	{
+		_ = stateTemporaryLingeringEffects.TryAdd(state, new(this));
+		stateTemporaryLingeringEffects[state].Add(info);
 	}
 	public void RegisterActivatedEffectImpl(ActivatedEffectInfo info)
 	{
