@@ -39,6 +39,7 @@ jobs:
   fix-formatting:
     strategy:
       matrix: { dir: ['Core', 'Client', 'Server'] }
+      max-parallel: 1
     runs-on: ubuntu-latest
     defaults:
       run:
