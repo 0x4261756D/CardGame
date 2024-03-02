@@ -1,0 +1,30 @@
+{
+	"windows":
+	{
+		"port": 7042,
+		"deck_config":
+		{
+			"deck_location": ".\\decks",
+			"additional_cards_url":
+			{
+				"address": "127.0.0.1",
+				"port": 7043
+			},
+			"should_fetch_additional_cards": true
+		}
+	},
+	"linux":
+	{
+		"port": 7042,
+		"deck_config":
+		{
+			"deck_location": "./decks",
+			"additional_cards_url":
+			{
+				"address": "127.0.0.1",
+				"port": 7043
+			},
+			"should_fetch_additional_cards": true
+		}
+	}	
+}

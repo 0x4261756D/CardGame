@@ -1,0 +1,27 @@
+{
+	"linux":
+	{
+		"port": 7043,
+		"room_min_port": 37042,
+		"room_max_port": 39942,
+		"core_info":
+		{
+			"FileName": "../Core/bin/Debug/net8.0/CardGameCore",
+			"WorkingDirectory": "../Core",
+			"Arguments": "--config=../../../config/config.json"
+		},
+		"additional_cards_path": "./additional_cards.json"
+	},
+	"windows":
+	{
+		"port": 7043,
+		"room_min_port": 37042,
+		"room_max_port": 39942,
+		"core_info":
+		{
+			"FileName": "..\\CardGameCore\\bin\\Debug\\net8.0\\CardGameCore.exe",
+			"Arguments": "--config=..\\..\\..\\config\\config.json"
+		},
+		"additional_cards_path": ".\\additional_cards.json"
+	}
+}

@@ -1,0 +1,103 @@
+<Window xmlns="https://github.com/avaloniaui"
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+		x:Class="CardGameClient.DuelWindow"
+		Title="Duel"
+		FontFamily="Noto Sans">
+	<Window.Styles>
+		<Style Selector="Border">
+			<Setter Property="BorderThickness" Value="2"/>
+			<Setter Property="BorderBrush" Value="White"/>
+		</Style>
+	</Window.Styles>
+	<Grid	ColumnDefinitions="100,1*,6*,50,*"
+			RowDefinitions="2*,2*,2*,*,2*,2*,2*"
+			HorizontalAlignment="Stretch"
+			VerticalAlignment="Stretch">
+		<Grid Grid.Column="0" Grid.Row="0" Grid.RowSpan="7" Grid.ColumnSpan="2"
+				ColumnDefinitions="*" RowDefinitions="Auto,*">
+			<Button Click="SurrenderClick" Grid.Row="0" Grid.Column="0">
+				Surrender
+			</Button>
+			<DockPanel Grid.Row="1" Grid.Column="0" Grid.RowSpan="4" Grid.ColumnSpan="2">
+				<Panel x:Name="CardImagePanel" DockPanel.Dock="Top"/>
+				<ScrollViewer DockPanel.Dock="Bottom">
+					<TextBlock x:Name="CardTextBlock" TextWrapping="Wrap">
+						No Card Selected
+					</TextBlock>
+				</ScrollViewer>
+			</DockPanel>
+		</Grid>
+		<Border Grid.Column="2" Grid.Row="0">
+			<StackPanel Orientation="Horizontal">
+				<StackPanel>
+					<TextBlock x:Name="OppNameBlock"/>
+					<TextBlock x:Name="OppLifeBlock"/>
+					<TextBlock x:Name="OppMomentumBlock"/>
+				</StackPanel>
+				<Panel x:Name="OppAbilityPanel"/>
+				<Panel x:Name="OppQuestPanel"/>
+				<Panel x:Name="OppShowPanel"/>
+			</StackPanel>
+		</Border>
+		<Border Grid.Column="2" Grid.Row="1">
+			<ScrollViewer HorizontalScrollBarVisibility="Visible">
+				<StackPanel x:Name="OppHandPanel" Orientation="Horizontal"/>
+			</ScrollViewer>
+		</Border>
+		<Button Grid.Column="3" Grid.Row="1" x:Name="OppDeckButton">
+			Deck
+		</Button>
+		<Border Grid.Column="2" Grid.Row="2">
+			<StackPanel x:Name="OppField" Orientation="Horizontal" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+		</Border>
+		<Button Grid.Column="3" Grid.Row="2" x:Name="OppGraveButton" Click="OppGraveClick">
+			Grave
+		</Button>
+		<Border Grid.Column="2" Grid.Row="3">
+			<Grid ColumnDefinitions="*,*,*,*,*,*" RowDefinitions="*">
+				<Button x:Name="PassButton" Click="PassClick" Grid.Column="0" Grid.Row="0" HorizontalAlignment="Center">
+					Pass
+				</Button>
+				<CheckBox x:Name="KeepPassingBox" Grid.Column="1" Grid.Row="0" HorizontalAlignment="Center">
+					Keep passing
+				</CheckBox>
+				<TextBlock x:Name="TurnBlock" Grid.Column="2" Grid.Row="0" HorizontalAlignment="Center"/>
+				<TextBlock x:Name="InitBlock" Grid.Column="3" Grid.Row="0" HorizontalAlignment="Center"/>
+				<TextBlock x:Name="DirectionBlock" Grid.Column="4" Grid.Row="0" HorizontalAlignment="Center"/>
+				<TextBlock x:Name="PhaseBlock" Grid.Column="5" Grid.Row="0" HorizontalAlignment="Center"/>
+			</Grid>
+		</Border>
+		<Border Grid.Column="2" Grid.Row="4">
+			<StackPanel x:Name="OwnField" Orientation="Horizontal" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+		</Border>
+		<Button Grid.Column="3" Grid.Row="4" x:Name="OwnGraveButton" Click="OwnGraveClick">
+			Grave
+		</Button>
+		<Border Grid.Column="2" Grid.Row="5">
+			<ScrollViewer HorizontalScrollBarVisibility="Visible">
+				<StackPanel x:Name="OwnHandPanel" Orientation="Horizontal"/>
+			</ScrollViewer>
+		</Border>
+		<Button Grid.Column="3" Grid.Row="5" x:Name="OwnDeckButton">
+			Deck
+		</Button>
+		<Border Grid.Column="2" Grid.Row="6">
+			<StackPanel Orientation="Horizontal">
+				<StackPanel>
+					<TextBlock x:Name="OwnNameBlock"/>
+					<TextBlock x:Name="OwnLifeBlock"/>
+					<TextBlock x:Name="OwnMomentumBlock"/>
+				</StackPanel>
+				<Panel x:Name="OwnAbilityPanel"/>
+				<Panel x:Name="OwnQuestPanel"/>
+				<Panel x:Name="OwnShowPanel"/>
+			</StackPanel>
+		</Border>
+		<ScrollViewer Background="DarkGray" Grid.Column="4" Grid.Row="0" Grid.RowSpan="7" HorizontalScrollBarVisibility="Auto">
+			<ListBox x:Name="ActivityLogList"/>
+		</ScrollViewer>
+	</Grid>
+</Window>
