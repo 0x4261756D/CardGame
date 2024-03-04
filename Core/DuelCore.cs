@@ -25,6 +25,9 @@ class DuelCore : Core
 			_state = value;
 		}
 	}
+
+	public int multiplicativeDamageModifier = 1;
+
 	public static int UIDCount, CardActionUIDCount;
 	public Player[] players;
 	public static NetworkStream?[] playerStreams = [];
@@ -139,6 +142,8 @@ class DuelCore : Core
 
 	public void RegisterScriptingFunctions()
 	{
+		Card.SetDamageMultiplier = SetDamageMultiplierImpl;
+		Card.GetDamageMultiplier = GetDamageMultiplierImpl;
 		Card.RegisterCastTrigger = RegisterCastTriggerImpl;
 		Card.RegisterGenericCastTrigger = RegisterGenericCastTriggerImpl;
 		Card.RegisterGenericEntersFieldTrigger = RegisterGenericEntersFieldTriggerImpl;
@@ -897,6 +902,10 @@ class DuelCore : Core
 		{
 			return;
 		}
+		if(amount < 0) 
+		{
+			amount *= multiplicativeDamageModifier;
+		}
 		if(amount < 0 && source.CardType == GameConstants.CardType.Spell)
 		{
 			players[source.Controller].dealtSpellDamages[turn] -= amount;
@@ -1654,6 +1663,7 @@ class DuelCore : Core
 		}
 		else
 		{
+			amount *= multiplicativeDamageModifier;
 			DealDamage(player: player, amount: -amount, source: source);
 		}
 	}
@@ -1734,6 +1744,15 @@ class DuelCore : Core
 		}
 		RemoveOutdatedTemporaryLingeringEffects(card);
 	}
+
+	private void SetDamageMultiplierImpl(int value){
+		multiplicativeDamageModifier = value;
+	}
+
+	private int GetDamageMultiplierImpl(){
+		return multiplicativeDamageModifier;
+	}
+
 	public Card[] GetDiscardableImpl(int player, Card? ignore)
 	{
 		return players[player].hand.GetDiscardable(ignore);

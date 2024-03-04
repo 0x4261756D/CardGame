@@ -204,6 +204,8 @@ public delegate void RegisterStateTemporaryLingeringEffectDelegate(LingeringEffe
 public delegate void RegisterActivatedEffectDelegate(ActivatedEffectInfo info);
 public delegate void CastDelegate(int player, Card card);
 public delegate void DrawDelegate(int player, int amount);
+public delegate void SetDamageMultiplierDelegate(int value);
+public delegate int GetDamageMultiplierDelegate();
 public delegate Card[] GetCardsInLocationDelegate(int player);
 public delegate Creature[] GetFieldUsedDelegate(int player);
 public delegate Creature?[] GetWholeFieldDelegate(int player);

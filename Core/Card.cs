@@ -61,6 +61,9 @@ public abstract class Card
 		ResetToBaseState();
 	}
 	#region ScriptingFunctions
+
+	public static GetDamageMultiplierDelegate GetDamageMultiplier = () => 1;
+	public static SetDamageMultiplierDelegate SetDamageMultiplier = (_) => { };
 	public static RegisterTriggerDelegate RegisterCastTrigger = (_, _) => { };
 	public static RegisterLocationBasedTargetingTriggerDelegate RegisterGenericCastTrigger = (_, _) => { };
 	public static RegisterTokenCreationTriggerDelegate RegisterTokenCreationTrigger = (_, _) => { };
