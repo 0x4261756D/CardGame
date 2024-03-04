@@ -211,7 +211,7 @@ public abstract partial class Creature : Card
 		get => _life;
 		set
 		{
-			if(damageCap > 0 && _life - value > damageCap)
+			if(damageCap > -1 && _life - value > damageCap)
 			{
 				_life -= damageCap;
 			}
