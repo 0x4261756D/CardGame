@@ -795,6 +795,7 @@ class DuelCore : Core
 						{
 							if(card1 == null)
 							{
+								// Deal damage to player
 								DealDamage(player: 1, amount: card0.Power, source: card0);
 								if(players[1].life <= 0)
 								{
@@ -803,6 +804,17 @@ class DuelCore : Core
 							}
 							else
 							{
+								//Creature Combat
+								if(card0.Keywords.ContainsKey(Keyword.Mighty) ^ card1.Keywords.ContainsKey(Keyword.Mighty)){
+									if(card0.Keywords.ContainsKey(Keyword.Mighty)){
+										int excessDamage = card0.Power - card1.Life;
+										if (excessDamage > 0) {DealDamage(player: 1, amount: excessDamage, source: card0);}
+									}
+									else{
+										int excessDamage = card1.Power - card0.Life;
+										if (excessDamage > 0) {DealDamage(player: 0, amount: excessDamage, source: card1);}
+									}
+								}
 								CreatureChangeLifeImpl(target: card0, amount: -card1.Power, source: card1);
 								CreatureChangeLifeImpl(target: card1, amount: -card0.Power, source: card0);
 								if(!card0.Location.HasFlag(GameConstants.Location.Field) && card1.Location.HasFlag(GameConstants.Location.Field))
