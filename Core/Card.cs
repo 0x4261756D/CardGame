@@ -77,6 +77,7 @@ public abstract class Card
 	public static RegisterCreatureTargetingTriggerDelegate RegisterAttackTrigger = (_, _) => { };
 	public static RegisterCreatureTargetingTriggerDelegate RegisterDeathTrigger = (_, _) => { };
 	public static RegisterCreatureTargetingTriggerDelegate RegisterGenericDeathTrigger = (_, _) => { };
+	public static RegisterCreatureTargetingTriggerDelegate RegisterGenericVictoriousTrigger = (_, _) => { };
 	public static RegisterTriggerDelegate RegisterDealsDamageTrigger = (_, _) => { };
 	public static RegisterLingeringEffectDelegate RegisterLingeringEffect = (_) => { };
 	public static RegisterLingeringEffectDelegate RegisterLocationTemporaryLingeringEffect = (_) => { };
