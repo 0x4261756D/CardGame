@@ -62,6 +62,7 @@ public abstract class Card
 	}
 	#region ScriptingFunctions
 
+	public static RemoveLingeringEffectDelegate RemoveLingeringEffect = (_) => { };
 	public static GetDamageMultiplierDelegate GetDamageMultiplier = () => 1;
 	public static SetDamageMultiplierDelegate SetDamageMultiplier = (_) => { };
 	public static RegisterTriggerDelegate RegisterCastTrigger = (_, _) => { };

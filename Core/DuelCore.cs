@@ -76,7 +76,13 @@ class DuelCore : Core
 		public void Add(LingeringEffectInfo info)
 		{
 			items.Add(info);
-			Log($"Added lingering effect, now evaluating lingering effects...");
+			Log("Added lingering effect, now evaluating lingering effects...");
+			core.EvaluateLingeringEffects();
+		}
+
+		public void Remove(LingeringEffectInfo info){
+			_ = items.Remove(info);
+			Log("Removed lingering effect, now evaluating lingering effects...");
 			core.EvaluateLingeringEffects();
 		}
 
@@ -142,6 +148,7 @@ class DuelCore : Core
 
 	public void RegisterScriptingFunctions()
 	{
+		Card.RemoveLingeringEffect = RemoveLingeringEffectImpl;
 		Card.SetDamageMultiplier = SetDamageMultiplierImpl;
 		Card.GetDamageMultiplier = GetDamageMultiplierImpl;
 		Card.RegisterCastTrigger = RegisterCastTriggerImpl;
@@ -1983,6 +1990,23 @@ class DuelCore : Core
 		}
 		return token;
 	}
+
+	public void RemoveLingeringEffectImpl(LingeringEffectInfo info){
+		if(info.influenceLocation == GameConstants.Location.ALL)
+		{
+			alwaysActiveLingeringEffects.Remove(info);
+		}
+		else
+		{
+			if(!lingeringEffects.ContainsKey(info.referrer.uid))
+			{
+				Log("Tried to remove Lingering Effect of a card that has no registered Lingering Effects");
+				return;
+			}
+			lingeringEffects[info.referrer.uid].Remove(info);
+		}
+	}
+
 	public int SelectZoneImpl(int choosingPlayer, int targetPlayer)
 	{
 		bool[] options = players[targetPlayer].field.GetPlacementOptions();

@@ -193,6 +193,7 @@ public delegate bool CreatureTargetingCondition(Creature target);
 public delegate void CreatureTargetingEffect(Creature target);
 public delegate void TokenCreationEffect(Creature token, Card source);
 public delegate bool TokenCreationCondition(Creature token, Card source);
+public delegate void RemoveLingeringEffectDelegate(LingeringEffectInfo info);
 public delegate void RegisterLocationBasedTargetingTriggerDelegate(LocationBasedTargetingTrigger trigger, Card referrer);
 public delegate void RegisterTokenCreationTriggerDelegate(TokenCreationTrigger trigger, Card referrer);
 public delegate void RegisterTriggerDelegate(Trigger trigger, Card referrer);
