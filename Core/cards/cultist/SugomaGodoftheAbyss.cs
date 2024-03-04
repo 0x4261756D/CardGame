@@ -9,7 +9,7 @@ class SugomaGodoftheAbyss : Creature
 		Name: "Sugoma God of the Abyss",
 		CardClass: PlayerClass.Cultist,
 		OriginalCost: 10,
-		Text: "[Colossal] +5\nCannot be Discarded.\n{Activate}: Discard 1. Destroy target creature.\n{Revelation}: Take 1 damage then draw 1.",
+		Text: "[Mighty][Colossal] +5\nCannot be Discarded.\n{Activate}: Discard 1. Destroy target creature.\n{Revelation}: Take 1 damage then draw 1.",
 		OriginalPower: 15,
 		OriginalLife: 15
 		)
@@ -18,6 +18,7 @@ class SugomaGodoftheAbyss : Creature
 	public override void Init()
 	{
 		RegisterKeyword(Keyword.Colossal, 5);
+		RegisterKeyword(Keyword.Mighty);
 		RegisterActivatedEffect(info: new ActivatedEffectInfo(name: "Activate", effect: ActivatedEffect, condition: ActivatedCondition, referrer: this));
 		RegisterRevelationTrigger(trigger: new Trigger(effect: RevelationEffect), referrer: this);
 	}
