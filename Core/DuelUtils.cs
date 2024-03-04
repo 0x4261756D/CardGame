@@ -9,6 +9,7 @@ public enum Keyword
 	Token,
 	Decaying,
 	Immovable,
+	Mighty,
 }
 
 public class Trigger
