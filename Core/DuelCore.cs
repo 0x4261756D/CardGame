@@ -49,6 +49,7 @@ class DuelCore : Core
 	private readonly Dictionary<int, List<LocationBasedTargetingTrigger>> genericEnterFieldTriggers = [];
 	private readonly Dictionary<int, List<Trigger>> revelationTriggers = [];
 	private readonly Dictionary<int, List<Trigger>> victoriousTriggers = [];
+	private readonly Dictionary<int, List<CreatureTargetingTrigger>> genericVictoriousTriggers = [];
 	private readonly Dictionary<int, List<CreatureTargetingTrigger>> attackTriggers = [];
 	private readonly Dictionary<int, List<CreatureTargetingTrigger>> deathTriggers = [];
 	private readonly Dictionary<int, List<CreatureTargetingTrigger>> genericDeathTriggers = [];
@@ -159,6 +160,7 @@ class DuelCore : Core
 		Card.RegisterDiscardTrigger = RegisterDiscardTriggerImpl;
 		Card.RegisterStateReachedTrigger = RegisterStateReachedTriggerImpl;
 		Card.RegisterVictoriousTrigger = RegisterVictoriousTriggerImpl;
+		Card.RegisterGenericVictoriousTrigger = RegisterGenericVictoriousTriggerImpl;
 		Card.RegisterAttackTrigger = RegisterAttackTriggerImpl;
 		Card.RegisterDeathTrigger = RegisterDeathTriggerImpl;
 		Card.RegisterGenericDeathTrigger = RegisterGenericDeathTriggerImpl;
@@ -820,10 +822,18 @@ class DuelCore : Core
 								if(!card0.Location.HasFlag(GameConstants.Location.Field) && card1.Location.HasFlag(GameConstants.Location.Field))
 								{
 									ProcessTriggers(victoriousTriggers, card1.uid);
+									foreach(Creature creature in CardUtils.GetBothFieldsUsed())
+									{
+										ProcessCreatureTargetingTriggers(genericVictoriousTriggers, target: card1, location: GameConstants.Location.Field, uid: creature.uid);
+									}
 								}
 								if(!card1.Location.HasFlag(GameConstants.Location.Field) && card0.Location.HasFlag(GameConstants.Location.Field))
 								{
 									ProcessTriggers(victoriousTriggers, card0.uid);
+									foreach(Creature creature in CardUtils.GetBothFieldsUsed())
+									{
+										ProcessCreatureTargetingTriggers(genericVictoriousTriggers, target: card0, location: GameConstants.Location.Field, uid: creature.uid);
+									}
 								}
 							}
 						}
@@ -915,6 +925,13 @@ class DuelCore : Core
 			SendPacketToPlayer(new DuelPackets.GameResultResponse(GameConstants.GameResult.Won), 1 - player);
 		}
 	}
+
+	public void RegisterGenericVictoriousTriggerImpl(CreatureTargetingTrigger trigger, Card referrer)
+	{
+		_ = genericVictoriousTriggers.TryAdd(referrer.uid, []);
+		genericVictoriousTriggers[referrer.uid].Add(trigger);
+	}
+
 	public void CreatureChangeLifeImpl(Creature target, int amount, Card source)
 	{
 		if(amount == 0)
