@@ -176,6 +176,7 @@ public class GameConstants
 		Cultist,
 		Pyromancer,
 		Artificer,
+		Gladiator
 	}
 
 	[Flags]
@@ -196,6 +197,7 @@ public class ClientConstants
 {
 	public static readonly Dictionary<string, string> KeywordDescriptions = new()
 	{
+		{ "Mighty", "Excess combat damage gets dealt as Damage unless the opposing creature has Mighty" },
 		{ "Brittle", "The creature dies at the end of the turn" },
 		{ "Colossal", "The creature needs X additional momentum to move" },
 		{ "Decaying", "The creature loses 1 Life at the end of the turn" },
