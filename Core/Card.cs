@@ -202,7 +202,7 @@ public class ClientCoreDummyToken : Token
 public abstract partial class Creature : Card
 {
 	public readonly int BaseLife, BasePower;
-	public int damageCap, baseDamageCap;
+	public int damageCap = -1, baseDamageCap = -1;
 
 	private int _life, _power;
 	public int Position;
@@ -211,7 +211,7 @@ public abstract partial class Creature : Card
 		get => _life;
 		set
 		{
-			if(damageCap > 0 && _life - value > damageCap)
+			if(damageCap > -1 && _life - value > damageCap)
 			{
 				_life -= damageCap;
 			}
