@@ -18,20 +18,21 @@ class Rush : Spell
 		RegisterCastTrigger(trigger: new Trigger(effect: CastEffect, condition: CastCondition), referrer: this);
 	}
 
-    private bool CastCondition()
+	private bool CastCondition()
 	{
 		return HasUsed(GetField(Controller));
 	}
 
 	private void CastEffect()
 	{
-        int damage = 0;
-        foreach(Creature creature in GetFieldUsed(Controller)){
-            if(creature.Power > damage) 
+		int damage = 0;
+		foreach(Creature creature in GetFieldUsed(Controller))
+		{
+			if(creature.Power > damage)
 			{
 				damage = creature.Power;
 			}
-        }
-        ChangeLifeOfAnyTarget(player: Controller, amount: -damage, description: "Rush", source: this);
+		}
+		ChangeLifeOfAnyTarget(player: Controller, amount: -damage, description: "Rush", source: this);
 	}
 }

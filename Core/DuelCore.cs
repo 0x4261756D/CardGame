@@ -81,7 +81,8 @@ class DuelCore : Core
 			core.EvaluateLingeringEffects();
 		}
 
-		public void Remove(LingeringEffectInfo info){
+		public void Remove(LingeringEffectInfo info)
+		{
 			_ = items.Remove(info);
 			Log("Removed lingering effect, now evaluating lingering effects...");
 			core.EvaluateLingeringEffects();
@@ -807,14 +808,17 @@ class DuelCore : Core
 							else
 							{
 								//Creature Combat
-								if(card0.Keywords.ContainsKey(Keyword.Mighty) ^ card1.Keywords.ContainsKey(Keyword.Mighty)){
-									if(card0.Keywords.ContainsKey(Keyword.Mighty)){
+								if(card0.Keywords.ContainsKey(Keyword.Mighty) ^ card1.Keywords.ContainsKey(Keyword.Mighty))
+								{
+									if(card0.Keywords.ContainsKey(Keyword.Mighty))
+									{
 										int excessDamage = card0.Power - card1.Life;
-										if (excessDamage > 0) {DealDamage(player: 1, amount: excessDamage, source: card0);}
+										if(excessDamage > 0) { DealDamage(player: 1, amount: excessDamage, source: card0); }
 									}
-									else{
+									else
+									{
 										int excessDamage = card1.Power - card0.Life;
-										if (excessDamage > 0) {DealDamage(player: 0, amount: excessDamage, source: card1);}
+										if(excessDamage > 0) { DealDamage(player: 0, amount: excessDamage, source: card1); }
 									}
 								}
 								CreatureChangeLifeImpl(target: card0, amount: -card1.Power, source: card1);
@@ -938,7 +942,7 @@ class DuelCore : Core
 		{
 			return;
 		}
-		if(amount < 0) 
+		if(amount < 0)
 		{
 			amount *= multiplicativeDamageModifier;
 		}
@@ -1781,11 +1785,13 @@ class DuelCore : Core
 		RemoveOutdatedTemporaryLingeringEffects(card);
 	}
 
-	private void SetDamageMultiplierImpl(int value){
+	private void SetDamageMultiplierImpl(int value)
+	{
 		multiplicativeDamageModifier = value;
 	}
 
-	private int GetDamageMultiplierImpl(){
+	private int GetDamageMultiplierImpl()
+	{
 		return multiplicativeDamageModifier;
 	}
 
@@ -2020,7 +2026,8 @@ class DuelCore : Core
 		return token;
 	}
 
-	public void RemoveLingeringEffectImpl(LingeringEffectInfo info){
+	public void RemoveLingeringEffectImpl(LingeringEffectInfo info)
+	{
 		if(info.influenceLocation == GameConstants.Location.ALL)
 		{
 			alwaysActiveLingeringEffects.Remove(info);

@@ -1,5 +1,4 @@
 // Scripted by Dotlof
-using System;
 using CardGameCore;
 using static CardGameCore.CardUtils;
 using static CardGameUtils.GameConstants;
@@ -28,21 +27,21 @@ class Empower : Spell
 
 	public void CastEffect()
 	{
-        Creature target = SelectSingleCard(Controller, GetFieldUsed(Controller), "Select target for Empower");
+		Creature target = SelectSingleCard(Controller, GetFieldUsed(Controller), "Select target for Empower");
 		RegisterLingeringEffect(LingeringEffectInfo.Create(Buff, target));
-        target.RegisterKeyword(Keyword.Mighty);
-        RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: () => target.Keywords.Remove(Keyword.Mighty), state: State.TurnEnd, influenceLocation: Location.ALL, oneshot: true), referrer: this);
+		target.RegisterKeyword(Keyword.Mighty);
+		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: () => target.Keywords.Remove(Keyword.Mighty), state: State.TurnEnd, influenceLocation: Location.ALL, oneshot: true), referrer: this);
 	}
 
-    private void Buff(Creature target)
-    {
-        target.Power += 1;
-        target.Life += 1;
-    }
+	private void Buff(Creature target)
+	{
+		target.Power += 1;
+		target.Life += 1;
+	}
 
-    private bool CastCondition()
-    {
-        return HasUsed(GetField(Controller));
-    }
+	private bool CastCondition()
+	{
+		return HasUsed(GetField(Controller));
+	}
 
 }

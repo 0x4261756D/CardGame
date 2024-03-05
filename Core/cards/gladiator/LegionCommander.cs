@@ -17,11 +17,11 @@ class LegionCommander : Creature
 
 	public override void Init()
 	{
-        RegisterLingeringEffect(LingeringEffectInfo.Create(BuffEffect, this));
-        RegisterRevelationTrigger(trigger: new Trigger(effect: RevelationEffect, RevealCondition), referrer: this);
+		RegisterLingeringEffect(LingeringEffectInfo.Create(BuffEffect, this));
+		RegisterRevelationTrigger(trigger: new Trigger(effect: RevelationEffect, RevealCondition), referrer: this);
 	}
 
-    private void BuffEffect(Creature target)
+	private void BuffEffect(Creature target)
 	{
 		foreach(Creature card in GetFieldUsed(target.Controller))
 		{
@@ -33,12 +33,12 @@ class LegionCommander : Creature
 		}
 	}
 
-    public void RevelationEffect()
+	public void RevelationEffect()
 	{
-        CreateTokenOnField(player: Controller, power: 1, life: 1, name: "Soldier", source: this);
+		CreateTokenOnField(player: Controller, power: 1, life: 1, name: "Soldier", source: this);
 	}
 
-    public bool RevealCondition()
+	public bool RevealCondition()
 	{
 		return HasEmpty(GetField(Controller));
 	}

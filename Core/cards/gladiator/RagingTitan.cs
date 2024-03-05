@@ -28,14 +28,15 @@ class RagingTitan : Creature
 
 	private void CostReductionEffect(Creature _)
 	{
-        //I don't know how often this is checked but could cause problems if it has to iterate over full boards a lot
-        int highestPower = 0;
-        foreach(Creature creature in GetFieldUsed(Controller)){
-            if (creature.Power > highestPower)
-            {
-                highestPower = creature.Power;
-            }
-        }
+		//I don't know how often this is checked but could cause problems if it has to iterate over full boards a lot
+		int highestPower = 0;
+		foreach(Creature creature in GetFieldUsed(Controller))
+		{
+			if(creature.Power > highestPower)
+			{
+				highestPower = creature.Power;
+			}
+		}
 		Cost -= highestPower;
 	}
 
