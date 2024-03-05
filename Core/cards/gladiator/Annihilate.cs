@@ -9,7 +9,7 @@ class Annihilate : Spell
 		Name: "Annihilate",
 		CardClass: PlayerClass.Gladiator,
 		OriginalCost: 3,
-		Text: "{Cast}: Destroy target creature. You take targets attack as damage."
+		Text: "{Cast}: Destroy target creature. You take target's power as damage."
 		)
 	{ }
 

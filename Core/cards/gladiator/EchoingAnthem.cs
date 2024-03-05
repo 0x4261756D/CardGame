@@ -9,7 +9,7 @@ class EchoingAnthem : Spell
 		Name: "Echoing Anthem",
 		CardClass: PlayerClass.Gladiator,
 		OriginalCost: 1,
-		Text: "{Cast}: Allied creatures gain +1/+0 or +0/+1. Return this to your hand. At the end of your turn discard this."
+		Text: "{Cast}: Allied creatures gain +1/+0 or +0/+1. Return this to your hand. {End of your turn}: Discard this."
 		)
 	{ }
 
