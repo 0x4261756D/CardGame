@@ -22,18 +22,18 @@ class LegionChampion : Creature
 		RegisterVictoriousTrigger(trigger: new Trigger(effect: VictoriousEffect), referrer: this);
 	}
 
-    private void VictoriousEffect()
-    {
-        int highestPower = 0;
-        foreach(Creature creature in GetFieldUsed(Controller))
-        {
-            if(creature.Power > highestPower)
-            {
-                highestPower = creature.Power;
-            }
-        }
-        ChangeLifeOfAnyTarget(player: Controller, amount: -highestPower, description: "Legion Champion Victorious Effect", source: this);
-    }
+	private void VictoriousEffect()
+	{
+		int highestPower = 0;
+		foreach(Creature creature in GetFieldUsed(Controller))
+		{
+			if(creature.Power > highestPower)
+			{
+				highestPower = creature.Power;
+			}
+		}
+		ChangeLifeOfAnyTarget(player: Controller, amount: -highestPower, description: "Legion Champion Victorious Effect", source: this);
+	}
 
 	private void AttackEffect(Creature _)
 	{

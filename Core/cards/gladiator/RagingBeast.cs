@@ -17,12 +17,12 @@ class RagingBeast : Creature
 	public override void Init()
 	{
 		RegisterKeyword(Keyword.Mighty);
-        RegisterVictoriousTrigger(trigger: new Trigger(effect: VictoriousEffect), referrer: this);
+		RegisterVictoriousTrigger(trigger: new Trigger(effect: VictoriousEffect), referrer: this);
 	}
 
 	private void VictoriousEffect()
 	{
-		RegisterLocationTemporaryLingeringEffect(info: LingeringEffectInfo.Create((c) => {c.Power += 1; c.Life += 1;}, this));
+		RegisterLocationTemporaryLingeringEffect(info: LingeringEffectInfo.Create((c) => { c.Power += 1; c.Life += 1; }, this));
 		Draw(player: Controller, amount: 1);
 	}
 }
