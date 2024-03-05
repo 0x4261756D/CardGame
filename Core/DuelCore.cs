@@ -2034,7 +2034,7 @@ class DuelCore : Core
 		{
 			if(!lingeringEffects.ContainsKey(info.referrer.uid))
 			{
-				Log("Tried to remove Lingering Effect of a card that has no registered Lingering Effects");
+				Log("Tried to remove Lingering Effect of a card that has no registered Lingering Effects", severity: LogSeverity.Error);
 				return;
 			}
 			lingeringEffects[info.referrer.uid].Remove(info);
