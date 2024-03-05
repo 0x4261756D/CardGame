@@ -20,7 +20,7 @@ class EchoingAnthem : Spell
 
 	private void CastEffect()
 	{
-        bool buffType = AskYesNo(Controller,"+1/+0?");
+		bool buffType = AskYesNo(Controller, "+1/+0?");
 		foreach(Creature creature in GetFieldUsed(Controller))
 		{
 			RegisterLingeringEffect(LingeringEffectInfo.Create(buffType ? PowerBuff : LifeBuff, creature));
@@ -42,11 +42,13 @@ class EchoingAnthem : Spell
 
 	private bool EndPhaseFilter(Card card) => card.Name == this.Name;
 
-	private void PowerBuff(Creature target){
+	private void PowerBuff(Creature target)
+	{
 		target.Power++;
 	}
 
-	private void LifeBuff(Creature target){
+	private void LifeBuff(Creature target)
+	{
 		target.Life++;
-	} 
+	}
 }

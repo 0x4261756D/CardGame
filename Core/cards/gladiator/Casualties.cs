@@ -20,19 +20,20 @@ class Casualties : Spell
 
 	private void CastEffect()
 	{
-        int highestPower = 0;
-		foreach(Creature creature in GetBothFieldsUsed()){
-            if (creature.Power > highestPower) 
-            {
-                highestPower = creature.Power;
-            }
-        }
-        foreach(Creature creature in GetBothFieldsUsed())
-        {
-            if (creature.Power < highestPower)
-            {
-                Destroy(creature);
-            }
-        }
+		int highestPower = 0;
+		foreach(Creature creature in GetBothFieldsUsed())
+		{
+			if(creature.Power > highestPower)
+			{
+				highestPower = creature.Power;
+			}
+		}
+		foreach(Creature creature in GetBothFieldsUsed())
+		{
+			if(creature.Power < highestPower)
+			{
+				Destroy(creature);
+			}
+		}
 	}
 }

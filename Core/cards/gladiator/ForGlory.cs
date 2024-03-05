@@ -31,9 +31,9 @@ class ForGlory : Quest
 	{
 		foreach(Creature card in GetFieldUsed(Controller))
 		{
-            card.RegisterKeyword(Keyword.Mighty);
+			card.RegisterKeyword(Keyword.Mighty);
 			RegisterLingeringEffect(LingeringEffectInfo.Create(effect: BuffEffect, referrer: card));
-        }
+		}
 	}
 
 	private void BuffEffect(Creature target)

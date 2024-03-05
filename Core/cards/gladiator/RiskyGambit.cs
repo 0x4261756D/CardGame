@@ -15,10 +15,10 @@ class RiskyGambit : Spell
 	public override void Init()
 	{
 		RegisterCastTrigger(trigger: new Trigger(effect: CastEffect), referrer: this);
-        RegisterRevelationTrigger(trigger: new Trigger(effect: RevelationEffect), referrer: this);
+		RegisterRevelationTrigger(trigger: new Trigger(effect: RevelationEffect), referrer: this);
 	}
 
-    public void RevelationEffect()
+	public void RevelationEffect()
 	{
 		PlayerChangeLife(player: Controller, amount: -5, source: this);
 		Draw(player: Controller, amount: 1);
@@ -27,11 +27,12 @@ class RiskyGambit : Spell
 
 	private void CastEffect()
 	{
-        SetDamageMultiplier(GetDamageMultiplier() * 2);
-        RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: EndPhaseEffect, state: State.TurnEnd, influenceLocation: Location.ALL, oneshot: true), referrer: this);
+		SetDamageMultiplier(GetDamageMultiplier() * 2);
+		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: EndPhaseEffect, state: State.TurnEnd, influenceLocation: Location.ALL, oneshot: true), referrer: this);
 	}
 
-    private void EndPhaseEffect(){
-        SetDamageMultiplier(GetDamageMultiplier() / 2);
-    }
+	private void EndPhaseEffect()
+	{
+		SetDamageMultiplier(GetDamageMultiplier() / 2);
+	}
 }

@@ -1,6 +1,5 @@
 //Scripted by Dotlof
 using CardGameCore;
-using static CardGameCore.CardUtils;
 using static CardGameUtils.GameConstants;
 
 class TitanicMight : Spell
@@ -20,14 +19,16 @@ class TitanicMight : Spell
 
 	private void CastEffect()
 	{
-		foreach(Creature creature in GetFieldUsed(Controller)){
-            RegisterLingeringEffect(LingeringEffectInfo.Create(effect: BuffEffect, referrer: creature));
-        }
+		foreach(Creature creature in GetFieldUsed(Controller))
+		{
+			RegisterLingeringEffect(LingeringEffectInfo.Create(effect: BuffEffect, referrer: creature));
+		}
 	}
 
-    private void BuffEffect(Creature creature){
-        creature.Power += 7;
-        creature.Life += 7;
-    }
+	private void BuffEffect(Creature creature)
+	{
+		creature.Power += 7;
+		creature.Life += 7;
+	}
 
 }

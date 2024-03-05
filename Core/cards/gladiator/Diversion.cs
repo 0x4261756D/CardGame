@@ -20,12 +20,12 @@ class Diversion : Spell
 
 	private void CastEffect()
 	{
-        foreach(Creature creature in GetBothFieldsUsed())
-        {
-            if(AskYesNo(Controller, $"Move {creature.Name}?"))
+		foreach(Creature creature in GetBothFieldsUsed())
+		{
+			if(AskYesNo(Controller, $"Move {creature.Name}?"))
 			{
 				MoveToField(choosingPlayer: Controller, targetPlayer: creature.Controller, card: creature, source: this);
 			}
-        }
+		}
 	}
 }
