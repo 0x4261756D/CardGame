@@ -36,15 +36,7 @@ class Warsong : Spell
 				RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: () => creature.Keywords.Remove(Keyword.Mighty), oneshot: true, state: State.TurnEnd), referrer: creature);
 			}
 			RegisterStateTemporaryLingeringEffect(LingeringEffectInfo.Create(effect: BigBuff, referrer: creature), State.TurnEnd);
-		}
-		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: EndPhaseEffect, state: State.TurnEnd, influenceLocation: Location.ALL, oneshot: true), referrer: this);
-	}
-
-	private void EndPhaseEffect()
-	{
-		foreach(Creature creature in GetFieldUsed(Controller))
-		{
-			RegisterLingeringEffect(info: LingeringEffectInfo.Create(effect: SmallBuff, referrer: creature));
+			RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: () => RegisterLocationTemporaryLingeringEffect(info: LingeringEffectInfo.Create(effect: SmallBuff, referrer: creature)), state: State.TurnEnd, influenceLocation: Location.Field, oneshot: true), referrer: creature);
 		}
 	}
 
