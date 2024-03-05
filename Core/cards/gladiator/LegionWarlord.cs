@@ -15,32 +15,32 @@ class LegionWarlord : Creature
 		)
 	{ }
 
-    public override void Init()
+	public override void Init()
 	{
 		RegisterCastTrigger(trigger: new Trigger(effect: CastEffect), referrer: this);
 	}
 
-    private void CastEffect()
-    {
-        for(int i = 0; i < GetHand(Controller).Length; i++)
-        {
-            if(HasEmpty(GetField(Controller)))
-            {
-                CreateTokenOnField(Controller, 1, 1, "Soldier", this);
-            }
-            else
-            {
-                foreach(Creature creature in GetFieldUsed(Controller))
-                {
-                    RegisterLingeringEffect(LingeringEffectInfo.Create(Buff, creature));
-                }
-            }
-        }
-    }
+	private void CastEffect()
+	{
+		for(int i = 0; i < GetHand(Controller).Length; i++)
+		{
+			if(HasEmpty(GetField(Controller)))
+			{
+				CreateTokenOnField(Controller, 1, 1, "Soldier", this);
+			}
+			else
+			{
+				foreach(Creature creature in GetFieldUsed(Controller))
+				{
+					RegisterLingeringEffect(LingeringEffectInfo.Create(Buff, creature));
+				}
+			}
+		}
+	}
 
-    private void Buff(Creature target)
-    {
-        target.Power += 1;
-        target.Life += 1;
-    }
+	private void Buff(Creature target)
+	{
+		target.Power += 1;
+		target.Life += 1;
+	}
 }

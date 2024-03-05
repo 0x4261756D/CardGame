@@ -21,7 +21,7 @@ class ToBattle : Spell
 
 	public void RevelationEffect()
 	{
-        CreateTokenOnField(player: Controller, power: 1, life: 1, name: "Soldier", source: this);
+		CreateTokenOnField(player: Controller, power: 1, life: 1, name: "Soldier", source: this);
 	}
 
 	public void CastEffect()
@@ -34,19 +34,21 @@ class ToBattle : Spell
 		}
 	}
 
-    public void AttackEffect(Creature token){
-        RegisterLingeringEffect(info: LingeringEffectInfo.Create(effect: Buff, referrer: token));
-    }
+	public void AttackEffect(Creature token)
+	{
+		RegisterLingeringEffect(info: LingeringEffectInfo.Create(effect: Buff, referrer: token));
+	}
 
-    public static void Buff(Creature token){
-        token.Life += 1;
-        token.Power += 1;
-    }
+	public static void Buff(Creature token)
+	{
+		token.Life += 1;
+		token.Power += 1;
+	}
 
-    public bool CastCondition()
-    {
-        return FIELD_SIZE - GetFieldUsed(Controller).Length > 2;
-    }
+	public bool CastCondition()
+	{
+		return FIELD_SIZE - GetFieldUsed(Controller).Length > 2;
+	}
 
 	public bool RevealCondition()
 	{

@@ -14,13 +14,13 @@ class LegionScout : Creature
 		)
 	{ }
 
-    public override void Init()
+	public override void Init()
 	{
 		RegisterStateReachedTrigger(new StateReachedTrigger(EndPhaseEffect, State.TurnEnd), this);
 	}
 
-    private void EndPhaseEffect()
-    {
-        Draw(player: Controller, amount: 1);
-    }
+	private void EndPhaseEffect()
+	{
+		Draw(player: Controller, amount: 1);
+	}
 }

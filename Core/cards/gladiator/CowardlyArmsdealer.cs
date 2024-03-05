@@ -15,13 +15,13 @@ class CowardlyArmsdealer : Creature
 		)
 	{ }
 
-    public override void Init()
+	public override void Init()
 	{
 		RegisterCastTrigger(trigger: new Trigger(effect: CastEffect), referrer: this);
 		RegisterActivatedEffect(info: new ActivatedEffectInfo(name: "Activate", effect: () => MoveToHand(Controller, this), referrer: this));
 	}
 
-    private void CastEffect()
+	private void CastEffect()
 	{
 		Creature target = SelectSingleCard(Controller, GetFieldUsed(Controller), "Select creature to get +0/+2");
 		RegisterLingeringEffect(LingeringEffectInfo.Create(Buff, target));

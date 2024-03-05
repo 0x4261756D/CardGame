@@ -18,14 +18,14 @@ class Annihilate : Spell
 		RegisterCastTrigger(trigger: new Trigger(effect: CastEffect, condition: CastCondition), referrer: this);
 	}
 
-    private bool CastCondition()
+	private bool CastCondition()
 	{
 		return HasUsed(GetField(1 - Controller));
 	}
 
 	private void CastEffect()
 	{
-        Creature target = SelectSingleCard(player: Controller, cards: GetFieldUsed(1 - Controller), description: "Select creature to destroy");
+		Creature target = SelectSingleCard(player: Controller, cards: GetFieldUsed(1 - Controller), description: "Select creature to destroy");
 		Destroy(target);
 		PlayerChangeLife(player: Controller, amount: -target.Power, source: this);
 	}

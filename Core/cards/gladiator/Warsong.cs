@@ -16,13 +16,13 @@ class Warsong : Spell
 	public override void Init()
 	{
 		RegisterCastTrigger(trigger: new Trigger(effect: CastEffect), referrer: this);
-        RegisterRevelationTrigger(trigger: new Trigger(effect: RevelationEffect, condition: RevelationCondition), referrer: this);
+		RegisterRevelationTrigger(trigger: new Trigger(effect: RevelationEffect, condition: RevelationCondition), referrer: this);
 	}
 
-    public void RevelationEffect()
+	public void RevelationEffect()
 	{
 		Creature target = SelectSingleCard(Controller, GetFieldUsed(Controller), "Select target to gain +1/+1");
-        RegisterLingeringEffect(info: LingeringEffectInfo.Create(effect: SmallBuff, referrer: target));
+		RegisterLingeringEffect(info: LingeringEffectInfo.Create(effect: SmallBuff, referrer: target));
 	}
 
 
@@ -48,18 +48,20 @@ class Warsong : Spell
 		}
 	}
 
-    private void BigBuff(Creature creature){
-        creature.Life += 3;
-        creature.Power += 3;
-    }
+	private void BigBuff(Creature creature)
+	{
+		creature.Life += 3;
+		creature.Power += 3;
+	}
 
-    private void SmallBuff(Creature creature){
-        creature.Life += 1;
-        creature.Power += 1;
-    }
+	private void SmallBuff(Creature creature)
+	{
+		creature.Life += 1;
+		creature.Power += 1;
+	}
 
-    private bool RevelationCondition()
-    {
-        return GetFieldUsed(Controller).Length > 0;
-    }
+	private bool RevelationCondition()
+	{
+		return GetFieldUsed(Controller).Length > 0;
+	}
 }

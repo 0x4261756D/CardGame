@@ -26,9 +26,10 @@ class TitanicMight : Spell
 		}
 	}
 
-    private void BuffEffect(Creature creature){
-        creature.Power += 7;
-        creature.Life += 7;
-    }
+	private void BuffEffect(Creature creature)
+	{
+		creature.Power += 7;
+		creature.Life += 7;
+	}
 
 }

@@ -23,9 +23,10 @@ class Recruit : Spell
 		Card target = Gather(player: Controller, amount: 5);
 		if(target.CardType == CardType.Creature)
 		{
-            if(HasEmpty(GetField(Controller))) {
-                MoveToField(Controller, Controller, (Creature)target, this);
-            }
+			if(HasEmpty(GetField(Controller)))
+			{
+				MoveToField(Controller, Controller, (Creature)target, this);
+			}
 		}
 	}
 }

@@ -42,11 +42,13 @@ class EchoingAnthem : Spell
 
 	private bool EndPhaseFilter(Card card) => card.Name == this.Name;
 
-	private void PowerBuff(Creature target){
+	private void PowerBuff(Creature target)
+	{
 		target.Power++;
 	}
 
-	private void LifeBuff(Creature target){
+	private void LifeBuff(Creature target)
+	{
 		target.Life++;
 	}
 }
