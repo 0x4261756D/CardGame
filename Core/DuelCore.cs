@@ -77,14 +77,12 @@ class DuelCore : Core
 		public void Add(LingeringEffectInfo info)
 		{
 			items.Add(info);
-			Log("Added lingering effect, now evaluating lingering effects...");
 			core.EvaluateLingeringEffects();
 		}
 
 		public void Remove(LingeringEffectInfo info)
 		{
 			_ = items.Remove(info);
-			Log("Removed lingering effect, now evaluating lingering effects...");
 			core.EvaluateLingeringEffects();
 		}
 
