@@ -56,7 +56,19 @@ public partial class ServerWindow : Window
 			return;
 		}
 		string playerName = ((ServerWindowViewModel)DataContext!).PlayerName;
-		TcpClient client = new(ServerAddressBox.Text, 7043);
+		TcpClient client;
+		try
+		{
+			client = new(ServerAddressBox.Text, 7043);
+		}
+		catch(Exception ex)
+		{
+			if(IsVisible)
+			{
+				new ErrorPopup(ex.Message).Show();
+			}
+			return;
+		}
 		client.GetStream().Write(Functions.GeneratePayload(new ServerPackets.CreateRequest(name: playerName)));
 		(byte, byte[]?) payload = Functions.ReceiveRawPacket(client.GetStream());
 		ServerPackets.CreateResponse response = Functions.DeserializePayload<ServerPackets.CreateResponse>(payload);
