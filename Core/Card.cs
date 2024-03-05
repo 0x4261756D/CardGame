@@ -61,6 +61,10 @@ public abstract class Card
 		ResetToBaseState();
 	}
 	#region ScriptingFunctions
+
+	public static RemoveLingeringEffectDelegate RemoveLingeringEffect = (_) => { };
+	public static GetDamageMultiplierDelegate GetDamageMultiplier = () => 1;
+	public static SetDamageMultiplierDelegate SetDamageMultiplier = (_) => { };
 	public static RegisterTriggerDelegate RegisterCastTrigger = (_, _) => { };
 	public static RegisterLocationBasedTargetingTriggerDelegate RegisterGenericCastTrigger = (_, _) => { };
 	public static RegisterTokenCreationTriggerDelegate RegisterTokenCreationTrigger = (_, _) => { };
@@ -73,6 +77,7 @@ public abstract class Card
 	public static RegisterCreatureTargetingTriggerDelegate RegisterAttackTrigger = (_, _) => { };
 	public static RegisterCreatureTargetingTriggerDelegate RegisterDeathTrigger = (_, _) => { };
 	public static RegisterCreatureTargetingTriggerDelegate RegisterGenericDeathTrigger = (_, _) => { };
+	public static RegisterCreatureTargetingTriggerDelegate RegisterGenericVictoriousTrigger = (_, _) => { };
 	public static RegisterTriggerDelegate RegisterDealsDamageTrigger = (_, _) => { };
 	public static RegisterLingeringEffectDelegate RegisterLingeringEffect = (_) => { };
 	public static RegisterLingeringEffectDelegate RegisterLocationTemporaryLingeringEffect = (_) => { };
@@ -199,7 +204,7 @@ public class ClientCoreDummyToken : Token
 public abstract partial class Creature : Card
 {
 	public readonly int BaseLife, BasePower;
-	public int damageCap, baseDamageCap;
+	public int damageCap = -1, baseDamageCap = -1;
 
 	private int _life, _power;
 	public int Position;
@@ -208,7 +213,7 @@ public abstract partial class Creature : Card
 		get => _life;
 		set
 		{
-			if(damageCap > 0 && _life - value > damageCap)
+			if(damageCap > -1 && _life - value > damageCap)
 			{
 				_life -= damageCap;
 			}

@@ -9,6 +9,7 @@ public enum Keyword
 	Token,
 	Decaying,
 	Immovable,
+	Mighty,
 }
 
 public class Trigger
@@ -192,6 +193,7 @@ public delegate bool CreatureTargetingCondition(Creature target);
 public delegate void CreatureTargetingEffect(Creature target);
 public delegate void TokenCreationEffect(Creature token, Card source);
 public delegate bool TokenCreationCondition(Creature token, Card source);
+public delegate void RemoveLingeringEffectDelegate(LingeringEffectInfo info);
 public delegate void RegisterLocationBasedTargetingTriggerDelegate(LocationBasedTargetingTrigger trigger, Card referrer);
 public delegate void RegisterTokenCreationTriggerDelegate(TokenCreationTrigger trigger, Card referrer);
 public delegate void RegisterTriggerDelegate(Trigger trigger, Card referrer);
@@ -203,6 +205,8 @@ public delegate void RegisterStateTemporaryLingeringEffectDelegate(LingeringEffe
 public delegate void RegisterActivatedEffectDelegate(ActivatedEffectInfo info);
 public delegate void CastDelegate(int player, Card card);
 public delegate void DrawDelegate(int player, int amount);
+public delegate void SetDamageMultiplierDelegate(int value);
+public delegate int GetDamageMultiplierDelegate();
 public delegate Card[] GetCardsInLocationDelegate(int player);
 public delegate Creature[] GetFieldUsedDelegate(int player);
 public delegate Creature?[] GetWholeFieldDelegate(int player);

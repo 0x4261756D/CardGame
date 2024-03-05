@@ -25,6 +25,9 @@ class DuelCore : Core
 			_state = value;
 		}
 	}
+
+	public int multiplicativeDamageModifier = 1;
+
 	public static int UIDCount, CardActionUIDCount;
 	public Player[] players;
 	public static NetworkStream?[] playerStreams = [];
@@ -46,6 +49,7 @@ class DuelCore : Core
 	private readonly Dictionary<int, List<LocationBasedTargetingTrigger>> genericEnterFieldTriggers = [];
 	private readonly Dictionary<int, List<Trigger>> revelationTriggers = [];
 	private readonly Dictionary<int, List<Trigger>> victoriousTriggers = [];
+	private readonly Dictionary<int, List<CreatureTargetingTrigger>> genericVictoriousTriggers = [];
 	private readonly Dictionary<int, List<CreatureTargetingTrigger>> attackTriggers = [];
 	private readonly Dictionary<int, List<CreatureTargetingTrigger>> deathTriggers = [];
 	private readonly Dictionary<int, List<CreatureTargetingTrigger>> genericDeathTriggers = [];
@@ -73,7 +77,12 @@ class DuelCore : Core
 		public void Add(LingeringEffectInfo info)
 		{
 			items.Add(info);
-			Log($"Added lingering effect, now evaluating lingering effects...");
+			core.EvaluateLingeringEffects();
+		}
+
+		public void Remove(LingeringEffectInfo info)
+		{
+			_ = items.Remove(info);
 			core.EvaluateLingeringEffects();
 		}
 
@@ -139,6 +148,9 @@ class DuelCore : Core
 
 	public void RegisterScriptingFunctions()
 	{
+		Card.RemoveLingeringEffect = RemoveLingeringEffectImpl;
+		Card.SetDamageMultiplier = SetDamageMultiplierImpl;
+		Card.GetDamageMultiplier = GetDamageMultiplierImpl;
 		Card.RegisterCastTrigger = RegisterCastTriggerImpl;
 		Card.RegisterGenericCastTrigger = RegisterGenericCastTriggerImpl;
 		Card.RegisterGenericEntersFieldTrigger = RegisterGenericEntersFieldTriggerImpl;
@@ -147,6 +159,7 @@ class DuelCore : Core
 		Card.RegisterDiscardTrigger = RegisterDiscardTriggerImpl;
 		Card.RegisterStateReachedTrigger = RegisterStateReachedTriggerImpl;
 		Card.RegisterVictoriousTrigger = RegisterVictoriousTriggerImpl;
+		Card.RegisterGenericVictoriousTrigger = RegisterGenericVictoriousTriggerImpl;
 		Card.RegisterAttackTrigger = RegisterAttackTriggerImpl;
 		Card.RegisterDeathTrigger = RegisterDeathTriggerImpl;
 		Card.RegisterGenericDeathTrigger = RegisterGenericDeathTriggerImpl;
@@ -783,6 +796,7 @@ class DuelCore : Core
 						{
 							if(card1 == null)
 							{
+								// Deal damage to player
 								DealDamage(player: 1, amount: card0.Power, source: card0);
 								if(players[1].life <= 0)
 								{
@@ -791,15 +805,37 @@ class DuelCore : Core
 							}
 							else
 							{
+								//Creature Combat
+								if(card0.Keywords.ContainsKey(Keyword.Mighty) ^ card1.Keywords.ContainsKey(Keyword.Mighty))
+								{
+									if(card0.Keywords.ContainsKey(Keyword.Mighty))
+									{
+										int excessDamage = card0.Power - card1.Life;
+										if(excessDamage > 0) { DealDamage(player: 1, amount: excessDamage, source: card0); }
+									}
+									else
+									{
+										int excessDamage = card1.Power - card0.Life;
+										if(excessDamage > 0) { DealDamage(player: 0, amount: excessDamage, source: card1); }
+									}
+								}
 								CreatureChangeLifeImpl(target: card0, amount: -card1.Power, source: card1);
 								CreatureChangeLifeImpl(target: card1, amount: -card0.Power, source: card0);
 								if(!card0.Location.HasFlag(GameConstants.Location.Field) && card1.Location.HasFlag(GameConstants.Location.Field))
 								{
 									ProcessTriggers(victoriousTriggers, card1.uid);
+									foreach(Creature creature in CardUtils.GetBothFieldsUsed())
+									{
+										ProcessCreatureTargetingTriggers(genericVictoriousTriggers, target: card1, location: GameConstants.Location.Field, uid: creature.uid);
+									}
 								}
 								if(!card1.Location.HasFlag(GameConstants.Location.Field) && card0.Location.HasFlag(GameConstants.Location.Field))
 								{
 									ProcessTriggers(victoriousTriggers, card0.uid);
+									foreach(Creature creature in CardUtils.GetBothFieldsUsed())
+									{
+										ProcessCreatureTargetingTriggers(genericVictoriousTriggers, target: card0, location: GameConstants.Location.Field, uid: creature.uid);
+									}
 								}
 							}
 						}
@@ -891,11 +927,22 @@ class DuelCore : Core
 			SendPacketToPlayer(new DuelPackets.GameResultResponse(GameConstants.GameResult.Won), 1 - player);
 		}
 	}
+
+	public void RegisterGenericVictoriousTriggerImpl(CreatureTargetingTrigger trigger, Card referrer)
+	{
+		_ = genericVictoriousTriggers.TryAdd(referrer.uid, []);
+		genericVictoriousTriggers[referrer.uid].Add(trigger);
+	}
+
 	public void CreatureChangeLifeImpl(Creature target, int amount, Card source)
 	{
 		if(amount == 0)
 		{
 			return;
+		}
+		if(amount < 0)
+		{
+			amount *= multiplicativeDamageModifier;
 		}
 		if(amount < 0 && source.CardType == GameConstants.CardType.Spell)
 		{
@@ -1654,6 +1701,7 @@ class DuelCore : Core
 		}
 		else
 		{
+			amount *= multiplicativeDamageModifier;
 			DealDamage(player: player, amount: -amount, source: source);
 		}
 	}
@@ -1734,6 +1782,17 @@ class DuelCore : Core
 		}
 		RemoveOutdatedTemporaryLingeringEffects(card);
 	}
+
+	private void SetDamageMultiplierImpl(int value)
+	{
+		multiplicativeDamageModifier = value;
+	}
+
+	private int GetDamageMultiplierImpl()
+	{
+		return multiplicativeDamageModifier;
+	}
+
 	public Card[] GetDiscardableImpl(int player, Card? ignore)
 	{
 		return players[player].hand.GetDiscardable(ignore);
@@ -1964,6 +2023,24 @@ class DuelCore : Core
 		}
 		return token;
 	}
+
+	public void RemoveLingeringEffectImpl(LingeringEffectInfo info)
+	{
+		if(info.influenceLocation == GameConstants.Location.ALL)
+		{
+			alwaysActiveLingeringEffects.Remove(info);
+		}
+		else
+		{
+			if(!lingeringEffects.ContainsKey(info.referrer.uid))
+			{
+				Log("Tried to remove Lingering Effect of a card that has no registered Lingering Effects", severity: LogSeverity.Error);
+				return;
+			}
+			lingeringEffects[info.referrer.uid].Remove(info);
+		}
+	}
+
 	public int SelectZoneImpl(int choosingPlayer, int targetPlayer)
 	{
 		bool[] options = players[targetPlayer].field.GetPlacementOptions();
