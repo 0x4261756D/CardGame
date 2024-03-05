@@ -16,6 +16,7 @@ class Persevere : Spell
 	public override void Init()
 	{
 		RegisterCastTrigger(trigger: new Trigger(effect: CastEffect), referrer: this);
+		RegisterRevelationTrigger(trigger: new(effect: () => PlayerChangeLife(player: Controller, amount: 1, source: this)), referrer: this);
 	}
 
 	private void CastEffect()
