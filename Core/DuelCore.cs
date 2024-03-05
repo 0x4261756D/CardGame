@@ -1311,9 +1311,21 @@ class DuelCore : Core
 			break;
 			case GameConstants.Location.Ability:
 			{
-				if(players[player].abilityUsable && players[player].momentum > 0 && castTriggers.ContainsKey(players[player].ability.uid))
+				if(players[player].abilityUsable && players[player].momentum > 0 && castTriggers.TryGetValue(players[player].ability.uid, out List<Trigger>? matchingTriggers))
 				{
-					options.Add(AbilityUseActionDescription);
+					bool canActivate = true;
+					foreach(Trigger trigger in matchingTriggers)
+					{
+						canActivate = trigger.condition();
+						if(!canActivate)
+						{
+							break;
+						}
+					}
+					if(canActivate)
+					{
+						options.Add(AbilityUseActionDescription);
+					}
 				}
 			}
 			break;
