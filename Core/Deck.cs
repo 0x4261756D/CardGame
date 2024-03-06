@@ -66,4 +66,9 @@ class Deck
 			(cards[k], cards[i]) = (cards[i], cards[k]);
 		}
 	}
+
+	internal void AddRange(List<Card> cardsToAdd)
+	{
+		cards.AddRange(cardsToAdd);
+	}
 }
