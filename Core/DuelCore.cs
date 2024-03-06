@@ -824,6 +824,10 @@ class DuelCore : Core
 								if(!card0.Location.HasFlag(GameConstants.Location.Field) && card1.Location.HasFlag(GameConstants.Location.Field))
 								{
 									ProcessTriggers(victoriousTriggers, card1.uid);
+									for(int playerIndex = 0; playerIndex < players.Length; playerIndex++)
+									{
+										ProcessCreatureTargetingTriggers(genericVictoriousTriggers, target: card1, location: GameConstants.Location.Quest, uid: players[playerIndex].quest.uid);
+									}
 									foreach(Creature creature in CardUtils.GetBothFieldsUsed())
 									{
 										ProcessCreatureTargetingTriggers(genericVictoriousTriggers, target: card1, location: GameConstants.Location.Field, uid: creature.uid);
@@ -831,6 +835,10 @@ class DuelCore : Core
 								}
 								if(!card1.Location.HasFlag(GameConstants.Location.Field) && card0.Location.HasFlag(GameConstants.Location.Field))
 								{
+									for(int playerIndex = 0; playerIndex < players.Length; playerIndex++)
+									{
+										ProcessCreatureTargetingTriggers(genericVictoriousTriggers, target: card0, location: GameConstants.Location.Quest, uid: players[playerIndex].quest.uid);
+									}
 									ProcessTriggers(victoriousTriggers, card0.uid);
 									foreach(Creature creature in CardUtils.GetBothFieldsUsed())
 									{
