@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Security.Cryptography;
@@ -68,7 +67,7 @@ class Program
 		{
 			lastAdditionalCardsTimestamp = JsonSerializer.Deserialize<ServerPackets.AdditionalCardsResponse>(File.ReadAllText(config.additional_cards_path), GenericConstants.packetSerialization)!.time;
 		}
-		TcpListener listener = new(IPAddress.Parse("127.0.0.1"), config.port);
+		TcpListener listener = TcpListener.Create(config.port);
 		byte[] nowBytes = Encoding.UTF8.GetBytes(DateTime.Now.ToString());
 		seed = Convert.ToBase64String(sha.ComputeHash(nowBytes));
 		listener.Start();
