@@ -268,61 +268,72 @@ class Program
 			case NetworkingConstants.PacketType.ServerCreateRequest:
 			{
 				string name = Functions.DeserializeJson<ServerPackets.CreateRequest>(bytes!).name!;
-				if(waitingList.Exists(x => x.players[0]?.Name == name || x.players[1]?.Name == name))
+				if(string.IsNullOrWhiteSpace(name))
 				{
 					payload = Functions.GeneratePayload(new ServerPackets.CreateResponse
 					(
 						success: false,
-						reason: "Oh oh, sorry kiddo, looks like someone else already has that name. Why don't you pick something else? (Please watch SAO Abridged if you don't get this reference)"
+						reason: "Names cannot be empty"
 					));
 				}
 				else
 				{
-					string id = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(seed + name))).Replace("-", "");
-					int currentPort = -1;
-					for(int i = config.room_min_port; i <= config.room_max_port; i++)
+					if(waitingList.Exists(x => x.players[0]?.Name == name || x.players[1]?.Name == name))
 					{
-						bool free = true;
-						foreach(Room r in waitingList)
-						{
-							if(r.port == i)
-							{
-								free = false;
-								break;
-							}
-						}
-						if(free)
-						{
-							if(Array.Exists(IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpConnections(), x => x.LocalEndPoint.Port == i))
-							{
-								free = false;
-							}
-						}
-						if(free)
-						{
-							Functions.Log($"Next port: {i}");
-							currentPort = i;
-							break;
-						}
-					}
-					if(currentPort == -1)
-					{
-						Functions.Log("No free port found", severity: Functions.LogSeverity.Warning);
 						payload = Functions.GeneratePayload(new ServerPackets.CreateResponse
 						(
 							success: false,
-							reason: "No free port found"
+							reason: "Oh oh, sorry kiddo, looks like someone else already has that name. Why don't you pick something else? (Please watch SAO Abridged if you don't get this reference)"
 						));
 					}
 					else
 					{
-						waitingList.Add(new Room(name, id, currentPort, stream));
-						payload = Functions.GeneratePayload(new ServerPackets.CreateResponse
-						(
-							success: true
-						));
-						stream.Write(payload);
-						return HandlePacketReturn.ContinueKeepStream;
+						string id = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(seed + name))).Replace("-", "");
+						int currentPort = -1;
+						for(int i = config.room_min_port; i <= config.room_max_port; i++)
+						{
+							bool free = true;
+							foreach(Room r in waitingList)
+							{
+								if(r.port == i)
+								{
+									free = false;
+									break;
+								}
+							}
+							if(free)
+							{
+								if(Array.Exists(IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpConnections(), x => x.LocalEndPoint.Port == i))
+								{
+									free = false;
+								}
+							}
+							if(free)
+							{
+								Functions.Log($"Next port: {i}");
+								currentPort = i;
+								break;
+							}
+						}
+						if(currentPort == -1)
+						{
+							Functions.Log("No free port found", severity: Functions.LogSeverity.Warning);
+							payload = Functions.GeneratePayload(new ServerPackets.CreateResponse
+							(
+								success: false,
+								reason: "No free port found"
+							));
+						}
+						else
+						{
+							waitingList.Add(new Room(name, id, currentPort, stream));
+							payload = Functions.GeneratePayload(new ServerPackets.CreateResponse
+							(
+								success: true
+							));
+							stream.Write(payload);
+							return HandlePacketReturn.ContinueKeepStream;
+						}
 					}
 				}
 			}
@@ -330,40 +341,51 @@ class Program
 			case NetworkingConstants.PacketType.ServerJoinRequest:
 			{
 				ServerPackets.JoinRequest request = Functions.DeserializeJson<ServerPackets.JoinRequest>(bytes!);
-				if(waitingList.FindIndex(x => x.players[0]?.Name == request.name || x.players[1]?.Name == request.name) != -1)
+				if(string.IsNullOrWhiteSpace(request.name) || string.IsNullOrWhiteSpace(request.targetName))
 				{
 					payload = Functions.GeneratePayload(new ServerPackets.JoinResponse
 					(
 						success: false,
-						reason: "Oh oh, sorry kiddo, looks like someone else already has that name. Why don't you pick something else? (Please watch SAO Abridged if you don't get this reference)"
+						reason: "Names cannot be empty"
 					));
 				}
 				else
 				{
-					int index = waitingList.FindIndex(x => x.players[0]?.Name == request.targetName || x.players[1]?.Name == request.targetName);
-					if(index == -1)
+					if(waitingList.FindIndex(x => x.players[0]?.Name == request.name || x.players[1]?.Name == request.name) != -1)
 					{
 						payload = Functions.GeneratePayload(new ServerPackets.JoinResponse
 						(
 							success: false,
-							reason: "No player with that name hosts a game right now"
+							reason: "Oh oh, sorry kiddo, looks like someone else already has that name. Why don't you pick something else? (Please watch SAO Abridged if you don't get this reference)"
 						));
 					}
 					else
 					{
-						string id = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(seed + request.name))).Replace("-", "");
-						int playerIndex = waitingList[index].players[0] == null ? 0 : 1;
-						waitingList[index].players[playerIndex] = new Room.Player(Name: request.name, id: id, stream: stream, ready: false, noshuffle: false);
-						payload = Functions.GeneratePayload(new ServerPackets.JoinResponse
-						(
-							success: true
-						));
-						if(waitingList[index].players[1 - playerIndex]!.stream != null && waitingList[index].players[1 - playerIndex]!.stream.Socket.Connected)
+						int index = waitingList.FindIndex(x => x.players[0]?.Name == request.targetName || x.players[1]?.Name == request.targetName);
+						if(index == -1)
 						{
-							waitingList[index].players[1 - playerIndex]!.stream.Write(Functions.GeneratePayload(new ServerPackets.OpponentChangedResponse(request.name)));
+							payload = Functions.GeneratePayload(new ServerPackets.JoinResponse
+							(
+								success: false,
+								reason: "No player with that name hosts a game right now"
+							));
 						}
-						stream.Write(payload);
-						return HandlePacketReturn.ContinueKeepStream;
+						else
+						{
+							string id = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(seed + request.name))).Replace("-", "");
+							int playerIndex = waitingList[index].players[0] == null ? 0 : 1;
+							waitingList[index].players[playerIndex] = new Room.Player(Name: request.name, id: id, stream: stream, ready: false, noshuffle: false);
+							payload = Functions.GeneratePayload(new ServerPackets.JoinResponse
+							(
+								success: true
+							));
+							if(waitingList[index].players[1 - playerIndex]!.stream != null && waitingList[index].players[1 - playerIndex]!.stream.Socket.Connected)
+							{
+								waitingList[index].players[1 - playerIndex]!.stream.Write(Functions.GeneratePayload(new ServerPackets.OpponentChangedResponse(request.name)));
+							}
+							stream.Write(payload);
+							return HandlePacketReturn.ContinueKeepStream;
+						}
 					}
 				}
 			}
