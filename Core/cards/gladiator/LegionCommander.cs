@@ -25,8 +25,8 @@ class LegionCommander : Creature
 	{
 		foreach(Creature card in GetFieldUsed(target.Controller))
 		{
-			card.Power += 1;
-			card.Life += 1;
+			card.Power += 2;
+			card.Life += 2;
 		}
 	}
 
