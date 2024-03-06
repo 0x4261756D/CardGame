@@ -1,7 +1,7 @@
 // Scripted by Dotlof
 using CardGameCore;
-using static CardGameUtils.GameConstants;
 using static CardGameCore.CardUtils;
+using static CardGameUtils.GameConstants;
 
 class LegionCommander : Creature
 {
@@ -25,11 +25,8 @@ class LegionCommander : Creature
 	{
 		foreach(Creature card in GetFieldUsed(target.Controller))
 		{
-			if(card != target)
-			{
-				card.Power += 1;
-				card.Life += 1;
-			}
+			card.Power += 1;
+			card.Life += 1;
 		}
 	}
 
