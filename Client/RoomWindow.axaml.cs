@@ -124,7 +124,11 @@ public partial class RoomWindow : Window
 		if(!closed)
 		{
 			networkTask.Dispose();
-			client.GetStream().Write(Functions.GeneratePayload(new ServerPackets.LeaveRequest()));
+			NetworkStream stream = client.GetStream();
+			if(stream.Socket.Connected)
+			{
+				stream.Write(Functions.GeneratePayload(new ServerPackets.LeaveRequest()));
+			}
 			client.Close();
 			closed = true;
 		}
