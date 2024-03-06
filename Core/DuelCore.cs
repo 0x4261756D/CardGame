@@ -969,12 +969,16 @@ class DuelCore : Core
 
 	private void DealDamage(int player, int amount, Card source)
 	{
+		if(amount < 0)
+		{
+			throw new Exception($"Tried to deal negative damage: {amount} by {source.Name} {source}");
+		}
+		amount *= multiplicativeDamageModifier;
 		players[player].life -= amount;
 		players[1 - player].dealtDamages[turn] += amount;
 		if(source.CardType == GameConstants.CardType.Spell)
 		{
 			players[1 - player].dealtSpellDamages[turn] += amount;
-
 		}
 		RevealImpl(player, amount);
 		CheckIfLost(player);
@@ -1722,7 +1726,6 @@ class DuelCore : Core
 		}
 		else
 		{
-			amount *= multiplicativeDamageModifier;
 			DealDamage(player: player, amount: -amount, source: source);
 		}
 	}
