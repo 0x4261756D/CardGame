@@ -982,17 +982,15 @@ class DuelCore : Core
 	}
 	private void RevealImpl(int player, int damage)
 	{
-		List<Card> revealedCards = [];
 		for(int i = 0; i < Math.Min(damage, players[player].deck.Size); i++)
 		{
 			Card c = players[player].deck.GetAt(i);
 			SendFieldUpdates(shownInfos: new() { { player, new() { card = c.ToStruct(), description = "Revealed" } } });
-			players[player].deck.Remove(c);
+			players[player].deck.PushToRevealed();
 			ProcessTriggers(revelationTriggers, c.uid);
 			SendFieldUpdates();
 		}
-		players[player].deck.AddRange(revealedCards);
-		players[player].deck.Shuffle();
+		players[player].deck.PopRevealedAndShuffle();
 	}
 	private void MarkNextZoneOrContinue()
 	{

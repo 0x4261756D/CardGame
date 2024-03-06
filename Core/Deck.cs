@@ -7,6 +7,7 @@ namespace CardGameCore;
 class Deck
 {
 	private readonly List<Card> cards = [];
+	private readonly List<Card> revealedCards = [];
 	public Deck()
 	{
 
@@ -51,11 +52,14 @@ class Deck
 
 	internal void Remove(Card card)
 	{
-		if(!cards.Remove(card))
+		if(cards.Remove(card) || revealedCards.Remove(card))
+		{
+			card.Location &= ~GameConstants.Location.Deck;
+		}
+		else
 		{
 			throw new Exception($"Tried to remove nonexistent card {card} from the deck");
 		}
-		card.Location &= ~GameConstants.Location.Deck;
 	}
 
 	internal void Shuffle()
@@ -67,8 +71,16 @@ class Deck
 		}
 	}
 
-	internal void AddRange(List<Card> cardsToAdd)
+	internal void PopRevealedAndShuffle()
 	{
-		cards.AddRange(cardsToAdd);
+		cards.AddRange(revealedCards);
+		revealedCards.Clear();
+		Shuffle();
+	}
+
+	internal void PushToRevealed()
+	{
+		revealedCards.Add(cards[0]);
+		cards.RemoveAt(0);
 	}
 }
