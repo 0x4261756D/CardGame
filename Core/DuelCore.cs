@@ -978,6 +978,7 @@ class DuelCore : Core
 		{
 			Card c = players[player].deck.GetAt(i);
 			SendFieldUpdates(shownInfos: new() { { player, new() { card = c.ToStruct(), description = "Revealed" } } });
+			players[player].deck.MoveToBottom(0);
 			ProcessTriggers(revelationTriggers, c.uid);
 			SendFieldUpdates();
 		}
