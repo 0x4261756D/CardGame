@@ -1,0 +1,48 @@
+{
+	"windows": {
+		"deck_edit_url": {
+			"address": "127.0.0.1",
+			"port": 7042
+		},
+		"width": 1080,
+		"height": 720,
+		"should_spawn_core": true,
+		"core_info": {
+			"FileName": "Core/CardGameCore.exe",
+			"Arguments": "--mode=client --config=../config/config_core.json",
+			"CreateNoWindow": false,
+			"Domain": null,
+			"ErrorDialog": false,
+			"UseShellExecute": false,
+			"WorkingDirectory": "./"
+		},
+		"player_name": null,
+		"should_save_player_name": false,
+		"server_address": "h2871632.stratoserver.net",
+		"last_deck_name": null,
+		"animation_delay_in_ms": 250
+	},
+	"linux": {
+		"deck_edit_url": {
+			"address": "127.0.0.1",
+			"port": 7042
+		},
+		"width": 1080,
+		"height": 720,
+		"should_spawn_core": true,
+		"core_info": {
+			"FileName": "Core/CardGameCore",
+			"Arguments": "--mode=client --config=../config/config_core.json --additional_cards_url=h2871632.stratoserver.net",
+			"CreateNoWindow": false,
+			"Domain": null,
+			"ErrorDialog": false,
+			"UseShellExecute": false,
+			"WorkingDirectory": "./"
+		},
+		"player_name": null,
+		"should_save_player_name": false,
+		"server_address": "h2871632.stratoserver.net",
+		"last_deck_name": null,
+		"animation_delay_in_ms": 250
+	}
+}
