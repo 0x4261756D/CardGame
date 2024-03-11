@@ -9,7 +9,7 @@ class Persevere : Spell
 		Name: "Persevere",
 		CardClass: PlayerClass.Gladiator,
 		OriginalCost: 1,
-		Text: "{Cast}: Target creature is immune to battle damage this turn. {Revelation}: Gain 1 Life."
+		Text: "{Cast}: Target creature is immune to damage this turn. {Revelation}: Gain 1 Life."
 		)
 	{ }
 
@@ -21,7 +21,7 @@ class Persevere : Spell
 
 	private void CastEffect()
 	{
-		Creature target = SelectSingleCard(Controller, GetBothFieldsUsed(), "Select target for Perservere");
+		Creature target = SelectSingleCard(Controller, GetBothFieldsUsed(), "Select target for Persevere");
 		int oldDamageCap = target.damageCap;
 		target.damageCap = -1;
 		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: () => target.damageCap = oldDamageCap, state: State.TurnEnd, influenceLocation: Location.ALL, oneshot: true), referrer: target);
