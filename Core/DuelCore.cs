@@ -1269,6 +1269,113 @@ class DuelCore : Core
 		SendFieldUpdates();
 	}
 
+	private List<CardAction> GetActivatableActions(int uid, GameConstants.Location location)
+	{
+		List<CardAction> ret = [];
+		if(activatedEffects.TryGetValue(uid, out List<ActivatedEffectInfo>? matchingInfos))
+		{
+			foreach(ActivatedEffectInfo info in matchingInfos)
+			{
+				if(info.CanActivate(location))
+				{
+					ret.Add(new(uid: info.cardActionUid, description: info.name));
+				}
+			}
+		}
+		return ret;
+	}
+
+	// private Dictionary<int, List<CardAction>> GetAllCardActions(int player)
+	// {
+	// 	if(player != initPlayer)
+	// 	{
+	// 		return [];
+	// 	}
+	// 	EvaluateLingeringEffects();
+	// 	Dictionary<int, List<CardAction>> infos = [];
+	// 	// Hand
+	// 	foreach(Card card in players[player].hand.GetAll())
+	// 	{
+	// 		List<CardAction> actions = GetActivatableActions(card.uid, GameConstants.Location.Hand);
+	// 		if(actions.Count > 0)
+	// 		{
+	// 			infos[card.uid] ??= [];
+	// 			infos[card.uid].AddRange(actions);
+	// 		}
+	// 		if(card.Cost <= players[player].momentum &&
+	// 			!(State.HasFlag(GameConstants.State.BattleStart) && card.CardType == GameConstants.CardType.Creature))
+	// 		{
+	// 			bool canCast = true;
+	// 			if(castTriggers.TryGetValue(card.uid, out List<Trigger>? matchingTriggers))
+	// 			{
+	// 				foreach(Trigger trigger in matchingTriggers)
+	// 				{
+	// 					EvaluateLingeringEffects();
+	// 					canCast = trigger.condition();
+	// 					if(!canCast)
+	// 					{
+	// 						break;
+	// 					}
+	// 				}
+	// 			}
+	// 			else
+	// 			{
+	// 				if(card.CardType == GameConstants.CardType.Spell)
+	// 				{
+	// 					canCast = false;
+	// 				}
+	// 			}
+	// 			if(canCast)
+	// 			{
+	// 				infos[card.uid] ??= [];
+	// 				infos[card.uid].Add(CastActionDescription);
+	// 			}
+	// 		}
+	// 	}
+	// 	// Ability
+	// 	{
+	// 		Spell ability = players[player].ability;
+	// 		List<CardAction> actions = GetActivatableActions(ability.uid, GameConstants.Location.Ability);
+	// 		if(actions.Count > 0)
+	// 		{
+	// 			infos[ability.uid] ??= [];
+	// 			infos[ability.uid].AddRange(actions);
+	// 		}
+	// 		if(players[player].abilityUsable && players[player].momentum > 0 && castTriggers.TryGetValue(ability.uid, out List<Trigger>? matchingTriggers))
+	// 		{
+	// 			bool canActivate = true;
+	// 			foreach(Trigger trigger in matchingTriggers)
+	// 			{
+	// 				canActivate = trigger.condition();
+	// 				if(!canActivate)
+	// 				{
+	// 					break;
+	// 				}
+	// 			}
+	// 			if(canActivate)
+	// 			{
+	// 				infos[ability.uid] ??= [];
+	// 				infos[ability.uid].Add(AbilityUseActionDescription);
+	// 			}
+	// 		}
+	// 	}
+	// 	// Field
+	// 	foreach(Creature card in players[player].field.GetUsed())
+	// 	{
+	// 		List<CardAction> actions = GetActivatableActions(card.uid, GameConstants.Location.Field);
+	// 		if(actions.Count > 0)
+	// 		{
+	// 			infos[card.uid] ??= [];
+	// 			infos[card.uid].AddRange(actions);
+	// 		}
+	// 		if(players[player].field.CanMove(card.Position, players[player].momentum))
+	// 		{
+	// 			infos[card.uid] ??= [];
+	// 			infos[card.uid].Add(CreatureMoveActionDescription);
+	// 		}
+	// 	}
+	// 	return infos;
+	// }
 	private CardAction[] GetCardActions(int player, int uid, GameConstants.Location location)
 	{
 		if(player != initPlayer)
@@ -1276,17 +1383,7 @@ class DuelCore : Core
 			return [];
 		}
 		EvaluateLingeringEffects();
-		List<CardAction> options = [];
-		if(activatedEffects.TryGetValue(uid, out List<ActivatedEffectInfo>? matchingInfos))
-		{
-			foreach(ActivatedEffectInfo info in matchingInfos)
-			{
-				if(info.CanActivate(location))
-				{
-					options.Add(new(uid: info.cardActionUid, description: info.name));
-				}
-			}
-		}
+		List<CardAction> options = GetActivatableActions(uid, location);
 		switch(location)
 		{
 			case GameConstants.Location.Hand:
