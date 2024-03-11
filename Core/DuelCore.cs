@@ -129,7 +129,7 @@ class DuelCore : Core
 				Log($"Player {config.players[i].name} has no ability, {abilityString} is no suitable ability");
 				return;
 			}
-			Card ability = CreateBasicCard(Type.GetType(CardNameToFilename(abilityString[1..]))!, i);
+			Spell ability = (Spell)CreateBasicCard(Type.GetType(CardNameToFilename(abilityString[1..]))!, i);
 			string questString = config.players[i].decklist[2];
 			if(!questString.StartsWith('|'))
 			{

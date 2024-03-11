@@ -16,13 +16,13 @@ class Player
 	public bool passed;
 	public bool abilityUsable = true;
 	public GameConstants.PlayerClass playerClass;
-	public Card ability;
+	public Spell ability;
 	public Quest quest;
 	public int life, momentum;
 	public List<int> discardCounts = [], dealtDamages = [], dealtSpellDamages = [], brittleDeathCounts = [], deathCounts = [];
 	public int baseIgniteDamage = 1, igniteDamage;
 	public Dictionary<string, int> castCounts = [];
-	public Player(CoreConfig.PlayerConfig config, int number, Deck deck, GameConstants.PlayerClass playerClass, Card ability, Quest quest)
+	public Player(CoreConfig.PlayerConfig config, int number, Deck deck, GameConstants.PlayerClass playerClass, Spell ability, Quest quest)
 	{
 		this.deck = deck;
 		this.id = config.id;
