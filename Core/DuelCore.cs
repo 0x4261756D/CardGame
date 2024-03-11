@@ -643,6 +643,10 @@ class DuelCore : Core
 		{
 			EvaluateLingeringEffects();
 		}
+		if(rewardClaimed)
+		{
+			return;
+		}
 		foreach(Player player in players)
 		{
 			if(player.quest.Progress >= player.quest.Goal)
@@ -1407,10 +1411,7 @@ class DuelCore : Core
 					}
 					else
 					{
-						if(card.CardType == GameConstants.CardType.Spell)
-						{
-							canCast = false;
-						}
+						canCast = card.CardType == GameConstants.CardType.Spell;
 					}
 					if(canCast)
 					{
