@@ -151,7 +151,14 @@ class Program
 								{
 									if(room.players[1 - playerIndex]?.stream.Socket.Connected ?? false)
 									{
-										room.players[1 - playerIndex]?.stream.Write(Functions.GeneratePayload(new ServerPackets.OpponentChangedResponse(null)));
+										try
+										{
+											room.players[1 - playerIndex]?.stream.Write(Functions.GeneratePayload(new ServerPackets.OpponentChangedResponse(null)));
+										}
+										catch(IOException e)
+										{
+											Functions.Log($"Could not send OpponentChangedResponse: {e.Message}");
+										}
 									}
 								}
 							}
