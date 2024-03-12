@@ -307,18 +307,6 @@ class DuelCore : Core
 		}
 		_ = stateTemporaryLingeringEffects.Remove(State);
 		SortedList<int, LingeringEffectInfo> infos = [];
-		foreach(LingeringEffectInfo info in alwaysActiveLingeringEffects)
-		{
-			if(info.influenceLocation == GameConstants.Location.ALL)
-			{
-				if(info.timestamp == 0)
-				{
-					info.timestamp = LingeringEffectInfo.timestampCounter;
-					LingeringEffectInfo.timestampCounter++;
-				}
-				infos.Add(info.timestamp, info);
-			}
-		}
 		foreach(LingeringEffectList list in stateTemporaryLingeringEffects.Values)
 		{
 			foreach(LingeringEffectInfo info in list)
@@ -453,6 +441,11 @@ class DuelCore : Core
 		foreach(KeyValuePair<int, LingeringEffectInfo> info in infos)
 		{
 			info.Value.effect(info.Value.referrer);
+			CheckQuestReward(false);
+		}
+		foreach(LingeringEffectInfo info in alwaysActiveLingeringEffects)
+		{
+			info.effect(info.referrer);
 			CheckQuestReward(false);
 		}
 		foreach(Player player in players)
