@@ -1407,7 +1407,7 @@ class DuelCore : Core
 					}
 					else
 					{
-						canCast = card.CardType == GameConstants.CardType.Spell;
+						canCast = card.CardType != GameConstants.CardType.Spell;
 					}
 					if(canCast)
 					{
