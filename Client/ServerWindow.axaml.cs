@@ -93,21 +93,13 @@ public partial class ServerWindow : Window
 	{
 		UpdateRoomList();
 	}
-	private void ServerListSelectionChanged(object? sender, SelectionChangedEventArgs args)
+	private void JoinClick(object? sender, RoutedEventArgs args)
 	{
-		if(sender == null || ServerAddressBox.Text == null || PlayerNameBox.Text == null || string.IsNullOrEmpty(PlayerNameBox.Text) ||
-			args.RemovedItems.Count > 0 || args.AddedItems.Count != 1)
+		if(sender is null || ServerAddressBox.Text == null || PlayerNameBox.Text == null || string.IsNullOrEmpty(PlayerNameBox.Text))
 		{
 			return;
 		}
-
-		args.Handled = true;
-		ServerListBox.SelectedItem = null;
-		string? targetNameText = (string?)args.AddedItems[0];
-		if(targetNameText == null)
-		{
-			return;
-		}
+		string targetNameText = (string)((Button)sender).Content!;
 		TcpClient client = new(ServerAddressBox.Text, 7043);
 		client.GetStream().Write(Functions.GeneratePayload(new ServerPackets.JoinRequest
 		(
