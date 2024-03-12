@@ -807,13 +807,13 @@ class DuelCore : Core
 								{
 									if(card0.Keywords.ContainsKey(Keyword.Mighty))
 									{
-										int excessDamage = card0.Power - card1.Life;
-										if(excessDamage > 0) { DealDamage(player: 1, amount: excessDamage, source: card0); }
+										int excessDamage = card0.Power * multiplicativeDamageModifier - card1.Life;
+										if(excessDamage > 0) { DealDamage(player: 1, amount: excessDamage, source: card0, alreadyDealtWithDamageModifiers: true); }
 									}
 									else
 									{
-										int excessDamage = card1.Power - card0.Life;
-										if(excessDamage > 0) { DealDamage(player: 0, amount: excessDamage, source: card1); }
+										int excessDamage = card1.Power * multiplicativeDamageModifier - card0.Life;
+										if(excessDamage > 0) { DealDamage(player: 0, amount: excessDamage, source: card1, alreadyDealtWithDamageModifiers: true); }
 									}
 								}
 								CreatureChangeLifeImpl(target: card0, amount: -card1.Power, source: card1);
@@ -964,13 +964,16 @@ class DuelCore : Core
 		RegisterLocationTemporaryLingeringEffectImpl(info: LingeringEffectInfo.Create(effect: (tg) => tg.Power += amount, referrer: target));
 	}
 
-	private void DealDamage(int player, int amount, Card source)
+	private void DealDamage(int player, int amount, Card source, bool alreadyDealtWithDamageModifiers = false)
 	{
 		if(amount < 0)
 		{
 			throw new Exception($"Tried to deal negative damage: {amount} by {source.Name} {source}");
 		}
-		amount *= multiplicativeDamageModifier;
+		if(!alreadyDealtWithDamageModifiers)
+		{
+			amount *= multiplicativeDamageModifier;
+		}
 		players[player].life -= amount;
 		players[1 - player].dealtDamages[turn] += amount;
 		if(source.CardType == GameConstants.CardType.Spell)
