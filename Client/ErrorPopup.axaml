@@ -8,7 +8,7 @@
 		Title="Error"
 		FontFamily="Noto Sans">
 	<WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-		<TextBlock Text="{Binding Message}" TextWrapping="Wrap"/>
+		<TextBlock x:Name="MessageBlock" TextWrapping="Wrap"/>
 		<Button Click="CloseClick">
 			Close
 		</Button>
