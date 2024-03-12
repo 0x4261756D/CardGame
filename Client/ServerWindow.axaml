@@ -27,14 +27,16 @@
 			Refresh
 		</Button>
 
-		<ScrollViewer Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4">
-			<ItemsControl x:Name="ServerListBox" ItemsSource="{Binding ServerRooms}">
-				<ItemsControl.ItemTemplate>
-					<DataTemplate>
-						<Button HorizontalAlignment="Stretch" Click="JoinClick" Content="{Binding}" Padding="10" Margin="5"/>
-					</DataTemplate>
-				</ItemsControl.ItemTemplate>
-			</ItemsControl>
-		</ScrollViewer>
+		<Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4" BorderBrush="Gray" BorderThickness="2">
+			<ScrollViewer>
+				<ItemsControl x:Name="ServerListBox" ItemsSource="{Binding ServerRooms}">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<Button HorizontalAlignment="Stretch" Click="JoinClick" Content="{Binding}" Padding="10" Margin="5"/>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+			</ScrollViewer>
+		</Border>
 	</Grid>
 </Window>
