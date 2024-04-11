@@ -94,7 +94,8 @@ public class UIUtils
 	private static Bitmap? DefaultArtwork;
 	public static Bitmap? FetchArtwork(string name)
 	{
-		if(ArtworkCache.TryGetValue(name, out Bitmap? bitmap))
+		string filename = Functions.CardNameToFilename(name);
+		if(ArtworkCache.TryGetValue(filename, out Bitmap? bitmap))
 		{
 			return bitmap;
 		}
@@ -102,17 +103,17 @@ public class UIUtils
 		{
 			return null;
 		}
-		string pathNoExtension = Path.Combine(Program.config.picture_path, name);
+		string pathNoExtension = Path.Combine(Program.config.picture_path, filename);
 		if(File.Exists(pathNoExtension + ".png"))
 		{
 			Bitmap ret = new(pathNoExtension + ".png");
-			ArtworkCache[name] = ret;
+			ArtworkCache[filename] = ret;
 			return ret;
 		}
 		if(File.Exists(pathNoExtension + ".jpg"))
 		{
 			Bitmap ret = new(pathNoExtension + ".jpg");
-			ArtworkCache[name] = ret;
+			ArtworkCache[filename] = ret;
 			return ret;
 		}
 		if(DefaultArtwork == null && File.Exists(Path.Combine(Program.config.picture_path, "default_artwork.png")))
@@ -162,7 +163,7 @@ public class UIUtils
 			{
 				Child = new Image
 				{
-					Source = FetchArtwork(c.name)
+					Source = FetchArtwork(c.name),
 				},
 			},
 			Margin = new Thickness(50, 0),
