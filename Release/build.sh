@@ -2,6 +2,7 @@ set -e
 
 if test "$#" -ne 1
 then
+	echo "No version number provided"
 	exit 1
 fi
 
