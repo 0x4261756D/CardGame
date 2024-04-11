@@ -72,9 +72,8 @@ public partial class DeckEditWindow : Window
 	public void LoadSidebar(string fil)
 	{
 		GameConstants.PlayerClass playerClass = (GameConstants.PlayerClass?)ClassSelectBox.SelectedItem ?? GameConstants.PlayerClass.All;
-		(byte, byte[]?) payload = Request(new DeckPackets.SearchRequest(filter: fil, playerClass: playerClass, includeGenericCards: SidebarGenericIncludeBox.IsChecked ?? false),
-			Program.config.deck_edit_url.address, Program.config.deck_edit_url.port);
-		cardpool = DeserializePayload<DeckPackets.SearchResponse>(payload).cards;
+		cardpool = SendAndReceive<DeckPackets.SearchResponse>(new DeckPackets.SearchRequest(filter: fil, playerClass: playerClass, includeGenericCards: SidebarGenericIncludeBox.IsChecked ?? false),
+			Program.config.deck_edit_url.address, Program.config.deck_edit_url.port).cards;
 		List<Control> items = [];
 		foreach(CardStruct c in cardpool)
 		{
@@ -249,38 +248,36 @@ public partial class DeckEditWindow : Window
 	}
 	public void LoadDeck(string deckName)
 	{
-		(byte, byte[]?) payload = Request(new DeckPackets.ListRequest(name: deckName),
-			Program.config.deck_edit_url.address, Program.config.deck_edit_url.port);
 		DecklistPanel.Children.Clear();
-		DeckPackets.Deck response = DeserializePayload<DeckPackets.ListResponse>(payload).deck;
-		if(response.player_class == GameConstants.PlayerClass.UNKNOWN)
+		DeckPackets.Deck deck = SendAndReceive<DeckPackets.ListResponse>(new DeckPackets.ListRequest(name: deckName), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port).deck;
+		if(deck.player_class == GameConstants.PlayerClass.UNKNOWN)
 		{
 			ClassSelectBox.SelectedIndex = -1;
 		}
 		else
 		{
-			ClassSelectBox.SelectedItem = response.player_class;
+			ClassSelectBox.SelectedItem = deck.player_class;
 		}
-		foreach(CardStruct c in response.cards)
+		foreach(CardStruct c in deck.cards)
 		{
 			DecklistPanel.Children.Add(CreateDeckButton(c));
 		}
 		ClassAbilityButton.Content = null;
-		if(response.ability != null)
+		if(deck.ability != null)
 		{
-			Viewbox v = UIUtils.CreateGenericCard(response.ability);
+			Viewbox v = UIUtils.CreateGenericCard(deck.ability);
 			v.PointerEntered += CardHover;
 			ClassAbilityButton.Content = v;
 		}
 		ClassQuestButton.Content = null;
-		if(response.quest != null)
+		if(deck.quest != null)
 		{
-			Viewbox v = UIUtils.CreateGenericCard(response.quest);
+			Viewbox v = UIUtils.CreateGenericCard(deck.quest);
 			v.PointerEntered += CardHover;
 			ClassQuestButton.Content = v;
 		}
 		DeckSizeBlock.Text = DecklistPanel.Children.Count.ToString();
-		ColorWrongThings(response.player_class);
+		ColorWrongThings(deck.player_class);
 	}
 	public void ClassSelectionChanged(object sender, SelectionChangedEventArgs args)
 	{
@@ -428,8 +425,7 @@ public class DeckEditWindowViewModel : INotifyPropertyChanged
 
 	public void LoadDecks()
 	{
-		(byte, byte[]?) payload = Request(new DeckPackets.NamesRequest(), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port);
-		string[] names = DeserializePayload<DeckPackets.NamesResponse>(payload).names;
+		string[] names = SendAndReceive<DeckPackets.NamesResponse>(new DeckPackets.NamesRequest(), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port).names;
 		Array.Sort(names);
 		Decknames.Clear();
 		foreach(string name in names)

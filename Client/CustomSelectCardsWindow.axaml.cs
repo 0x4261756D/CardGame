@@ -77,7 +77,7 @@ public partial class CustomSelectCardsWindow : Window
 	public void CardSelectionChanged(object sender, SelectionChangedEventArgs args)
 	{
 		stream.Write(GeneratePayload(new DuelPackets.CustomSelectCardsIntermediateRequest(uids: UIUtils.CardListBoxSelectionToUID((ListBox)sender))));
-		((CustomSelectCardViewModel)DataContext!).CanConfirm = DeserializePayload<DuelPackets.CustomSelectCardsIntermediateResponse>(ReceiveRawPacket((NetworkStream)stream)!).isValid;
+		((CustomSelectCardViewModel)DataContext!).CanConfirm = ReceivePacket<DuelPackets.CustomSelectCardsIntermediateResponse>((NetworkStream)stream)!.isValid;
 	}
 }
 public class CustomSelectCardViewModel : INotifyPropertyChanged

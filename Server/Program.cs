@@ -83,9 +83,9 @@ class Program
 				HandlePacketReturn decision = HandlePacketReturn.Continue;
 				try
 				{
-					(byte type, byte[]? bytes) = Functions.ReceiveRawPacket(stream);
+					Packet packet = Functions.ReceiveRawPacket(stream);
 					Functions.Log("Server received a request", includeFullPath: true);
-					decision = HandlePacket(type, bytes, stream);
+					decision = HandlePacket(packet, stream);
 					if(decision == HandlePacketReturn.Break)
 					{
 						Functions.Log("Server received a request signalling it should stop", includeFullPath: true);
@@ -126,19 +126,12 @@ class Program
 					player.stream.CanRead &&
 					player.stream.DataAvailable)
 				{
-					(byte type, byte[]? bytes)? packet = Functions.TryReceiveRawPacket(player.stream, 100);
+					Packet? packet = Functions.TryReceiveRawPacket(player.stream, 100);
 					if(packet != null)
 					{
-						if(packet.Value.type >= (byte)NetworkingConstants.PacketType.PACKET_COUNT)
+						switch(packet)
 						{
-							Functions.Log($"Unrecognized packet type ({packet.Value.type})");
-							throw new Exception($"Unrecognized packet type ({packet.Value.type})");
-						}
-						NetworkingConstants.PacketType type = (NetworkingConstants.PacketType)packet.Value.type;
-						byte[]? bytes = packet.Value.bytes;
-						switch(type)
-						{
-							case NetworkingConstants.PacketType.ServerLeaveRequest:
+							case ServerPackets.LeaveRequest:
 							{
 								player.stream.Dispose();
 								room.players[playerIndex] = null;
@@ -163,10 +156,9 @@ class Program
 								}
 							}
 							break;
-							case NetworkingConstants.PacketType.ServerStartRequest:
+							case ServerPackets.StartRequest request:
 							{
 								Functions.Log("----START REQUEST HANDLING----", includeFullPath: true);
-								ServerPackets.StartRequest request = Functions.DeserializeJson<ServerPackets.StartRequest>(bytes!);
 								if(request.decklist.Length != GameConstants.DECK_SIZE + 3)
 								{
 									player.stream.Write(Functions.GeneratePayload(new ServerPackets.StartResponse
@@ -259,22 +251,16 @@ class Program
 		Functions.Log($"Cleaned up {waitingCount} abandoned waiting rooms, {waitingList.Count} rooms still open", includeFullPath: true);
 	}
 
-	private static HandlePacketReturn HandlePacket(byte typeByte, byte[]? bytes, NetworkStream stream)
+	private static HandlePacketReturn HandlePacket(Packet packet, NetworkStream stream)
 	{
 		CleanupRooms();
 		// THIS MIGHT CHANGE AS SENDING RAW JSON MIGHT BE TOO EXPENSIVE/SLOW
-		if(typeByte >= (byte)NetworkingConstants.PacketType.PACKET_COUNT)
-		{
-			throw new Exception($"ERROR: Unknown packet type encountered: ({typeByte})");
-		}
-		NetworkingConstants.PacketType type = (NetworkingConstants.PacketType)typeByte;
 		byte[]? payload = null;
-		Functions.Log($"Received packet of type {type}", includeFullPath: true);
-		switch(type)
+		switch(packet)
 		{
-			case NetworkingConstants.PacketType.ServerCreateRequest:
+			case ServerPackets.CreateRequest request:
 			{
-				string name = Functions.DeserializeJson<ServerPackets.CreateRequest>(bytes!).name!;
+				string name = request.name!;
 				if(string.IsNullOrWhiteSpace(name))
 				{
 					payload = Functions.GeneratePayload(new ServerPackets.CreateResponse
@@ -345,9 +331,8 @@ class Program
 				}
 			}
 			break;
-			case NetworkingConstants.PacketType.ServerJoinRequest:
+			case ServerPackets.JoinRequest request:
 			{
-				ServerPackets.JoinRequest request = Functions.DeserializeJson<ServerPackets.JoinRequest>(bytes!);
 				if(string.IsNullOrWhiteSpace(request.name) || string.IsNullOrWhiteSpace(request.targetName))
 				{
 					payload = Functions.GeneratePayload(new ServerPackets.JoinResponse
@@ -397,7 +382,7 @@ class Program
 				}
 			}
 			break;
-			case NetworkingConstants.PacketType.ServerRoomsRequest:
+			case ServerPackets.RoomsRequest:
 			{
 				if(waitingList.Exists(x => x.players[0]?.Name == null && x.players[1]?.Name == null))
 				{
@@ -407,7 +392,7 @@ class Program
 				payload = Functions.GeneratePayload(new ServerPackets.RoomsResponse([.. waitingList.FindAll(x => !Array.TrueForAll(x.players, y => y?.ready ?? false)).ConvertAll(x => x.players[0]?.Name ?? x.players[1]?.Name)]));
 			}
 			break;
-			case NetworkingConstants.PacketType.ServerAdditionalCardsRequest:
+			case ServerPackets.AdditionalCardsRequest:
 			{
 				string fullAdditionalCardsPath = Path.Combine(baseDir, config.additional_cards_path);
 				if(!File.Exists(fullAdditionalCardsPath) ||
@@ -439,7 +424,7 @@ class Program
 			break;
 			default:
 			{
-				throw new Exception($"ERROR: Unable to process this packet: Packet type: {type} | {Encoding.UTF8.GetString(bytes!)}");
+				throw new Exception($"ERROR: Unable to process this packet: Packet type: {packet.GetType()}");
 			}
 		}
 		stream.Write(payload);

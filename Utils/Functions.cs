@@ -48,137 +48,119 @@ partial class Functions
 		Console.ForegroundColor = current;
 	}
 
-	public static byte[] GeneratePayload<T>(T response)
+	public static Packet DeserializeRaw(byte[] data)
 	{
-		Type type = typeof(T);
-		byte[] json = JsonSerializer.SerializeToUtf8Bytes(response, type, GenericConstants.packetSerialization);
-		return
-		[
-			.. BitConverter.GetBytes(json.Length + 1),
-			NetworkingConstants.PacketDict[type],
-			.. json,
-		];
+		// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
+		//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
+		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
+		// the only difference being the type passed, wondering why one works and the other not...
+		return (Packet?)JsonSerializer.Deserialize(data, typeof(Packet), GenericConstants.packetSerialization) ?? throw new Exception("Deserialization returned null");
 	}
 
-	public static T? TryReceivePacket<T>(NetworkStream stream, long timeoutMs) where T : PacketContent
+	public static byte[] GeneratePayload(Packet data)
 	{
-		Stopwatch watch = Stopwatch.StartNew();
-		if(!stream.CanRead)
-		{
-			return null;
-		}
-		while(!stream.DataAvailable)
-		{
-			Thread.Sleep(10);
-			if(!stream.CanRead || (timeoutMs != -1 && watch.ElapsedMilliseconds > timeoutMs))
-			{
-				return null;
-			}
-		}
-		return ReceivePacket<T>(stream);
+		// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
+		//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
+		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
+		// the only difference being the type passed, wondering why one works and the other not...
+		byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(data, typeof(Packet), GenericConstants.packetSerialization);
+		return [..BitConverter.GetBytes(bytes.Length), ..bytes];
 	}
-	public static T ReceivePacket<T>(NetworkStream stream) where T : PacketContent
+	public static byte[] ReadPacketBytes(NetworkStream stream)
 	{
-		(byte type, byte[]? payload) = ReceiveRawPacket(stream);
-		while(type != NetworkingConstants.PacketDict[typeof(T)])
-		{
-			(type, payload) = ReceiveRawPacket(stream);
-			foreach(Type? key in NetworkingConstants.PacketDict.Keys)
-			{
-				if(NetworkingConstants.PacketDict[key] == type)
-				{
-					Log($"Ignoring {key}", severity: LogSeverity.Warning);
-					break;
-				}
-			}
-		}
-		if(payload == null)
-		{
-			return (T)new PacketContent();
-		}
-		return DeserializeJson<T>(payload);
-	}
-
-	public static (byte, byte[]?)? TryReceiveRawPacket(NetworkStream stream, long timeoutMs)
-	{
-		Stopwatch watch = Stopwatch.StartNew();
-		if(!stream.CanRead)
-		{
-			return null;
-		}
-		while(!stream.DataAvailable)
-		{
-			Thread.Sleep(10);
-			if(!stream.CanRead || (timeoutMs != -1 && watch.ElapsedMilliseconds > timeoutMs))
-			{
-				return null;
-			}
-		}
-		return ReceiveRawPacket(stream);
-	}
-	public static (byte, byte[]?) ReceiveRawPacket(NetworkStream stream)
-	{
-		Stopwatch watch = Stopwatch.StartNew();
-		byte[] sizeBuffer = new byte[4];
-		stream.ReadExactly(sizeBuffer);
-		uint size = BitConverter.ToUInt32(sizeBuffer);
-		Span<byte> buffer = new byte[size];
+		byte[] buffer = new byte[4];
 		stream.ReadExactly(buffer);
-		Log($"{watch.ElapsedMilliseconds}ms for raw receive of {size} bytes");
-		return (buffer[0], buffer.Length > 0 ? buffer[1..].ToArray() : null);
+		uint length = BitConverter.ToUInt32(buffer);
+		buffer = new byte[length];
+		stream.ReadExactly(buffer);
+		return buffer;
 	}
 
-	public static T DeserializePayload<T>((byte type, byte[]? payload) input) where T : PacketContent
+	public static Packet ReceiveRawPacket(NetworkStream stream)
 	{
-		return DeserializePayload<T>(input.type, input.payload);
+		// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
+		//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
+		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
+		// the only difference being the type passed, wondering why one works and the other not...
+		Packet packet = JsonSerializer.Deserialize<Packet>(ReadPacketBytes(stream), GenericConstants.packetSerialization) ?? throw new Exception("Deserialization returned null");
+		packet.EnsureCompatible();
+		return packet;
 	}
-	public static T DeserializePayload<T>(byte type, byte[]? payload) where T : PacketContent
+	public static Packet? TryReceiveRawPacket(NetworkStream stream, long timeoutMs)
 	{
-		if(payload == null)
+		Stopwatch watch = Stopwatch.StartNew();
+		if(!stream.CanRead)
 		{
-			return (T)new PacketContent();
+			return null;
 		}
-		if(type != NetworkingConstants.PacketDict[typeof(T)])
+		while(!stream.DataAvailable)
 		{
-			Type? t = null;
-			foreach(var typ in NetworkingConstants.PacketDict)
+			Thread.Sleep(10);
+			if(!stream.CanRead || (timeoutMs != -1 && watch.ElapsedMilliseconds > timeoutMs))
 			{
-				if(typ.Value == type)
-				{
-					t = typ.Key;
-					break;
-				}
+				return null;
 			}
-			throw new Exception($"Expected a packet of type {typeof(T)}({NetworkingConstants.PacketDict[typeof(T)]}) but got {t}({type}) instead");
 		}
-		return DeserializeJson<T>(payload);
+		// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
+		//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
+		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
+		// the only difference being the type passed, wondering why one works and the other not...
+		Packet? packet = JsonSerializer.Deserialize<Packet>(ReadPacketBytes(stream), GenericConstants.packetSerialization);
+		packet?.EnsureCompatible();
+		return packet;
 	}
-	public static T DeserializeJson<T>(byte[] data) where T : PacketContent
+	public static T? TryReceivePacket<T>(NetworkStream stream, long timeoutMs) where T : Packet
 	{
-		return JsonSerializer.Deserialize<T>(data, GenericConstants.packetSerialization) ?? throw new Exception($"{data} deserialized to null");
+		Stopwatch watch = Stopwatch.StartNew();
+		if(!stream.CanRead)
+		{
+			return null;
+		}
+		while(!stream.DataAvailable)
+		{
+			Thread.Sleep(10);
+			if(!stream.CanRead || (timeoutMs != -1 && watch.ElapsedMilliseconds > timeoutMs))
+			{
+				return null;
+			}
+		}
+		Packet? packet;
+		do
+		{
+		// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
+		//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
+		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
+		// the only difference being the type passed, wondering why one works and the other not...
+			packet = JsonSerializer.Deserialize<Packet>(ReadPacketBytes(stream), GenericConstants.packetSerialization);
+			packet?.EnsureCompatible();
+		}
+		while(packet is not T);
+
+		return (T?)packet;
 	}
-	public static void Send<T>(T request, string address, int port) where T : PacketContent
+
+	public static T ReceivePacket<T>(NetworkStream stream) where T : Packet
+	{
+		Packet packet;
+		do
+		{
+			packet = ReceiveRawPacket(stream);
+		}
+		while(packet is not T);
+		return (T)packet;
+	}
+	public static void Send(Packet request, string address, int port)
 	{
 		using TcpClient client = new(address, port);
 		using NetworkStream stream = client.GetStream();
 		stream.Write(GeneratePayload(request));
 	}
-	public static (byte, byte[]?) Request(PacketContent request, string address, int port)
+	public static R SendAndReceive<R>(Packet request, string address, int port) where R : Packet
 	{
-		using TcpClient client = new();
-		client.Connect(address, port);
+		using TcpClient client = new(address, port);
 		using NetworkStream stream = client.GetStream();
-		Type type = request.GetType();
-		byte[] json = JsonSerializer.SerializeToUtf8Bytes(request, type, GenericConstants.packetSerialization);
-		byte[] payload =
-		[
-			.. BitConverter.GetBytes(json.Length + 1),
-			NetworkingConstants.PacketDict[request.GetType()],
-			.. json,
-		];
-		stream.Write(payload);
-		// Reuse the payload list for the response
-		return ReceiveRawPacket(stream);
+		stream.Write(GeneratePayload(request));
+		return ReceivePacket<R>(stream);
 	}
 }
 

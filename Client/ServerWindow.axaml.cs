@@ -70,8 +70,7 @@ public partial class ServerWindow : Window
 			return;
 		}
 		client.GetStream().Write(Functions.GeneratePayload(new ServerPackets.CreateRequest(name: playerName)));
-		(byte, byte[]?) payload = Functions.ReceiveRawPacket(client.GetStream());
-		ServerPackets.CreateResponse response = Functions.DeserializePayload<ServerPackets.CreateResponse>(payload);
+		ServerPackets.CreateResponse response = Functions.ReceivePacket<ServerPackets.CreateResponse>(client.GetStream());
 		if(response.success)
 		{
 			RoomWindow w = new(address: ServerAddressBox.Text, client: client)
@@ -106,8 +105,7 @@ public partial class ServerWindow : Window
 			name: PlayerNameBox.Text,
 			targetName: targetNameText
 		)));
-		(byte, byte[]?) payload = Functions.ReceiveRawPacket(client.GetStream());
-		ServerPackets.JoinResponse response = Functions.DeserializePayload<ServerPackets.JoinResponse>(payload);
+		ServerPackets.JoinResponse response = Functions.ReceivePacket<ServerPackets.JoinResponse>(client.GetStream());
 		if(response.success)
 		{
 			new RoomWindow(ServerAddressBox.Text, client, opponentName: targetNameText)

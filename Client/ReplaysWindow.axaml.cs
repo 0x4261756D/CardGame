@@ -1,4 +1,3 @@
-using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -46,35 +45,36 @@ public partial class ReplaysWindow : Window
 			for(; actionIndex < replay.actions.Count; actionIndex++)
 			{
 				Replay.GameAction action = replay.actions[actionIndex];
+				NetworkingStructs.Packet packet = DeserializeRaw(action.PacketContentBytes());
 				((ReplaysViewModel)DataContext!).ActionList.Insert
 				(
 					0,
-					$"{(IsFieldUpdateForCurrentPlayer(action) ? "*" : "")}{actionIndex}: Player {action.player}: {(action.clientToServer ? "<-" : "->")} {Enum.GetName((NetworkingConstants.PacketType)action.packetType) ?? "UNKNOWN"}"
+					$"{(IsFieldUpdateForCurrentPlayer(action.clientToServer, action.player, packet) ? "*" : "")}{actionIndex}: Player {action.player}: {(action.clientToServer ? "<-" : "->")} {packet.GetType()}"
 				);
 			}
-			Replay.GameAction lastAction = replay.actions.FindLast(IsFieldUpdateForCurrentPlayer)!;
-			window.EnqueueFieldUpdate(DeserializePayload<NetworkingStructs.DuelPackets.FieldUpdateRequest>(lastAction.packetType, lastAction.PacketContentBytes()));
+			Replay.GameAction lastAction = replay.actions.FindLast((action) => IsFieldUpdateForCurrentPlayer(action.clientToServer, action.player, DeserializeRaw(action.PacketContentBytes())))!;
+			window.EnqueueFieldUpdate((NetworkingStructs.DuelPackets.FieldUpdateRequest)DeserializeRaw(lastAction.PacketContentBytes()));
 			window.UpdateField();
 		}
 	}
 
-	private bool IsFieldUpdateForCurrentPlayer(Replay.GameAction action)
+	private bool IsFieldUpdateForCurrentPlayer(bool clientToServer, int player, NetworkingStructs.Packet packet)
 	{
-		return action.player == (((ReplaysViewModel)DataContext!).IsFirstPlayer ? 0 : 1) && action.packetType == (byte)NetworkingConstants.PacketType.DuelFieldUpdateRequest;
+		return !clientToServer && player == (((ReplaysViewModel)DataContext!).IsFirstPlayer ? 0 : 1) && packet is NetworkingStructs.DuelPackets.FieldUpdateRequest;
 	}
 
 	public void StartClick(object sender, RoutedEventArgs args)
 	{
 		if(!File.Exists(FilePathBox.Text))
 		{
-			_ = new ErrorPopup($"Replay {FilePathBox.Text} does not exist");
+			new ErrorPopup($"Replay {FilePathBox.Text} does not exist").Show();
 			return;
 		}
 		string text = File.ReadAllText(FilePathBox.Text);
 		replay = JsonSerializer.Deserialize<Replay>(text, GenericConstants.replaySerialization);
 		if(replay == null)
 		{
-			_ = new ErrorPopup($"Could not open replay {FilePathBox.Text}");
+			new ErrorPopup($"Could not open replay {FilePathBox.Text}").Show();
 			return;
 		}
 		actionIndex = 0;
@@ -91,19 +91,24 @@ public partial class ReplaysWindow : Window
 			return;
 		}
 		Replay.GameAction action = replay.actions[actionIndex];
-		int playerIndex = ((ReplaysViewModel)DataContext!).IsFirstPlayer ? 0 : 1;
-		while(action.player != playerIndex || action.clientToServer || action.packetType != (byte)NetworkingConstants.PacketType.DuelFieldUpdateRequest)
+		if(action.packetVersion != GenericConstants.PACKET_VERSION)
 		{
-			((ReplaysViewModel)DataContext!).ActionList.Insert(0, $"{actionIndex}: Player {action.player}: {(action.clientToServer ? "<-" : "->")} {Enum.GetName((NetworkingConstants.PacketType)action.packetType) ?? "UNKNOWN"}");
+			new ErrorPopup($"Replay was made by an incompatble game version (expected {GenericConstants.PACKET_VERSION}, replay has {action.packetVersion})").Show();
+		}
+		NetworkingStructs.Packet packet = DeserializeRaw(action.PacketContentBytes());
+		while(!IsFieldUpdateForCurrentPlayer(action.clientToServer, action.player, packet))
+		{
+			((ReplaysViewModel)DataContext!).ActionList.Insert(0, $"{actionIndex}: Player {action.player}: {(action.clientToServer ? "<-" : "->")} {packet.GetType()}");
 			actionIndex++;
 			if(actionIndex >= replay.actions.Count - 1)
 			{
 				return;
 			}
 			action = replay.actions[actionIndex];
+			packet = DeserializeRaw(action.PacketContentBytes());
 		}
-		((ReplaysViewModel)DataContext!).ActionList.Insert(0, $"* {actionIndex}: Player {action.player}: {(action.clientToServer ? "<-" : "->")} {Enum.GetName((NetworkingConstants.PacketType)action.packetType) ?? "UNKNOWN"}");
-		window.EnqueueFieldUpdate(DeserializePayload<NetworkingStructs.DuelPackets.FieldUpdateRequest>(replay.actions[actionIndex].packetType, replay.actions[actionIndex].PacketContentBytes()));
+		((ReplaysViewModel)DataContext!).ActionList.Insert(0, $"* {actionIndex}: Player {action.player}: {(action.clientToServer ? "<-" : "->")} {packet.GetType()}");
+		window.EnqueueFieldUpdate((NetworkingStructs.DuelPackets.FieldUpdateRequest)packet);
 		window.UpdateField();
 		actionIndex++;
 	}
@@ -117,11 +122,11 @@ public partial class ReplaysWindow : Window
 		actionIndex -= 2;
 		((ReplaysViewModel)DataContext!).ActionList.RemoveAt(0);
 		Replay.GameAction action = replay.actions[actionIndex];
-		int playerIndex = ((ReplaysViewModel)DataContext!).IsFirstPlayer ? 0 : 1;
-		while(action.player != playerIndex || action.clientToServer || action.packetType != (byte)NetworkingConstants.PacketType.DuelFieldUpdateRequest)
+		NetworkingStructs.Packet packet = DeserializeRaw(action.PacketContentBytes());
+		while(!IsFieldUpdateForCurrentPlayer(action.clientToServer, action.player, packet))
 		{
 			((ReplaysViewModel)DataContext!).ActionList.RemoveAt(0);
-			if(action.packetType == (byte)NetworkingConstants.PacketType.DuelGameResultResponse)
+			if(packet is NetworkingStructs.DuelPackets.GameResultResponse)
 			{
 				window.Close();
 				return;
@@ -134,8 +139,9 @@ public partial class ReplaysWindow : Window
 				return;
 			}
 			action = replay.actions[actionIndex];
+			packet = DeserializeRaw(action.PacketContentBytes());
 		}
-		window.EnqueueFieldUpdate(DeserializePayload<NetworkingStructs.DuelPackets.FieldUpdateRequest>(replay.actions[actionIndex].packetType, replay.actions[actionIndex].PacketContentBytes()));
+		window.EnqueueFieldUpdate((NetworkingStructs.DuelPackets.FieldUpdateRequest)packet);
 		window.UpdateField();
 		actionIndex++;
 	}

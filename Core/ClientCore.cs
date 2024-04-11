@@ -4,7 +4,7 @@ using System.IO;
 using System.IO.Pipes;
 using System.Net.Sockets;
 using System.Reflection;
-using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using CardGameUtils;
 using CardGameUtils.Structs;
@@ -129,67 +129,52 @@ partial class ClientCore : Core
 			Log("Waiting for a connection");
 			using TcpClient client = listener.AcceptTcpClient();
 			using NetworkStream stream = client.GetStream();
-			(byte type, byte[]? bytes) = ReceiveRawPacket(stream);
+			Packet packet = ReceiveRawPacket(stream);
 			Log("Received a request");
-			if(bytes == null || bytes.Length == 0)
+			if(HandlePacket(packet, stream))
 			{
-				Log("The request was empty, ignoring it", severity: LogSeverity.Warning);
+				Log("Received a package that says the server should close");
+				break;
 			}
-			else
-			{
-				if(HandlePacket(type, bytes, stream))
-				{
-					Log("Received a package that says the server should close");
-					break;
-				}
-				Log("Sent a response");
-			}
+			Log("Sent a response");
 		}
 		listener.Stop();
 	}
 
-	public bool HandlePacket(byte typeByte, byte[] bytes, NetworkStream stream)
+	public bool HandlePacket(Packet packet, NetworkStream stream)
 	{
 		// THIS MIGHT CHANGE AS SENDING RAW JSON MIGHT BE TOO EXPENSIVE/SLOW
 		// possible improvements: Huffman or Burrows-Wheeler+RLE
-		if(typeByte >= (byte)NetworkingConstants.PacketType.PACKET_COUNT)
-		{
-			throw new Exception($"ERROR: Unknown packet type encountered: ({typeByte})");
-		}
-		NetworkingConstants.PacketType type = (NetworkingConstants.PacketType)typeByte;
 		byte[] payload;
-		switch(type)
+		switch(packet)
 		{
-			case NetworkingConstants.PacketType.DeckNamesRequest:
+			case DeckPackets.NamesRequest:
 			{
-				DeckPackets.NamesRequest request = DeserializeJson<DeckPackets.NamesRequest>(bytes);
 				payload = GeneratePayload(new DeckPackets.NamesResponse
 				(
 					names: [.. decks.ConvertAll(x => x.name)]
 				));
 			}
 			break;
-			case NetworkingConstants.PacketType.DeckListRequest:
+			case DeckPackets.ListRequest request:
 			{
-				DeckPackets.ListRequest request = DeserializeJson<DeckPackets.ListRequest>(bytes);
 				payload = GeneratePayload(new DeckPackets.ListResponse
 				(
 					deck: FindDeckByName(request.name!)
 				));
 			}
 			break;
-			case NetworkingConstants.PacketType.DeckSearchRequest:
+			case DeckPackets.SearchRequest request:
 			{
-				DeckPackets.SearchRequest request = DeserializeJson<DeckPackets.SearchRequest>(bytes);
 				payload = GeneratePayload(new DeckPackets.SearchResponse
 				(
 					cards: FilterCards(cards, request.filter!, request.playerClass, request.includeGenericCards)
 				));
 			}
 			break;
-			case NetworkingConstants.PacketType.DeckListUpdateRequest:
+			case DeckPackets.ListUpdateRequest request:
 			{
-				DeckPackets.Deck deck = DeserializeJson<DeckPackets.ListUpdateRequest>(bytes).deck;
+				DeckPackets.Deck deck = request.deck;
 				deck.name = DeckNameRegex().Replace(deck.name, "");
 				int index = decks.FindIndex(x => x.name == deck.name);
 				if(deck.cards != null)
@@ -216,7 +201,7 @@ partial class ClientCore : Core
 			}
 			break;
 			default:
-				throw new Exception($"ERROR: Unable to process this packet: ({type}) | {Encoding.UTF8.GetString(bytes)}");
+				throw new Exception($"ERROR: Unable to process this packet: ({packet.GetType()}) | {JsonSerializer.Serialize(packet, options: GenericConstants.packetSerialization)}");
 		}
 		stream.Write(payload);
 		return false;

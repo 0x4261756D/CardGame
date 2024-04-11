@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace CardGameUtils.Structs;
 
@@ -217,82 +218,124 @@ public class ServerConfig(string additional_cards_path, int port, int room_min_p
 
 public class NetworkingStructs
 {
-	// NOTE: The packet class exists for reference only,
-	// 		 in practive it is unnecessary to actually serialize a packet,
-	// 		 accessing it's type and then parsing it's content is enough.
+	[JsonDerivedType(typeof(Packet))]
+	[JsonDerivedType(typeof(DuelPackets.CustomSelectCardsIntermediateRequest), typeDiscriminator: nameof(DuelPackets.CustomSelectCardsIntermediateRequest))]
+	[JsonDerivedType(typeof(DuelPackets.CustomSelectCardsIntermediateResponse), typeDiscriminator: nameof(DuelPackets.CustomSelectCardsIntermediateResponse))]
+	[JsonDerivedType(typeof(DuelPackets.CustomSelectCardsRequest), typeDiscriminator: nameof(DuelPackets.CustomSelectCardsRequest))]
+	[JsonDerivedType(typeof(DuelPackets.CustomSelectCardsResponse), typeDiscriminator: nameof(DuelPackets.CustomSelectCardsResponse))]
+	[JsonDerivedType(typeof(DuelPackets.FieldUpdateRequest), typeDiscriminator: nameof(DuelPackets.FieldUpdateRequest))]
+	[JsonDerivedType(typeof(DuelPackets.GameResultResponse), typeDiscriminator: nameof(DuelPackets.GameResultResponse))]
+	[JsonDerivedType(typeof(DuelPackets.GetOptionsRequest), typeDiscriminator: nameof(DuelPackets.GetOptionsRequest))]
+	[JsonDerivedType(typeof(DuelPackets.GetOptionsResponse), typeDiscriminator: nameof(DuelPackets.GetOptionsResponse))]
+	[JsonDerivedType(typeof(DuelPackets.PassRequest), typeDiscriminator: nameof(DuelPackets.PassRequest))]
+	[JsonDerivedType(typeof(DuelPackets.SelectCardsRequest), typeDiscriminator: nameof(DuelPackets.SelectCardsRequest))]
+	[JsonDerivedType(typeof(DuelPackets.SelectCardsResponse), typeDiscriminator: nameof(DuelPackets.SelectCardsResponse))]
+	[JsonDerivedType(typeof(DuelPackets.SelectOptionRequest), typeDiscriminator: nameof(DuelPackets.SelectOptionRequest))]
+	[JsonDerivedType(typeof(DuelPackets.SelectZoneRequest), typeDiscriminator: nameof(DuelPackets.SelectZoneRequest))]
+	[JsonDerivedType(typeof(DuelPackets.SelectZoneResponse), typeDiscriminator: nameof(DuelPackets.SelectZoneResponse))]
+	[JsonDerivedType(typeof(DuelPackets.SurrenderRequest), typeDiscriminator: nameof(DuelPackets.SurrenderRequest))]
+	[JsonDerivedType(typeof(DuelPackets.ViewCardsResponse), typeDiscriminator: nameof(DuelPackets.ViewCardsResponse))]
+	[JsonDerivedType(typeof(DuelPackets.ViewGraveRequest), typeDiscriminator: nameof(DuelPackets.ViewGraveRequest))]
+	[JsonDerivedType(typeof(DuelPackets.YesNoRequest), typeDiscriminator: nameof(DuelPackets.YesNoRequest))]
+	[JsonDerivedType(typeof(DuelPackets.YesNoResponse), typeDiscriminator: nameof(DuelPackets.YesNoResponse))]
+	[JsonDerivedType(typeof(DeckPackets.ListRequest), typeDiscriminator: nameof(DeckPackets.ListRequest))]
+	[JsonDerivedType(typeof(DeckPackets.ListResponse), typeDiscriminator: nameof(DeckPackets.ListResponse))]
+	[JsonDerivedType(typeof(DeckPackets.ListUpdateRequest), typeDiscriminator: nameof(DeckPackets.ListUpdateRequest))]
+	[JsonDerivedType(typeof(DeckPackets.ListUpdateResponse), typeDiscriminator: nameof(DeckPackets.ListUpdateResponse))]
+	[JsonDerivedType(typeof(DeckPackets.NamesRequest), typeDiscriminator: nameof(DeckPackets.NamesRequest))]
+	[JsonDerivedType(typeof(DeckPackets.NamesResponse), typeDiscriminator: nameof(DeckPackets.NamesResponse))]
+	[JsonDerivedType(typeof(DeckPackets.SearchRequest), typeDiscriminator: nameof(DeckPackets.SearchRequest))]
+	[JsonDerivedType(typeof(DeckPackets.SearchResponse), typeDiscriminator: nameof(DeckPackets.SearchResponse))]
+	[JsonDerivedType(typeof(ServerPackets.AdditionalCardsRequest), typeDiscriminator: nameof(ServerPackets.AdditionalCardsRequest))]
+	[JsonDerivedType(typeof(ServerPackets.AdditionalCardsResponse), typeDiscriminator: nameof(ServerPackets.AdditionalCardsResponse))]
+	[JsonDerivedType(typeof(ServerPackets.CreateRequest), typeDiscriminator: nameof(ServerPackets.CreateRequest))]
+	[JsonDerivedType(typeof(ServerPackets.CreateResponse), typeDiscriminator: nameof(ServerPackets.CreateResponse))]
+	[JsonDerivedType(typeof(ServerPackets.JoinRequest), typeDiscriminator: nameof(ServerPackets.JoinRequest))]
+	[JsonDerivedType(typeof(ServerPackets.JoinResponse), typeDiscriminator: nameof(ServerPackets.JoinResponse))]
+	[JsonDerivedType(typeof(ServerPackets.LeaveRequest), typeDiscriminator: nameof(ServerPackets.LeaveRequest))]
+	[JsonDerivedType(typeof(ServerPackets.OpponentChangedResponse), typeDiscriminator: nameof(ServerPackets.OpponentChangedResponse))]
+	[JsonDerivedType(typeof(ServerPackets.RoomsRequest), typeDiscriminator: nameof(ServerPackets.RoomsRequest))]
+	[JsonDerivedType(typeof(ServerPackets.RoomsResponse), typeDiscriminator: nameof(ServerPackets.RoomsResponse))]
+	[JsonDerivedType(typeof(ServerPackets.StartRequest), typeDiscriminator: nameof(ServerPackets.StartRequest))]
+	[JsonDerivedType(typeof(ServerPackets.StartResponse), typeDiscriminator: nameof(ServerPackets.StartResponse))]
 	public class Packet
 	{
-		public int length;
-		public byte type;
-		public PacketContent content = new();
+		public uint version = GenericConstants.PACKET_VERSION;
+
+		public void EnsureCompatible()
+		{
+			if(GenericConstants.PACKET_VERSION != version)
+			{
+				throw new Exception($"Incompatible packet versions: Received packet of version {version} but expected {GenericConstants.PACKET_VERSION}");
+			}
+		}
 	}
-	public class PacketContent { }
 	public class DuelPackets
 	{
-		public class SurrenderRequest : PacketContent
+		public class SurrenderRequest : Packet
 		{
 		}
 
-		public class GameResultResponse(GameConstants.GameResult result) : PacketContent
+		public class GameResultResponse(GameConstants.GameResult result) : Packet
 		{
 			public GameConstants.GameResult result = result;
 		}
 
-		public class GetOptionsRequest(GameConstants.Location location, int uid) : PacketContent
+		public class GetOptionsRequest(GameConstants.Location location, int uid) : Packet
 		{
 			public GameConstants.Location location = location;
 			public int uid = uid;
 		}
-		public class GetOptionsResponse(GameConstants.Location location, int uid, CardAction[] options) : PacketContent
+		public class GetOptionsResponse(GameConstants.Location location, int uid, CardAction[] options) : Packet
 		{
 			public GameConstants.Location location = location;
 			public int uid = uid;
 			public CardAction[] options = options;
 		}
 
-		public class SelectOptionRequest(GameConstants.Location location, int uid, CardAction cardAction) : PacketContent
+		public class SelectOptionRequest(GameConstants.Location location, int uid, CardAction cardAction) : Packet
 		{
 			public GameConstants.Location location = location;
 			public int uid = uid;
 			public CardAction cardAction = cardAction;
 		}
 
-		public class YesNoRequest(string question) : PacketContent
+		public class YesNoRequest(string question) : Packet
 		{
 			public string question = question;
 		}
-		public class YesNoResponse(bool result) : PacketContent
+		public class YesNoResponse(bool result) : Packet
 		{
 			public bool result = result;
 		}
 
-		public class SelectCardsRequest(CardStruct[] cards, string desc, int amount) : PacketContent
+		public class SelectCardsRequest(CardStruct[] cards, string desc, int amount) : Packet
 		{
 			public CardStruct[] cards = cards;
 			public string desc = desc;
 			public int amount = amount;
 		}
-		public class SelectCardsResponse(int[] uids) : PacketContent
+		public class SelectCardsResponse(int[] uids) : Packet
 		{
 			public int[] uids = uids;
 		}
 
-		public class CustomSelectCardsRequest(CardStruct[] cards, string desc, bool initialState) : PacketContent
+		public class CustomSelectCardsRequest(CardStruct[] cards, string desc, bool initialState) : Packet
 		{
 			public CardStruct[] cards = cards;
 			public string desc = desc;
 			public bool initialState = initialState;
 		}
-		public class CustomSelectCardsResponse(int[] uids) : PacketContent
+		public class CustomSelectCardsResponse(int[] uids) : Packet
 		{
 			public int[] uids = uids;
 		}
 
-		public class CustomSelectCardsIntermediateRequest(int[] uids) : PacketContent
+		public class CustomSelectCardsIntermediateRequest(int[] uids) : Packet
 		{
 			public int[] uids = uids;
 		}
-		public class CustomSelectCardsIntermediateResponse(bool isValid) : PacketContent
+		public class CustomSelectCardsIntermediateResponse(bool isValid) : Packet
 		{
 			public bool isValid = isValid;
 		}
@@ -303,7 +346,7 @@ public class NetworkingStructs
 			int turn,
 			bool hasInitiative,
 			bool battleDirectionLeftToRight,
-			int? markedZone) : PacketContent
+			int? markedZone) : Packet
 		{
 			public class Field(
 				int life,
@@ -338,24 +381,24 @@ public class NetworkingStructs
 			public int? markedZone = markedZone;
 		}
 
-		public class SelectZoneRequest(bool[] options) : PacketContent
+		public class SelectZoneRequest(bool[] options) : Packet
 		{
 			public bool[] options = options;
 		}
-		public class SelectZoneResponse(int zone) : PacketContent
+		public class SelectZoneResponse(int zone) : Packet
 		{
 			public int zone = zone;
 		}
 
-		internal class PassRequest : PacketContent
+		internal class PassRequest : Packet
 		{
 		}
 
-		internal class ViewGraveRequest(bool opponent) : PacketContent
+		internal class ViewGraveRequest(bool opponent) : Packet
 		{
 			public bool opponent = opponent;
 		}
-		internal class ViewCardsResponse(string message, CardStruct[] cards) : PacketContent
+		internal class ViewCardsResponse(string message, CardStruct[] cards) : Packet
 		{
 			public string message = message;
 			public CardStruct[] cards = cards;
@@ -394,40 +437,40 @@ public class NetworkingStructs
 			}
 		}
 
-		public class NamesRequest : PacketContent
+		public class NamesRequest : Packet
 		{
 		}
 
-		public class NamesResponse(string[] names) : PacketContent
+		public class NamesResponse(string[] names) : Packet
 		{
 			public string[] names = names;
 		}
 
-		public class ListRequest(string name) : PacketContent
+		public class ListRequest(string name) : Packet
 		{
 			public string name = name;
 		}
-		public class ListResponse(Deck deck) : PacketContent
+		public class ListResponse(Deck deck) : Packet
 		{
 			public Deck deck = deck;
 		}
 
-		public class SearchRequest(string filter, GameConstants.PlayerClass playerClass, bool includeGenericCards) : PacketContent
+		public class SearchRequest(string filter, GameConstants.PlayerClass playerClass, bool includeGenericCards) : Packet
 		{
 			public string filter = filter;
 			public GameConstants.PlayerClass playerClass = playerClass;
 			public bool includeGenericCards = includeGenericCards;
 		}
-		public class SearchResponse(CardStruct[] cards) : PacketContent
+		public class SearchResponse(CardStruct[] cards) : Packet
 		{
 			public CardStruct[] cards = cards;
 		}
 
-		public class ListUpdateRequest(Deck deck) : PacketContent
+		public class ListUpdateRequest(Deck deck) : Packet
 		{
 			public Deck deck = deck;
 		}
-		public class ListUpdateResponse(bool shouldUpdate) : PacketContent
+		public class ListUpdateResponse(bool shouldUpdate) : Packet
 		{
 			public bool shouldUpdate = shouldUpdate;
 		}
@@ -435,57 +478,57 @@ public class NetworkingStructs
 
 	public class ServerPackets
 	{
-		public class AdditionalCardsRequest : PacketContent
+		public class AdditionalCardsRequest : Packet
 		{
 		}
-		public class AdditionalCardsResponse(DateTime time, CardStruct[] cards) : PacketContent
+		public class AdditionalCardsResponse(DateTime time, CardStruct[] cards) : Packet
 		{
 			public DateTime time = time;
 			public CardStruct[] cards = cards;
 		}
 
-		public class CreateRequest(string name) : PacketContent
+		public class CreateRequest(string name) : Packet
 		{
 			public string name = name;
 		}
-		public class CreateResponse(bool success, string? reason = null) : PacketContent
+		public class CreateResponse(bool success, string? reason = null) : Packet
 		{
 			public bool success = success;
 			public string? reason = reason;
 		}
 
-		public class JoinRequest(string name, string targetName) : PacketContent
+		public class JoinRequest(string name, string targetName) : Packet
 		{
 			public string name = name, targetName = targetName;
 		}
-		public class JoinResponse(bool success, string? reason = null) : PacketContent
+		public class JoinResponse(bool success, string? reason = null) : Packet
 		{
 			public bool success = success;
 			public string? reason = reason;
 		}
 
-		public class OpponentChangedResponse(string? name) : PacketContent
+		public class OpponentChangedResponse(string? name) : Packet
 		{
 			public string? name = name;
 		}
 
-		public class LeaveRequest() : PacketContent { }
+		public class LeaveRequest() : Packet { }
 
-		public class RoomsRequest : PacketContent
+		public class RoomsRequest : Packet
 		{
 
 		}
-		public class RoomsResponse(string[] rooms) : PacketContent
+		public class RoomsResponse(string[] rooms) : Packet
 		{
 			public string[] rooms = rooms;
 		}
 
-		public class StartRequest(string[] decklist, bool noshuffle) : PacketContent
+		public class StartRequest(string[] decklist, bool noshuffle) : Packet
 		{
 			public string[] decklist = decklist;
 			public bool noshuffle = noshuffle;
 		}
-		public class StartResponse : PacketContent
+		public class StartResponse : Packet
 		{
 			public enum Result
 			{

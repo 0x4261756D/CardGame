@@ -1,11 +1,38 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using CardGameUtils.Structs;
 
 namespace CardGameUtils;
 
+[JsonSourceGenerationOptions(IncludeFields = true)]
+[JsonSerializable(typeof(PlatformCoreConfig))]
+[JsonSerializable(typeof(CoreConfig))]
+internal partial class PlatformCoreConfigSerializationContext : JsonSerializerContext { }
+
+
+[JsonSourceGenerationOptions(IncludeFields = true)]
+[JsonSerializable(typeof(PlatformClientConfig))]
+internal partial class PlatformClientConfigSerializationContext : JsonSerializerContext { }
+
+[JsonSourceGenerationOptions(IncludeFields = true)]
+[JsonSerializable(typeof(PlatformServerConfig))]
+internal partial class PlatformServerConfigSerializationContext : JsonSerializerContext { }
+
+[JsonSourceGenerationOptions(IncludeFields = true)]
+[JsonSerializable(typeof(NetworkingStructs.Packet))]
+internal partial class PacketSerializationContext : JsonSerializerContext { }
+
+[JsonSourceGenerationOptions(IncludeFields = true)]
+[JsonSerializable(typeof(Replay))]
+internal partial class ReplaySerializationContext : JsonSerializerContext { }
+
 public class GenericConstants
 {
+	public const uint PACKET_VERSION = 6;
+
+
 	public static readonly JsonSerializerOptions platformClientConfigSerialization = new()
 	{
 		TypeInfoResolver = PlatformClientConfigSerializationContext.Default,
@@ -31,100 +58,6 @@ public class GenericConstants
 	{
 		TypeInfoResolver = ReplaySerializationContext.Default,
 		IncludeFields = true,
-	};
-}
-
-public class NetworkingConstants
-{
-	public enum PacketType : byte
-	{
-		UNKNOWN,
-		DeckNamesRequest,
-		DeckNamesResponse,
-		DeckListRequest,
-		DeckListResponse,
-		DeckSearchRequest,
-		DeckSearchResponse,
-		DeckListUpdateRequest,
-		DeckListUpdateResponse,
-
-		DuelSurrenderRequest,
-		DuelYesNoRequest,
-		DuelYesNoResponse,
-		DuelSelectCardsRequest,
-		DuelSelectCardsResponse,
-		DuelCustomSelectCardsRequest,
-		DuelCustomSelectCardsResponse,
-		DuelCustomSelectCardsIntermediateRequest,
-		DuelCustomSelectCardsIntermediateResponse,
-		DuelFieldUpdateRequest,
-		DuelGetOptionsRequest,
-		DuelGetOptionsResponse,
-		DuelSelectOptionRequest,
-		DuelSelectZoneRequest,
-		DuelSelectZoneResponse,
-		DuelPassRequest,
-		DuelGameResultResponse,
-		DuelViewGraveRequest,
-		DuelViewCardsResponse,
-
-		ServerAdditionalCardsRequest,
-		ServerAdditionalCardsResponse,
-		ServerCreateRequest,
-		ServerCreateResponse,
-		ServerJoinRequest,
-		ServerJoinResponse,
-		ServerOpponentChangedResponse,
-		ServerLeaveRequest,
-		ServerRoomsRequest,
-		ServerRoomsResponse,
-		ServerStartRequest,
-		ServerStartResponse,
-		PACKET_COUNT,
-	}
-	public static readonly Dictionary<Type, byte> PacketDict = new()
-	{
-		{typeof(Structs.NetworkingStructs.DeckPackets.NamesRequest), (byte)PacketType.DeckNamesRequest},
-		{typeof(Structs.NetworkingStructs.DeckPackets.NamesResponse), (byte)PacketType.DeckNamesResponse},
-		{typeof(Structs.NetworkingStructs.DeckPackets.ListRequest), (byte)PacketType.DeckListRequest},
-		{typeof(Structs.NetworkingStructs.DeckPackets.ListResponse), (byte)PacketType.DeckListResponse},
-		{typeof(Structs.NetworkingStructs.DeckPackets.SearchRequest), (byte)PacketType.DeckSearchRequest},
-		{typeof(Structs.NetworkingStructs.DeckPackets.SearchResponse), (byte)PacketType.DeckSearchResponse},
-		{typeof(Structs.NetworkingStructs.DeckPackets.ListUpdateRequest), (byte)PacketType.DeckListUpdateRequest},
-		{typeof(Structs.NetworkingStructs.DeckPackets.ListUpdateResponse), (byte)PacketType.DeckListUpdateResponse},
-
-		{typeof(Structs.NetworkingStructs.DuelPackets.SurrenderRequest), (byte)PacketType.DuelSurrenderRequest},
-		{typeof(Structs.NetworkingStructs.DuelPackets.YesNoRequest), (byte)PacketType.DuelYesNoRequest},
-		{typeof(Structs.NetworkingStructs.DuelPackets.YesNoResponse), (byte)PacketType.DuelYesNoResponse},
-		{typeof(Structs.NetworkingStructs.DuelPackets.SelectCardsRequest), (byte)PacketType.DuelSelectCardsRequest},
-		{typeof(Structs.NetworkingStructs.DuelPackets.SelectCardsResponse), (byte)PacketType.DuelSelectCardsResponse},
-		{typeof(Structs.NetworkingStructs.DuelPackets.CustomSelectCardsRequest), (byte)PacketType.DuelCustomSelectCardsRequest},
-		{typeof(Structs.NetworkingStructs.DuelPackets.CustomSelectCardsResponse), (byte)PacketType.DuelCustomSelectCardsResponse},
-		{typeof(Structs.NetworkingStructs.DuelPackets.CustomSelectCardsIntermediateRequest), (byte)PacketType.DuelCustomSelectCardsIntermediateRequest},
-		{typeof(Structs.NetworkingStructs.DuelPackets.CustomSelectCardsIntermediateResponse), (byte)PacketType.DuelCustomSelectCardsIntermediateResponse},
-		{typeof(Structs.NetworkingStructs.DuelPackets.FieldUpdateRequest), (byte)PacketType.DuelFieldUpdateRequest},
-		{typeof(Structs.NetworkingStructs.DuelPackets.GetOptionsRequest), (byte)PacketType.DuelGetOptionsRequest},
-		{typeof(Structs.NetworkingStructs.DuelPackets.GetOptionsResponse), (byte)PacketType.DuelGetOptionsResponse},
-		{typeof(Structs.NetworkingStructs.DuelPackets.SelectOptionRequest), (byte)PacketType.DuelSelectOptionRequest},
-		{typeof(Structs.NetworkingStructs.DuelPackets.SelectZoneRequest), (byte)PacketType.DuelSelectZoneRequest},
-		{typeof(Structs.NetworkingStructs.DuelPackets.SelectZoneResponse), (byte)PacketType.DuelSelectZoneResponse},
-		{typeof(Structs.NetworkingStructs.DuelPackets.PassRequest), (byte)PacketType.DuelPassRequest},
-		{typeof(Structs.NetworkingStructs.DuelPackets.GameResultResponse), (byte)PacketType.DuelGameResultResponse},
-		{typeof(Structs.NetworkingStructs.DuelPackets.ViewGraveRequest), (byte)PacketType.DuelViewGraveRequest},
-		{typeof(Structs.NetworkingStructs.DuelPackets.ViewCardsResponse), (byte)PacketType.DuelViewCardsResponse},
-
-		{typeof(Structs.NetworkingStructs.ServerPackets.AdditionalCardsRequest), (byte)PacketType.ServerAdditionalCardsRequest},
-		{typeof(Structs.NetworkingStructs.ServerPackets.AdditionalCardsResponse), (byte)PacketType.ServerAdditionalCardsResponse},
-		{typeof(Structs.NetworkingStructs.ServerPackets.CreateRequest), (byte)PacketType.ServerCreateRequest},
-		{typeof(Structs.NetworkingStructs.ServerPackets.CreateResponse), (byte)PacketType.ServerCreateResponse},
-		{typeof(Structs.NetworkingStructs.ServerPackets.JoinRequest), (byte)PacketType.ServerJoinRequest},
-		{typeof(Structs.NetworkingStructs.ServerPackets.JoinResponse), (byte)PacketType.ServerJoinResponse},
-		{typeof(Structs.NetworkingStructs.ServerPackets.OpponentChangedResponse), (byte)PacketType.ServerOpponentChangedResponse},
-		{typeof(Structs.NetworkingStructs.ServerPackets.LeaveRequest), (byte)PacketType.ServerLeaveRequest},
-		{typeof(Structs.NetworkingStructs.ServerPackets.RoomsRequest), (byte)PacketType.ServerRoomsRequest},
-		{typeof(Structs.NetworkingStructs.ServerPackets.RoomsResponse), (byte)PacketType.ServerRoomsResponse},
-		{typeof(Structs.NetworkingStructs.ServerPackets.StartRequest), (byte)PacketType.ServerStartRequest},
-		{typeof(Structs.NetworkingStructs.ServerPackets.StartResponse), (byte)PacketType.ServerStartResponse},
 	};
 }
 

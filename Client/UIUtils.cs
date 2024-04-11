@@ -29,11 +29,11 @@ public class UIUtils
 		};
 	}
 
-	public static (byte, byte[]?)? TryRequest(PacketContent request, string address, int port, Window? window)
+	public static R? TrySendAndReceive<R>(Packet request, string address, int port, Window? window) where R : Packet
 	{
 		try
 		{
-			return Functions.Request(request, address, port);
+			return Functions.SendAndReceive<R>(request, address, port);
 		}
 		catch(Exception ex)
 		{

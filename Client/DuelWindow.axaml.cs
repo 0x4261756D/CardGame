@@ -104,8 +104,8 @@ public partial class DuelWindow : Window
 		{
 			if(client.Connected)
 			{
-				(byte, byte[]?)? payload = await Task.Run(() => TryReceiveRawPacket((NetworkStream)stream, 100)).ConfigureAwait(false);
-				if(payload != null && await Dispatcher.UIThread.InvokeAsync(() => HandlePacket(payload.Value)))
+				Packet? packet = await Task.Run(() => TryReceiveRawPacket((NetworkStream)stream, 100)).ConfigureAwait(false);
+				if(packet != null && await Dispatcher.UIThread.InvokeAsync(() => HandlePacket(packet)))
 				{
 					return;
 				}
@@ -155,63 +155,53 @@ public partial class DuelWindow : Window
 		}
 	}
 
-	private bool HandlePacket((byte type, byte[]? bytes) packet)
+	private bool HandlePacket(Packet packet)
 	{
-		if(packet.type >= (byte)NetworkingConstants.PacketType.PACKET_COUNT)
+		switch(packet)
 		{
-			Log($"Unrecognized packet type ({packet.type})");
-			throw new Exception($"Unrecognized packet type ({packet.type})");
-		}
-		NetworkingConstants.PacketType type = (NetworkingConstants.PacketType)packet.type;
-		switch(type)
-		{
-			case NetworkingConstants.PacketType.DuelFieldUpdateRequest:
+			case DuelPackets.FieldUpdateRequest request:
 			{
-				EnqueueFieldUpdate(DeserializeJson<DuelPackets.FieldUpdateRequest>(packet.bytes!));
+				EnqueueFieldUpdate(request);
 			}
 			break;
-			case NetworkingConstants.PacketType.DuelYesNoRequest:
+			case DuelPackets.YesNoRequest request:
 			{
 				Log("Received a yesno requets", severity: LogSeverity.Error);
-				windowToShowAfterUpdate = new YesNoWindow(DeserializeJson<DuelPackets.YesNoRequest>(packet.bytes!).question, stream);
+				windowToShowAfterUpdate = new YesNoWindow(request.question, stream);
 			}
 			break;
-			case NetworkingConstants.PacketType.DuelCustomSelectCardsRequest:
+			case DuelPackets.CustomSelectCardsRequest request:
 			{
-				DuelPackets.CustomSelectCardsRequest request = DeserializeJson<DuelPackets.CustomSelectCardsRequest>(packet.bytes!);
 				windowToShowAfterUpdate = new CustomSelectCardsWindow(request.desc!, request.cards, request.initialState, stream, playerIndex, ShowCard);
 			}
 			break;
-			case NetworkingConstants.PacketType.DuelGetOptionsResponse:
+			case DuelPackets.GetOptionsResponse request:
 			{
-				UpdateCardOptions(DeserializeJson<DuelPackets.GetOptionsResponse>(packet.bytes!));
+				UpdateCardOptions(request);
 			}
 			break;
-			case NetworkingConstants.PacketType.DuelSelectZoneRequest:
+			case DuelPackets.SelectZoneRequest request:
 			{
-				windowToShowAfterUpdate = new SelectZoneWindow(DeserializeJson<DuelPackets.SelectZoneRequest>(packet.bytes!).options, stream);
+				windowToShowAfterUpdate = new SelectZoneWindow(request.options, stream);
 			}
 			break;
-			case NetworkingConstants.PacketType.DuelGameResultResponse:
+			case DuelPackets.GameResultResponse request:
 			{
-				windowToShowAfterUpdate = new GameResultWindow(this, DeserializeJson<DuelPackets.GameResultResponse>(packet.bytes!));
+				windowToShowAfterUpdate = new GameResultWindow(this, request);
 			}
 			break;
-			case NetworkingConstants.PacketType.DuelSelectCardsRequest:
+			case DuelPackets.SelectCardsRequest request:
 			{
-				DuelPackets.SelectCardsRequest request = DeserializeJson<DuelPackets.SelectCardsRequest>(packet.bytes!);
-				windowToShowAfterUpdate = new SelectCardsWindow(request.desc!, request.amount, request.cards, stream, playerIndex, ShowCard);
+				windowToShowAfterUpdate = new SelectCardsWindow(request.desc, request.amount, request.cards, stream, playerIndex, ShowCard);
 			}
 			break;
-			case NetworkingConstants.PacketType.DuelViewCardsResponse:
+			case DuelPackets.ViewCardsResponse request:
 			{
-				DuelPackets.ViewCardsResponse request = DeserializeJson<DuelPackets.ViewCardsResponse>(packet.bytes!);
 				windowToShowAfterUpdate = new ViewCardsWindow(cards: request.cards, message: request.message, showCardAction: ShowCard);
 			}
 			break;
 			default:
-				Log($"Unimplemented: {type}");
-				throw new NotImplementedException($"{type}");
+				throw new NotImplementedException($"{packet.GetType()}");
 		}
 		return false;
 	}

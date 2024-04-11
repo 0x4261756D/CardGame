@@ -61,34 +61,27 @@ public partial class RoomWindow : Window
 		{
 			if(client.Connected)
 			{
-				(byte, byte[]?)? payload = await Task.Run(() => Functions.TryReceiveRawPacket(client.GetStream(), 100)).ConfigureAwait(false);
-				if(payload != null)
+				Packet? packet = await Task.Run(() => Functions.TryReceiveRawPacket(client.GetStream(), 100)).ConfigureAwait(false);
+				if(packet != null)
 				{
-					await Dispatcher.UIThread.InvokeAsync(() => HandlePacket(payload.Value));
+					await Dispatcher.UIThread.InvokeAsync(() => HandlePacket(packet));
 				}
 			}
 		}
 	}
 
-	private void HandlePacket((byte type, byte[]? bytes) packet)
+	private void HandlePacket(Packet packet)
 	{
-		if(packet.type >= (byte)NetworkingConstants.PacketType.PACKET_COUNT)
+		switch(packet)
 		{
-			Functions.Log($"Unrecognized packet type ({packet.type})");
-			throw new Exception($"Unrecognized packet type ({packet.type})");
-		}
-		NetworkingConstants.PacketType type = (NetworkingConstants.PacketType)packet.type;
-		switch(type)
-		{
-			case NetworkingConstants.PacketType.ServerOpponentChangedResponse:
+			case ServerPackets.OpponentChangedResponse response:
 			{
-				string? name = Functions.DeserializeJson<ServerPackets.OpponentChangedResponse>(packet.bytes!).name;
+				string? name = response.name;
 				OpponentNameBlock.Text = name;
 			}
 			break;
-			case NetworkingConstants.PacketType.ServerStartResponse:
+			case ServerPackets.StartResponse response:
 			{
-				ServerPackets.StartResponse response = Functions.DeserializeJson<ServerPackets.StartResponse>(packet.bytes!);
 				if(response.success != ServerPackets.StartResponse.Result.Success)
 				{
 					_ = new ErrorPopup(response.reason ?? "Duel creation failed for unknown reason");
@@ -101,7 +94,7 @@ public partial class RoomWindow : Window
 			break;
 			default:
 			{
-				throw new Exception($"Unexpected packet of type {type}");
+				throw new Exception($"Unexpected packet of type {packet.GetType()}");
 			}
 		}
 	}
@@ -145,13 +138,13 @@ public partial class RoomWindow : Window
 			await new ErrorPopup("You have no opponent").ShowDialog(this).ConfigureAwait(false);
 			return;
 		}
-		(byte, byte[]?)? responseBytes = UIUtils.TryRequest(new DeckPackets.ListRequest(name: deckname),
+		DeckPackets.ListResponse? listResponse = UIUtils.TrySendAndReceive<DeckPackets.ListResponse>(new DeckPackets.ListRequest(name: deckname),
 			Program.config.deck_edit_url.address, Program.config.deck_edit_url.port, this);
-		if(responseBytes == null)
+		if(listResponse == null)
 		{
 			return;
 		}
-		string[]? decklist = Functions.DeserializePayload<DeckPackets.ListResponse>(responseBytes.Value).deck.ToString()?.Split('\n');
+		string[]? decklist = listResponse.deck.ToString()?.Split('\n');
 		if(decklist == null)
 		{
 			await new ErrorPopup("Deck list could not be loaded properly").ShowDialog(this).ConfigureAwait(false);
@@ -212,13 +205,13 @@ public class RoomWindowViewModel : INotifyPropertyChanged
 
 	public void LoadDecks()
 	{
-		(byte, byte[]?)? payload = UIUtils.TryRequest(new DeckPackets.NamesRequest(), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port, null);
-		if(payload == null)
+		DeckPackets.NamesResponse? packet = UIUtils.TrySendAndReceive<DeckPackets.NamesResponse>(new DeckPackets.NamesRequest(), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port, null);
+		if(packet == null)
 		{
 			return;
 		}
 		Decknames.Clear();
-		Decknames.AddRange(Functions.DeserializePayload<DeckPackets.NamesResponse>(payload.Value).names);
+		Decknames.AddRange(packet.names);
 	}
 
 	public event PropertyChangedEventHandler? PropertyChanged;

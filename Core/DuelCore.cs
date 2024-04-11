@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipes;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using CardGameUtils;
 using CardGameUtils.Structs;
@@ -1042,19 +1043,12 @@ class DuelCore : Core
 		{
 			if(playerStreams[i]!.DataAvailable)
 			{
-				(byte typeByte, byte[]? bytes) = ReceiveRawPacket(playerStreams[i]!);
-				if(bytes == null || bytes.Length == 0)
+				Packet packet = ReceiveRawPacket(playerStreams[i]!);
+				Program.replay?.actions.Add(new Replay.GameAction(packet: packet, player: i, clientToServer: true));
+				if(HandlePacket(packet, i))
 				{
-					Log("Request was empty, ignoring it", severity: LogSeverity.Warning);
-				}
-				else
-				{
-					Program.replay?.actions.Add(new Replay.GameAction(packet: bytes, packetType: typeByte, player: i, clientToServer: true));
-					if(HandlePacket(typeByte, bytes, i))
-					{
-						Log($"{players[i].name} is giving up, closing.");
-						return true;
-					}
+					Log($"{players[i].name} is giving up, closing.");
+					return true;
 				}
 			}
 			else
@@ -1065,19 +1059,13 @@ class DuelCore : Core
 		return false;
 	}
 
-	private bool HandlePacket(byte typeByte, byte[] packet, int player)
+	private bool HandlePacket(Packet packet, int player)
 	{
 		// THIS MIGHT CHANGE AS SENDING RAW JSON MIGHT BE TOO EXPENSIVE/SLOW
 		// possible improvements: Huffman or Burrows-Wheeler+RLE
-		if(typeByte >= (byte)NetworkingConstants.PacketType.PACKET_COUNT)
+		switch(packet)
 		{
-			throw new Exception($"ERROR: Unknown packet type encountered: ({typeByte})");
-		}
-		NetworkingConstants.PacketType type = (NetworkingConstants.PacketType)typeByte;
-
-		switch(type)
-		{
-			case NetworkingConstants.PacketType.DuelSurrenderRequest:
+			case DuelPackets.SurrenderRequest:
 			{
 				SendPacketToPlayer(new DuelPackets.GameResultResponse
 				(
@@ -1086,9 +1074,8 @@ class DuelCore : Core
 				Log("Surrender request received");
 				return true;
 			}
-			case NetworkingConstants.PacketType.DuelGetOptionsRequest:
+			case DuelPackets.GetOptionsRequest request:
 			{
-				DuelPackets.GetOptionsRequest request = DeserializeJson<DuelPackets.GetOptionsRequest>(packet);
 				SendPacketToPlayer(new DuelPackets.GetOptionsResponse
 				(
 					location: request.location,
@@ -1097,9 +1084,8 @@ class DuelCore : Core
 				), player);
 			}
 			break;
-			case NetworkingConstants.PacketType.DuelSelectOptionRequest:
+			case DuelPackets.SelectOptionRequest request:
 			{
-				DuelPackets.SelectOptionRequest request = DeserializeJson<DuelPackets.SelectOptionRequest>(packet);
 				bool found = false;
 				foreach(CardAction action in GetCardActions(player, request.uid, request.location))
 				{
@@ -1118,7 +1104,7 @@ class DuelCore : Core
 				State |= GameConstants.State.ActionTaken;
 			}
 			break;
-			case NetworkingConstants.PacketType.DuelPassRequest:
+			case DuelPackets.PassRequest:
 			{
 				switch(State)
 				{
@@ -1160,9 +1146,9 @@ class DuelCore : Core
 				}
 			}
 			break;
-			case NetworkingConstants.PacketType.DuelViewGraveRequest:
+			case DuelPackets.ViewGraveRequest request:
 			{
-				bool opponent = DeserializeJson<DuelPackets.ViewGraveRequest>(packet).opponent;
+				bool opponent = request.opponent;
 				SendPacketToPlayer(new DuelPackets.ViewCardsResponse
 				(
 					cards: Card.ToStruct(players[opponent ? 1 - player : player].grave.GetAll()),
@@ -1171,7 +1157,7 @@ class DuelCore : Core
 			}
 			break;
 			default:
-				throw new Exception($"ERROR: Unable to process this packet: ({type}) | {packet}");
+				throw new Exception($"ERROR: Unable to process this packet: ({packet.GetType()} | {JsonSerializer.Serialize(packet, options: GenericConstants.packetSerialization)}");
 		}
 		return false;
 	}
@@ -1518,41 +1504,34 @@ class DuelCore : Core
 		), player);
 
 		Log("request sent");
-		byte type;
-		byte[]? payload = null;
 		while(true)
 		{
-			DuelPackets.CustomSelectCardsIntermediateRequest request;
-			(type, payload) = ReceiveRawPacket(playerStreams[player]!);
+			Packet packet = ReceiveRawPacket(playerStreams[player]!);
 			Log("request received");
-			Program.replay?.actions.Add(new Replay.GameAction(player: player, packetType: type, packet: payload, clientToServer: true));
-			if(type == (byte)NetworkingConstants.PacketType.DuelCustomSelectCardsResponse)
+			Program.replay?.actions.Add(new Replay.GameAction(player: player, packet: packet, clientToServer: true));
+			if(packet is DuelPackets.CustomSelectCardsResponse response)
 			{
-				Log("breaking out");
-				break;
+				Log("final response");
+				Card[] ret = UidsToCards(cards, response.uids);
+				if(!isValidSelection(ret))
+				{
+					throw new Exception("Player somethow selected invalid cards");
+				}
+				Log("returning");
+				return ret;
 			}
-			if(type != (byte)NetworkingConstants.PacketType.DuelCustomSelectCardsIntermediateRequest)
+			if(packet is not DuelPackets.CustomSelectCardsIntermediateRequest)
 			{
 				continue;
 			}
-			request = DeserializePayload<DuelPackets.CustomSelectCardsIntermediateRequest>(type, payload);
 			Log("deserialized packet");
 			SendPacketToPlayer(new DuelPackets.CustomSelectCardsIntermediateResponse
 			(
-				isValid: isValidSelection(Array.ConvertAll(request.uids, x => Array.Find(cards, y => y.uid == x)!))
+				isValid: isValidSelection(Array.ConvertAll(((DuelPackets.CustomSelectCardsIntermediateRequest)packet).uids, x => Array.Find(cards, y => y.uid == x)!))
 			), player);
 			Log("sent packet");
 		}
 
-		DuelPackets.CustomSelectCardsResponse response = DeserializePayload<DuelPackets.CustomSelectCardsResponse>(type, payload);
-		Log("final response");
-		Card[] ret = UidsToCards(cards, response.uids);
-		if(!isValidSelection(ret))
-		{
-			throw new Exception("Player somethow selected invalid cards");
-		}
-		Log("returning");
-		return ret;
 	}
 
 	public static Card[] UidsToCards(Card[] cards, int[] uids)
@@ -2221,16 +2200,16 @@ class DuelCore : Core
 		return players[player].deathCounts[turn - turns];
 	}
 
-	public static T ReceivePacketFromPlayer<T>(int player) where T : PacketContent
+	public static T ReceivePacketFromPlayer<T>(int player) where T : Packet
 	{
 		T packet = ReceivePacket<T>(playerStreams[player]!);
-		Program.replay?.actions.Add(new Replay.GameAction(player: player, packetType: NetworkingConstants.PacketDict[typeof(T)], packet: GeneratePayload(packet), clientToServer: true));
+		Program.replay?.actions.Add(new Replay.GameAction(player: player, packet: packet, clientToServer: true));
 		return packet;
 	}
-	public static void SendPacketToPlayer<T>(T packet, int player) where T : PacketContent
+	public static void SendPacketToPlayer<T>(T packet, int player) where T : Packet
 	{
 		byte[] payload = GeneratePayload(packet);
-		Program.replay?.actions.Add(new Replay.GameAction(player: player, packetType: NetworkingConstants.PacketDict[typeof(T)], packet: payload[5..], clientToServer: false));
+		Program.replay?.actions.Add(new Replay.GameAction(player: player, packet: packet, clientToServer: false));
 		playerStreams[player]!.Write(payload);
 	}
 }
