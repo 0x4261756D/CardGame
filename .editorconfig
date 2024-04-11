@@ -11,7 +11,6 @@ charset = utf-8
 [*.cs]
 csharp_space_after_keywords_in_control_flow_statements = false
 csharp_indent_case_contents_when_block = false
-csharp_style_unused_value_expression_preference = unused_local_variable
 csharp_prefer_braces = true
 csharp_prefer_static_local_function = true
 dotnet_style_prefer_foreach_explicit_cast_in_source = always
