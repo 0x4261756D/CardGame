@@ -37,13 +37,7 @@ jobs:
     - name: Build
       run: dotnet build --no-restore
   fix-formatting:
-    strategy:
-      matrix: { dir: ['Core', 'Client', 'Server'] }
-      max-parallel: 1
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ${{ matrix.dir }}
     permissions:
       contents: write
     steps:
@@ -53,9 +47,23 @@ jobs:
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 8.0.x
-      - name: Restore
+      - name: Restore Client
+        working-directory: Client
         run: dotnet restore
-      - name: Format
+      - name: Format Client
+        working-directory: Client
+        run: dotnet format
+      - name: Restore Core
+        working-directory: Core
+        run: dotnet restore
+      - name: Format Core
+        working-directory: Core
+        run: dotnet format
+      - name: Restore Server
+        working-directory: Server
+        run: dotnet restore
+      - name: Format Server
+        working-directory: Server
         run: dotnet format
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5.0.0
