@@ -8,10 +8,10 @@ fi
 
 name="$1_AOT"
 echo "$name"
-mkdir $name
+mkdir -p $name
 cp -r config "$name/"
 cp -r ../Core/decks "$name/"
-mkdir "$name/Core"
+mkdir -p "$name/Core"
 cd ../Client/
 dotnet publish -c Release -r linux-x64 --sc true /p:PublishAot=true
 cp bin/Release/net8.0/linux-x64/publish/* "../Release/$name/"
