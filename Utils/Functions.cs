@@ -64,7 +64,7 @@ partial class Functions
 		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
 		// the only difference being the type passed, wondering why one works and the other not...
 		byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(data, typeof(Packet), GenericConstants.packetSerialization);
-		return [..BitConverter.GetBytes(bytes.Length), ..bytes];
+		return [.. BitConverter.GetBytes(bytes.Length), .. bytes];
 	}
 	public static byte[] ReadPacketBytes(NetworkStream stream)
 	{
@@ -127,10 +127,10 @@ partial class Functions
 		Packet? packet;
 		do
 		{
-		// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
-		//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
-		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
-		// the only difference being the type passed, wondering why one works and the other not...
+			// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
+			//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
+			// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
+			// the only difference being the type passed, wondering why one works and the other not...
 			packet = JsonSerializer.Deserialize<Packet>(ReadPacketBytes(stream), GenericConstants.packetSerialization);
 			packet?.EnsureCompatible();
 		}
