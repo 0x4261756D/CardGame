@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -259,6 +260,10 @@ public class NetworkingStructs
 	[JsonDerivedType(typeof(ServerPackets.RoomsResponse), typeDiscriminator: nameof(ServerPackets.RoomsResponse))]
 	[JsonDerivedType(typeof(ServerPackets.StartRequest), typeDiscriminator: nameof(ServerPackets.StartRequest))]
 	[JsonDerivedType(typeof(ServerPackets.StartResponse), typeDiscriminator: nameof(ServerPackets.StartResponse))]
+	[JsonDerivedType(typeof(ServerPackets.ArtworkRequest), typeDiscriminator: nameof(ServerPackets.ArtworkRequest))]
+	[JsonDerivedType(typeof(ServerPackets.ArtworkResponse), typeDiscriminator: nameof(ServerPackets.ArtworkResponse))]
+	[JsonDerivedType(typeof(ServerPackets.ArtworksRequest), typeDiscriminator: nameof(ServerPackets.ArtworksRequest))]
+	[JsonDerivedType(typeof(ServerPackets.ArtworksResponse), typeDiscriminator: nameof(ServerPackets.ArtworksResponse))]
 	public class Packet
 	{
 		public uint version = GenericConstants.PACKET_VERSION;
@@ -486,6 +491,34 @@ public class NetworkingStructs
 		{
 			public DateTime time = time;
 			public CardStruct[] cards = cards;
+		}
+
+		public class ArtworksRequest(string[] names) : Packet
+		{
+			public string[] names = names;
+		}
+		public class ArtworkRequest(string name) : Packet
+		{
+			public string name = name;
+		}
+		public enum ArtworkFiletype : byte
+		{
+			None,
+			JPG,
+			PNG,
+		}
+		public class ArtworksResponse(Dictionary<string, ArtworkResponse> artworks, bool supports_artworks) : Packet
+		{
+			public bool supports_artworks = supports_artworks;
+			public Dictionary<string, ArtworkResponse> artworks = artworks;
+		}
+		public class ArtworkResponse(ArtworkFiletype filetype, string? filedata_base64) : Packet
+		{
+			public ArtworkFiletype filetype = filetype;
+			// NOTE: This is very unfortunate, JSON does not have the ability to encode raw binary data.
+			//		 The cleaner way to send the artwork data would be to either use another serialization format or
+			//		 only send the size in the JSON response and receive the raw data afterwards.
+			public string? filedata_base64 = filedata_base64;
 		}
 
 		public class CreateRequest(string name) : Packet

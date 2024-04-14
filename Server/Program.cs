@@ -422,6 +422,59 @@ class Program
 				}
 			}
 			break;
+			case ServerPackets.ArtworkRequest request:
+			{
+				if(config.artwork_path is null)
+				{
+					payload = Functions.GeneratePayload(new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.None, null));
+					break;
+				}
+				string sanitizedName = Functions.CardNameToFilename(request.name);
+				string pngPath = Path.Combine(config.artwork_path, ".png");
+				string jpgPath = Path.Combine(config.artwork_path, ".jpg");
+				if(File.Exists(pngPath))
+				{
+					payload = Functions.GeneratePayload(new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.PNG, Convert.ToBase64String(File.ReadAllBytes(pngPath))));
+				}
+				else if(File.Exists(jpgPath))
+				{
+					payload = Functions.GeneratePayload(new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.JPG, Convert.ToBase64String(File.ReadAllBytes(jpgPath))));
+				}
+				else
+				{
+					payload = Functions.GeneratePayload(new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.None, null));
+				}
+			}
+			break;
+			case ServerPackets.ArtworksRequest request:
+			{
+				if(config.artwork_path is null)
+				{
+					payload = Functions.GeneratePayload(new ServerPackets.ArtworksResponse([], false));
+					break;
+				}
+				Dictionary<string, ServerPackets.ArtworkResponse> artworks = [];
+				foreach(string name in request.names)
+				{
+					string sanitizedName = Functions.CardNameToFilename(name);
+					string pngPath = Path.Combine(config.artwork_path, sanitizedName + ".png");
+					string jpgPath = Path.Combine(config.artwork_path, sanitizedName + ".jpg");
+					if(File.Exists(pngPath))
+					{
+						artworks[sanitizedName] = new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.PNG, Convert.ToBase64String(File.ReadAllBytes(pngPath)));
+					}
+					else if(File.Exists(jpgPath))
+					{
+						artworks[sanitizedName] = new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.JPG, Convert.ToBase64String(File.ReadAllBytes(jpgPath)));
+					}
+					else
+					{
+						artworks[sanitizedName] = new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.None, null);
+					}
+				}
+				payload = Functions.GeneratePayload(new ServerPackets.ArtworksResponse(artworks, true));
+			}
+			break;
 			default:
 			{
 				throw new Exception($"ERROR: Unable to process this packet: Packet type: {packet.GetType()}");

@@ -162,5 +162,15 @@ partial class Functions
 		stream.Write(GeneratePayload(request));
 		return ReceivePacket<R>(stream);
 	}
+
+	public static string ArtworkFiletypeToExtension(ServerPackets.ArtworkFiletype filetype)
+	{
+		return filetype switch
+		{
+			ServerPackets.ArtworkFiletype.JPG => ".jpg",
+			ServerPackets.ArtworkFiletype.PNG => ".png",
+			_ => throw new NotImplementedException(),
+		};
+	}
 }
 

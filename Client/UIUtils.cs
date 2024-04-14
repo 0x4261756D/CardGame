@@ -90,20 +90,58 @@ public class UIUtils
 		return null;
 	}
 
-	private static readonly Dictionary<string, Bitmap> ArtworkCache = [];
+	private static readonly Dictionary<string, Bitmap?> ArtworkCache = [];
 	private static Bitmap? DefaultArtwork;
-	public static Bitmap? FetchArtwork(string name)
+	private static readonly HashSet<string> ServersNotSupportingArtworks = [];
+	public static void CacheArtworkBatchFromServer(string[] names)
 	{
-		string filename = Functions.CardNameToFilename(name);
-		if(ArtworkCache.TryGetValue(filename, out Bitmap? bitmap))
+		if(ServersNotSupportingArtworks.Contains(Program.config.server_address))
 		{
-			return bitmap;
+			return;
 		}
-		if(Program.config.picture_path == null)
+		if(Program.config.artwork_path is null)
 		{
-			return null;
+			return;
 		}
-		string pathNoExtension = Path.Combine(Program.config.picture_path, filename);
+		string[] filenames = Array.ConvertAll(names, Functions.CardNameToFilename);
+		ServerPackets.ArtworksResponse response = Functions.SendAndReceive<ServerPackets.ArtworksResponse>(new ServerPackets.ArtworksRequest([.. filenames]), Program.config.server_address, GenericConstants.SERVER_PORT);
+		if(!response.supports_artworks)
+		{
+			_ = ServersNotSupportingArtworks.Add(Program.config.server_address);
+			return;
+		}
+		foreach(KeyValuePair<string, ServerPackets.ArtworkResponse> artwork in response.artworks)
+		{
+			string filename = Functions.CardNameToFilename(artwork.Key);
+			bool wasRequested = false;
+			foreach(string s in filenames)
+			{
+				if(s == filename)
+				{
+					wasRequested = true;
+					break;
+				}
+			}
+			if(!wasRequested)
+			{
+				Functions.Log($"Skipping artwork for card '{filename}' since it was not requested", severity: Functions.LogSeverity.Warning);
+				continue;
+			}
+			if(artwork.Value.filedata_base64 is not null && artwork.Value.filetype != ServerPackets.ArtworkFiletype.None)
+			{
+				string pathWithExtension = Path.Combine(Program.config.artwork_path, filename + Functions.ArtworkFiletypeToExtension(artwork.Value.filetype));
+				File.WriteAllBytes(pathWithExtension, Convert.FromBase64String(artwork.Value.filedata_base64));
+				Bitmap ret = new(pathWithExtension);
+				ArtworkCache[filename] = ret;
+			}
+			else
+			{
+				ArtworkCache[filename] = null;
+			}
+		}
+	}
+	public static Bitmap? TryLoadArtworkFromDisk(string filename, string pathNoExtension)
+	{
 		if(File.Exists(pathNoExtension + ".png"))
 		{
 			Bitmap ret = new(pathNoExtension + ".png");
@@ -116,9 +154,48 @@ public class UIUtils
 			ArtworkCache[filename] = ret;
 			return ret;
 		}
-		if(DefaultArtwork == null && File.Exists(Path.Combine(Program.config.picture_path, "default_artwork.png")))
+		return null;
+	}
+	public static Bitmap? FetchArtwork(string name)
+	{
+		string filename = Functions.CardNameToFilename(name);
+		if(Program.config.artwork_path == null)
 		{
-			DefaultArtwork = new Bitmap(Path.Combine(Program.config.picture_path, "default_artwork.png"));
+			return null;
+		}
+		string pathNoExtension = Path.Combine(Program.config.artwork_path, filename);
+		Bitmap? fromDisk = TryLoadArtworkFromDisk(filename: filename, pathNoExtension: pathNoExtension);
+		if(ArtworkCache.TryGetValue(filename, out Bitmap? bitmap))
+		{
+			if(bitmap is null)
+			{
+				if(DefaultArtwork == null && File.Exists(Path.Combine(Program.config.artwork_path, "default_artwork.png")))
+				{
+					DefaultArtwork = new Bitmap(Path.Combine(Program.config.artwork_path, "default_artwork.png"));
+				}
+				return DefaultArtwork;
+			}
+			return bitmap;
+		}
+		if(fromDisk is not null)
+		{
+			return fromDisk;
+		}
+		if(!ServersNotSupportingArtworks.Contains(Program.config.server_address))
+		{
+			ServerPackets.ArtworkResponse response = Functions.SendAndReceive<ServerPackets.ArtworkResponse>(new ServerPackets.ArtworkRequest(filename), Program.config.server_address, GenericConstants.SERVER_PORT);
+			if(response.filedata_base64 is not null && response.filetype != ServerPackets.ArtworkFiletype.None)
+			{
+				string pathWithExtension = Path.Combine(pathNoExtension, Functions.ArtworkFiletypeToExtension(response.filetype));
+				File.WriteAllBytes(pathWithExtension, Convert.FromBase64String(response.filedata_base64));
+				Bitmap ret = new(pathWithExtension);
+				ArtworkCache[filename] = ret;
+				return ret;
+			}
+		}
+		if(DefaultArtwork == null && File.Exists(Path.Combine(Program.config.artwork_path, "default_artwork.png")))
+		{
+			DefaultArtwork = new Bitmap(Path.Combine(Program.config.artwork_path, "default_artwork.png"));
 		}
 		return DefaultArtwork;
 	}

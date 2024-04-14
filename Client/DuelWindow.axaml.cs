@@ -442,6 +442,7 @@ public partial class DuelWindow : Window
 			}
 		}
 		OppHandPanel.Children.Clear();
+		UIUtils.CacheArtworkBatchFromServer(Array.ConvertAll(request.oppField.hand, x => x.name));
 		for(int i = 0; i < request.oppField.hand.Length; i++)
 		{
 			OppHandPanel.Children.Add(CreateCardButton(request.oppField.hand[i]));
@@ -491,6 +492,7 @@ public partial class DuelWindow : Window
 			}
 		}
 		OwnHandPanel.Children.Clear();
+		UIUtils.CacheArtworkBatchFromServer(Array.ConvertAll(request.ownField.hand, x => x.name));
 		for(int i = 0; i < request.ownField.hand.Length; i++)
 		{
 			OwnHandPanel.Children.Add(CreateCardButton(request.ownField.hand[i]));

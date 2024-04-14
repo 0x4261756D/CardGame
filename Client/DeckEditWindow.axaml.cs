@@ -74,6 +74,7 @@ public partial class DeckEditWindow : Window
 		GameConstants.PlayerClass playerClass = (GameConstants.PlayerClass?)ClassSelectBox.SelectedItem ?? GameConstants.PlayerClass.All;
 		cardpool = SendAndReceive<DeckPackets.SearchResponse>(new DeckPackets.SearchRequest(filter: fil, playerClass: playerClass, includeGenericCards: SidebarGenericIncludeBox.IsChecked ?? false),
 			Program.config.deck_edit_url.address, Program.config.deck_edit_url.port).cards;
+		UIUtils.CacheArtworkBatchFromServer(Array.ConvertAll(cardpool, x => x.name));
 		List<Control> items = [];
 		foreach(CardStruct c in cardpool)
 		{
@@ -258,6 +259,7 @@ public partial class DeckEditWindow : Window
 		{
 			ClassSelectBox.SelectedItem = deck.player_class;
 		}
+		UIUtils.CacheArtworkBatchFromServer(Array.ConvertAll(deck.cards, x => x.name));
 		foreach(CardStruct c in deck.cards)
 		{
 			DecklistPanel.Children.Add(CreateDeckButton(c));
