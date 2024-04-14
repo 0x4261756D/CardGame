@@ -1,2 +1,4 @@
 bin/
 obj/
+artworks/*
+!artworks/default_artwork.png
