@@ -103,7 +103,24 @@ public class UIUtils
 		{
 			return;
 		}
-		string[] filenames = Array.ConvertAll(names, Functions.CardNameToFilename);
+		List<string> filenames = [];
+		foreach(string name in names)
+		{
+			string filename = Functions.CardNameToFilename(name);
+			if(ArtworkCache.ContainsKey(filename))
+			{
+				continue;
+			}
+			if(File.Exists(Path.Combine(Program.config.artwork_path, filename + ".png")))
+			{
+				continue;
+			}
+			if(File.Exists(Path.Combine(Program.config.artwork_path, filename + ".jpg")))
+			{
+				continue;
+			}
+			filenames.Add(filename);
+		}
 		ServerPackets.ArtworksResponse response = Functions.SendAndReceive<ServerPackets.ArtworksResponse>(new ServerPackets.ArtworksRequest([.. filenames]), Program.config.server_address, GenericConstants.SERVER_PORT);
 		if(!response.supports_artworks)
 		{
