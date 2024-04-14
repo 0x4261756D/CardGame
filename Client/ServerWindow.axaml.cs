@@ -35,7 +35,7 @@ public partial class ServerWindow : Window
 		}
 		try
 		{
-			using TcpClient updateClient = new(ServerAddressBox.Text, 7043);
+			using TcpClient updateClient = new(ServerAddressBox.Text, GenericConstants.SERVER_PORT);
 			using NetworkStream updateStream = updateClient.GetStream();
 			updateStream.Write(Functions.GeneratePayload(new ServerPackets.RoomsRequest()));
 			((ServerWindowViewModel)DataContext!).ServerRooms = Functions.ReceivePacket<ServerPackets.RoomsResponse>(updateStream).rooms;
@@ -59,7 +59,7 @@ public partial class ServerWindow : Window
 		TcpClient client;
 		try
 		{
-			client = new(ServerAddressBox.Text, 7043);
+			client = new(ServerAddressBox.Text, GenericConstants.SERVER_PORT);
 		}
 		catch(Exception ex)
 		{
@@ -99,7 +99,7 @@ public partial class ServerWindow : Window
 			return;
 		}
 		string targetNameText = (string)((Button)sender).Content!;
-		TcpClient client = new(ServerAddressBox.Text, 7043);
+		TcpClient client = new(ServerAddressBox.Text, GenericConstants.SERVER_PORT);
 		client.GetStream().Write(Functions.GeneratePayload(new ServerPackets.JoinRequest
 		(
 			name: PlayerNameBox.Text,

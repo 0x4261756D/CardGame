@@ -32,6 +32,7 @@ public class GenericConstants
 {
 	public const uint PACKET_VERSION = 6;
 
+	public const int SERVER_PORT = 7043;
 
 	public static readonly JsonSerializerOptions platformClientConfigSerialization = new()
 	{
