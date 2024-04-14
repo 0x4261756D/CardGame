@@ -10,7 +10,8 @@
 			"WorkingDirectory": "../Core",
 			"Arguments": "--config=../../../config/config.json"
 		},
-		"additional_cards_path": "./additional_cards.json"
+		"additional_cards_path": "./additional_cards.json",
+		"artwork_path": "./artworks"
 	},
 	"windows":
 	{

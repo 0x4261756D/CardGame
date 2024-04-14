@@ -172,7 +172,7 @@ public class CardAction(int uid, string description)
 }
 
 public class ClientConfig(
-	URL deck_edit_url, int width, int height, CoreInfo core_info, bool should_save_player_name, bool should_spawn_core, string server_address, int animation_delay_in_ms, ClientConfig.ThemeVariant? theme, string? picture_path)
+	URL deck_edit_url, int width, int height, CoreInfo core_info, bool should_save_player_name, bool should_spawn_core, string server_address, int animation_delay_in_ms, ClientConfig.ThemeVariant? theme, string? artwork_path)
 {
 	public enum ThemeVariant
 	{
@@ -191,7 +191,7 @@ public class ClientConfig(
 	public string? last_deck_name;
 	public int animation_delay_in_ms = animation_delay_in_ms;
 	public ThemeVariant? theme = theme;
-	public string? picture_path = picture_path;
+	public string? artwork_path = artwork_path;
 }
 public struct CoreInfo
 {
@@ -208,12 +208,13 @@ public struct PlatformServerConfig
 {
 	public ServerConfig windows, linux;
 }
-public class ServerConfig(string additional_cards_path, int port, int room_min_port, int room_max_port, CoreInfo core_info)
+public class ServerConfig(string additional_cards_path, string? artwork_path, int port, int room_min_port, int room_max_port, CoreInfo core_info)
 {
 	public CoreInfo core_info = core_info;
 	public int port = port;
 	public int room_min_port = room_min_port, room_max_port = room_max_port;
 	public string additional_cards_path = additional_cards_path;
+	public string? artwork_path = artwork_path;
 }
 
 public class NetworkingStructs

@@ -17,7 +17,7 @@ namespace CardGameServer;
 class Program
 {
 	public static string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-	public static ServerConfig config = new("additional_cards/", 7043, 37042, 39942, new CoreInfo());
+	public static ServerConfig config = new(additional_cards_path: "additional_cards/", artwork_path: null, port: 7043, room_min_port: 37042, room_max_port: 39942, core_info: new CoreInfo());
 	public static DateTime lastAdditionalCardsTimestamp;
 	public static string? seed;
 	public static SHA384 sha = SHA384.Create();

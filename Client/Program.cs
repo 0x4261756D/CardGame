@@ -16,7 +16,7 @@ class Program
 	public static ClientConfig config = new(deck_edit_url: new URL("127.0.0.1", 7042),
 		width: 1080, height: 720, core_info: new CoreInfo(), should_spawn_core: false, should_save_player_name: true,
 		server_address: "127.0.0.1", animation_delay_in_ms: 120, theme: ClientConfig.ThemeVariant.Default,
-		picture_path: "./pictures/");
+		artwork_path: "./artworks/");
 	private static Process? core;
 	private static bool couldReadConfig;
 
