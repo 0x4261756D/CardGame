@@ -11,8 +11,8 @@ echo "$name"
 mkdir -p $name
 cp -r config "$name/"
 cp -r ../Core/decks "$name/"
-mkdir -p "$name/pictures"
-cp ../Client/pictures/default_artwork.png "$name/pictures"
+mkdir -p "$name/artworks"
+cp ../Client/artworks/default_artwork.png "$name/artworks"
 mkdir -p "$name/Core"
 cd ../Client/
 dotnet publish -c Release -r linux-x64 --sc true /p:PublishAot=true
