@@ -169,7 +169,7 @@ class Program
 	{
 		foreach(string file in Directory.EnumerateFiles(baseDir))
 		{
-			if(Path.GetFileName(file) is "CardGameCore.dll" or "CardGameCore")
+			if(Path.GetFileName(file) is "CardGameCore.dll" or "CardGameCore" or "CardGameCore.exe")
 			{
 				return File.GetCreationTime(file);
 			}
