@@ -30,6 +30,8 @@ echo "$name"
 mkdir $name
 cp -r config "$name/"
 cp -r ../Core/decks "$name/"
+mkdir -p "$name/artworks"
+cp ../Client/artworks/default_artwork.png "$name/artworks"
 mkdir "$name/Core"
 cd ../Client/
 dotnet publish -c Release -r linux-x64 --sc true /p:PublishSingleFile=true
@@ -47,6 +49,8 @@ echo "$name"
 mkdir $name
 cp -r config "$name/"
 cp -r ../Core/decks "$name/"
+mkdir -p "$name/artworks"
+cp ../Client/artworks/default_artwork.png "$name/artworks"
 mkdir "$name/Core"
 cd ../Client/
 dotnet publish -c Release -r linux-x64 --sc false /p:PublishSingleFile=true
@@ -64,6 +68,8 @@ echo "$name"
 mkdir $name
 cp -r config "$name/"
 cp -r ../Core/decks "$name/"
+mkdir -p "$name/artworks"
+cp ../Client/artworks/default_artwork.png "$name/artworks"
 mkdir "$name/Core"
 cd ../Client/
 dotnet publish -c Release -r win-x64 --sc true /p:PublishSingleFile=true
@@ -79,6 +85,8 @@ echo "$name"
 mkdir $name
 cp -r config "$name/"
 cp -r ../Core/decks "$name/"
+mkdir -p "$name/artworks"
+cp ../Client/artworks/default_artwork.png "$name/artworks"
 mkdir "$name/Core"
 cd ../Client/
 dotnet publish -c Release -r win-x64 --sc false /p:PublishSingleFile=true
