@@ -93,7 +93,7 @@ public class UIUtils
 	private static readonly Dictionary<string, Bitmap?> ArtworkCache = [];
 	private static Bitmap? DefaultArtwork;
 	private static readonly HashSet<string> ServersNotSupportingArtworks = [];
-	public static void CacheArtworkBatchFromServer(string[] names)
+	public static void CacheArtworkBatchFromServer(string[] names, bool ignoreExistingCards = true)
 	{
 		if(ServersNotSupportingArtworks.Contains(Program.config.server_address))
 		{
@@ -104,24 +104,28 @@ public class UIUtils
 			return;
 		}
 		List<string> filenames = [];
-		foreach(string name in names)
+		if(ignoreExistingCards)
 		{
-			string filename = Functions.CardNameToFilename(name);
-			if(ArtworkCache.ContainsKey(filename))
+			foreach(string name in names)
 			{
-				continue;
+				string filename = Functions.CardNameToFilename(name);
+				if(ArtworkCache.ContainsKey(filename))
+				{
+					continue;
+				}
+				if(File.Exists(Path.Combine(Program.config.artwork_path, filename + ".png")))
+				{
+					continue;
+				}
+				if(File.Exists(Path.Combine(Program.config.artwork_path, filename + ".jpg")))
+				{
+					continue;
+				}
+				filenames.Add(filename);
 			}
-			if(File.Exists(Path.Combine(Program.config.artwork_path, filename + ".png")))
-			{
-				continue;
-			}
-			if(File.Exists(Path.Combine(Program.config.artwork_path, filename + ".jpg")))
-			{
-				continue;
-			}
-			filenames.Add(filename);
 		}
-		ServerPackets.ArtworksResponse response = Functions.SendAndReceive<ServerPackets.ArtworksResponse>(new ServerPackets.ArtworksRequest([.. filenames]), Program.config.server_address, GenericConstants.SERVER_PORT);
+		ServerPackets.ArtworksResponse response = Functions.SendAndReceive<ServerPackets.ArtworksResponse>(new ServerPackets.ArtworksRequest([.. filenames]),
+			Program.config.server_address, GenericConstants.SERVER_PORT);
 		if(!response.supports_artworks)
 		{
 			_ = ServersNotSupportingArtworks.Add(Program.config.server_address);
