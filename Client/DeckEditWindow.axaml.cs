@@ -134,7 +134,12 @@ public partial class DeckEditWindow : Window
 			}
 			DecklistPanel.Children.Add(CreateDeckButton(card));
 		}
-		DeckSizeBlock.Text = DecklistPanel.Children.Count.ToString();
+		SetDeckSize();
+	}
+
+	public void SetDeckSize()
+	{
+		DeckSizeBlock.Text = $"Deck size: {DecklistPanel.Children.Count}";
 	}
 
 	private void ContentRemoveClick(object sender, RoutedEventArgs args)
@@ -181,7 +186,7 @@ public partial class DeckEditWindow : Window
 			return;
 		}
 		_ = DecklistPanel.Children.Remove((Button)sender);
-		DeckSizeBlock.Text = DecklistPanel.Children.Count.ToString();
+		SetDeckSize();
 	}
 	private void MoveClick(object? sender, RoutedEventArgs e)
 	{
@@ -278,7 +283,7 @@ public partial class DeckEditWindow : Window
 			v.PointerEntered += CardHover;
 			ClassQuestButton.Content = v;
 		}
-		DeckSizeBlock.Text = DecklistPanel.Children.Count.ToString();
+		SetDeckSize();
 		ColorWrongThings(deck.player_class);
 	}
 	public void ClassSelectionChanged(object sender, SelectionChangedEventArgs args)
@@ -366,7 +371,7 @@ public partial class DeckEditWindow : Window
 		), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port);
 		((DeckEditWindowViewModel)DataContext!).Decknames.Add(newName);
 		DeckSelectBox.SelectedItem = newName;
-		DeckSizeBlock.Text = "0";
+		DeckSizeBlock.Text = "Deck size: 0";
 		NewDeckName.Text = "";
 	}
 	public void SaveDeckClick(object? sender, RoutedEventArgs args)

@@ -6,75 +6,80 @@
 		x:Class="CardGameClient.DeckEditWindow"
 		Title="Deck Edit"
 		FontFamily="Noto Sans">
-	<Grid ColumnDefinitions="100,1*,1*,1*,Auto,1*,Auto,1*,1*" RowDefinitions="Auto,Auto,Auto,Auto,*" x:Name="WindowGrid">
-		<Button Click="BackClick"
-				Grid.Row="0"
-				Grid.Column="0">
-			Back
-		</Button>
-		<DockPanel Grid.Row="1" Grid.Column="0" Grid.RowSpan="4" Grid.ColumnSpan="2">
-			<Panel x:Name="CardImagePanel" DockPanel.Dock="Top"/>
+	<Grid RowDefinitions="1*, 3*" ColumnDefinitions="1*, 3*, 1*" x:Name="WindowGrid">
+		<DockPanel Grid.Row="0" Grid.Column="0" Grid.RowSpan="2">
+			<Button DockPanel.Dock="Top" Click="BackClick">
+				Back
+			</Button>
+			<Panel DockPanel.Dock="Top" x:Name="CardImagePanel"/>
 			<ScrollViewer DockPanel.Dock="Bottom">
 				<TextBlock x:Name="CardTextBlock" TextWrapping="Wrap">
 					No Card Selected
 				</TextBlock>
 			</ScrollViewer>
 		</DockPanel>
-		<ComboBox 	Grid.Row="2"
-					Grid.Column="2"
-					Name="DeckSelectBox"
-					ItemsSource="{Binding Decknames}"
-					SelectionChanged="DeckSelectionChanged"
-					HorizontalAlignment="Stretch">
-			<ComboBox.ItemTemplate>
-				<DataTemplate>
-					<TextBlock Text="{Binding}"/>
-				</DataTemplate>
-			</ComboBox.ItemTemplate>
-		</ComboBox>
-		<TextBox Grid.Row="1" Grid.Column="2" x:Name="NewDeckName" Watermark="Deck Name"/>
-		<Button Grid.Row="1" Grid.Column="3" Click="CreateNewDeckClick">Create New Deck</Button>
-		<Button Grid.Row="2" Grid.Column="3" Click="SaveDeckClick">
-			Save Deck
-		</Button>
-		<Button Grid.Row="1" Grid.Column="4" Click="DeleteDeckClick">
-			Delete Deck
-		</Button>
-		<TextBlock Grid.Row="2" Grid.Column="4" x:Name="DeckSizeBlock"/>
-		<Button Grid.Row="3" Grid.Column="4" Click="SortDeckClick">
-			Sort Deck
-		</Button>
-		<TextBlock Grid.Row="3" Grid.Column="2">
-			Select your class:
-		</TextBlock>
-		<ComboBox 	Grid.Row="3"
-					Grid.Column="3"
-					Name="ClassSelectBox"
-					ItemsSource="{Binding Classes}"
-					SelectionChanged="ClassSelectionChanged"
-					HorizontalAlignment="Stretch">
-			<ComboBox.ItemTemplate>
-				<DataTemplate>
-					<TextBlock Text="{Binding}"/>
-				</DataTemplate>
-			</ComboBox.ItemTemplate>
-		</ComboBox>
-		<TextBlock Grid.Row="3" Grid.Column="4">
-			Your ability:
-		</TextBlock>
-		<Button x:Name="ClassAbilityButton" Grid.Row="0" Grid.Column="5" Grid.RowSpan="4" Click="ContentRemoveClick"/>
-		<TextBlock Grid.Row="3" Grid.Column="6">
-			Your quest:
-		</TextBlock>
-		<Button x:Name="ClassQuestButton" Grid.Row="0" Grid.Column="7" Grid.RowSpan="4" Click="ContentRemoveClick"/>
-		<Border Grid.Row="4" Grid.Column="2" Grid.ColumnSpan="6" BorderThickness="2" BorderBrush="White" x:Name="DecklistBorder">
+		<Grid	RowDefinitions="Auto, Auto, Auto, Auto, *" ColumnDefinitions="1*, 1*, 1*, 1*"
+				Grid.Row="0" Grid.Column="1">
+			<TextBox	Grid.Row="0" Grid.Column="0" x:Name="NewDeckName" Watermark="Deck Name"/>
+			<ComboBox 	Grid.Row="1"
+						Grid.Column="0"
+						Name="DeckSelectBox"
+						ItemsSource="{Binding Decknames}"
+						SelectionChanged="DeckSelectionChanged"
+						HorizontalAlignment="Stretch">
+				<ComboBox.ItemTemplate>
+					<DataTemplate>
+						<TextBlock Text="{Binding}"/>
+					</DataTemplate>
+				</ComboBox.ItemTemplate>
+			</ComboBox>
+			<Button Grid.Row="2" Grid.Column="0" Click="CreateNewDeckClick">
+				Create New Deck
+			</Button>
+			<Button Grid.Row="3" Grid.Column="0" Click="SaveDeckClick">
+				Save Deck
+			</Button>
+			<Button Grid.Row="4" Grid.Column="0" Click="DeleteDeckClick">
+				Delete Deck
+			</Button>
+			<TextBlock Grid.Row="1" Grid.Column="1" x:Name="DeckSizeBlock"/>
+			<TextBlock Grid.Row="2" Grid.Column="1">
+				Your class:
+			</TextBlock>
+			<ComboBox 	Grid.Row="3"
+						Grid.Column="1"
+						Name="ClassSelectBox"
+						ItemsSource="{Binding Classes}"
+						SelectionChanged="ClassSelectionChanged"
+						HorizontalAlignment="Stretch">
+				<ComboBox.ItemTemplate>
+					<DataTemplate>
+						<TextBlock Text="{Binding}"/>
+					</DataTemplate>
+				</ComboBox.ItemTemplate>
+			</ComboBox>
+			<Button Grid.Row="4" Grid.Column="1" Click="SortDeckClick">
+				Sort Deck
+			</Button>
+			<TextBlock Grid.Row="0" Grid.Column="2">
+				Your ability:
+			</TextBlock>
+			<Button x:Name="ClassAbilityButton" Grid.Row="1" Grid.Column="2" Grid.RowSpan="4" Click="ContentRemoveClick"/>
+			<TextBlock Grid.Row="0" Grid.Column="3">
+				Your quest:
+			</TextBlock>
+			<Button x:Name="ClassQuestButton" Grid.Row="1" Grid.Column="3" Grid.RowSpan="4" Click="ContentRemoveClick"/>
+		</Grid>
+		<Border Grid.Row="1" Grid.Column="1" BorderThickness="2" BorderBrush="White" x:Name="DecklistBorder">
 			<WrapPanel x:Name="DecklistPanel">
 			</WrapPanel>
 		</Border>
-		<CheckBox x:Name="SidebarGenericIncludeBox" Grid.Row="1" Grid.Column="8" Click="SidebarGenericIncludeBoxClick">
-			Include generic cards?
-		</CheckBox>
-		<TextBox Grid.Row="2" Grid.Column="8" x:Name="SidebarTextBox" KeyUp="SidebarTextInput" Watermark="Search"/>
-		<ListBox Grid.Row="3" Grid.Column="8" Grid.RowSpan="2" x:Name="SidebarList" SelectionChanged="SidebarSelectionChanged"/>
+		<DockPanel Grid.Row="0" Grid.Column="2" Grid.RowSpan="2">
+			<TextBox DockPanel.Dock="Top" x:Name="SidebarTextBox" KeyUp="SidebarTextInput" Watermark="Search"/>
+			<CheckBox DockPanel.Dock="Top" x:Name="SidebarGenericIncludeBox" Click="SidebarGenericIncludeBoxClick">
+				Include generic cards?
+			</CheckBox>
+			<ListBox DockPanel.Dock="Bottom" x:Name="SidebarList" SelectionChanged="SidebarSelectionChanged"/>
+		</DockPanel>
 	</Grid>
 </Window>
