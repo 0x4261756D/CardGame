@@ -207,7 +207,7 @@ public class UIUtils
 			ServerPackets.ArtworkResponse response = Functions.SendAndReceive<ServerPackets.ArtworkResponse>(new ServerPackets.ArtworkRequest(filename), Program.config.server_address, GenericConstants.SERVER_PORT);
 			if(response.filedata_base64 is not null && response.filetype != ServerPackets.ArtworkFiletype.None)
 			{
-				string pathWithExtension = Path.Combine(pathNoExtension, Functions.ArtworkFiletypeToExtension(response.filetype));
+				string pathWithExtension = pathNoExtension + Functions.ArtworkFiletypeToExtension(response.filetype);
 				File.WriteAllBytes(pathWithExtension, Convert.FromBase64String(response.filedata_base64));
 				Bitmap ret = new(pathWithExtension);
 				ArtworkCache[filename] = ret;
