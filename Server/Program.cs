@@ -430,8 +430,8 @@ class Program
 					break;
 				}
 				string sanitizedName = Functions.CardNameToFilename(request.name);
-				string pngPath = Path.Combine(config.artwork_path, ".png");
-				string jpgPath = Path.Combine(config.artwork_path, ".jpg");
+				string pngPath = Path.Combine(config.artwork_path, sanitizedName + ".png");
+				string jpgPath = Path.Combine(config.artwork_path, sanitizedName + ".jpg");
 				if(File.Exists(pngPath))
 				{
 					payload = Functions.GeneratePayload(new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.PNG, Convert.ToBase64String(File.ReadAllBytes(pngPath))));
