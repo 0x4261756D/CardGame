@@ -52,9 +52,9 @@ public partial class DeckEditWindow : Window
 
 	private void DecklistPanelInitialized(object? sender, EventArgs e)
 	{
-		LoadDeck(DeckSelectBox.SelectedItem!.ToString()!);
-		LoadSidebar("", true);
 		DecklistPanel.LayoutUpdated -= DecklistPanelInitialized;
+		LoadSidebar("");
+		LoadDeck(DeckSelectBox.SelectedItem!.ToString()!);
 	}
 
 	public void BackClick(object sender, RoutedEventArgs args)
@@ -69,12 +69,12 @@ public partial class DeckEditWindow : Window
 	{
 		LoadSidebar(SidebarTextBox?.Text ?? "");
 	}
-	public void LoadSidebar(string fil, bool isFirstOne = false)
+	public void LoadSidebar(string fil)
 	{
 		GameConstants.PlayerClass playerClass = (GameConstants.PlayerClass?)ClassSelectBox.SelectedItem ?? GameConstants.PlayerClass.All;
 		cardpool = SendAndReceive<DeckPackets.SearchResponse>(new DeckPackets.SearchRequest(filter: fil, playerClass: playerClass, includeGenericCards: SidebarGenericIncludeBox.IsChecked ?? false),
 			Program.config.deck_edit_url.address, Program.config.deck_edit_url.port).cards;
-		UIUtils.CacheArtworkBatchFromServer(Array.ConvertAll(cardpool, x => x.name), ignoreExistingCards: isFirstOne);
+		UIUtils.CacheArtworkBatchFromServer(Array.ConvertAll(cardpool, x => x.name));
 		List<Control> items = [];
 		foreach(CardStruct c in cardpool)
 		{

@@ -93,7 +93,7 @@ public class UIUtils
 	private static readonly Dictionary<string, Bitmap?> ArtworkCache = [];
 	private static Bitmap? DefaultArtwork;
 	private static readonly HashSet<string> ServersNotSupportingArtworks = [];
-	public static void CacheArtworkBatchFromServer(string[] names, bool ignoreExistingCards = true)
+	public static void CacheArtworkBatchFromServer(string[] names)
 	{
 		if(ServersNotSupportingArtworks.Contains(Program.config.server_address))
 		{
@@ -104,25 +104,18 @@ public class UIUtils
 			return;
 		}
 		List<string> filenames = [];
-		if(ignoreExistingCards)
+		foreach(string name in names)
 		{
-			foreach(string name in names)
+			string filename = Functions.CardNameToFilename(name);
+			if(ArtworkCache.ContainsKey(filename))
 			{
-				string filename = Functions.CardNameToFilename(name);
-				if(ArtworkCache.ContainsKey(filename))
-				{
-					continue;
-				}
-				if(File.Exists(Path.Combine(Program.config.artwork_path, filename + ".png")))
-				{
-					continue;
-				}
-				if(File.Exists(Path.Combine(Program.config.artwork_path, filename + ".jpg")))
-				{
-					continue;
-				}
-				filenames.Add(filename);
+				continue;
 			}
+			filenames.Add(filename);
+		}
+		if(filenames.Count == 0)
+		{
+			return;
 		}
 		ServerPackets.ArtworksResponse response = Functions.SendAndReceive<ServerPackets.ArtworksResponse>(new ServerPackets.ArtworksRequest([.. filenames]),
 			Program.config.server_address, GenericConstants.SERVER_PORT);
@@ -131,38 +124,31 @@ public class UIUtils
 			_ = ServersNotSupportingArtworks.Add(Program.config.server_address);
 			return;
 		}
-		foreach(KeyValuePair<string, ServerPackets.ArtworkResponse> artwork in response.artworks)
+		foreach(string filename in filenames)
 		{
-			string filename = Functions.CardNameToFilename(artwork.Key);
-			bool wasRequested = false;
-			foreach(string s in filenames)
+			if(response.artworks.TryGetValue(Functions.CardNameToFilename(filename), out ServerPackets.ArtworkResponse? artwork))
 			{
-				if(s == filename)
+				if(artwork.filedata_base64 is not null && artwork.filetype != ServerPackets.ArtworkFiletype.None)
 				{
-					wasRequested = true;
-					break;
+					string pathWithExtension = Path.Combine(Program.config.artwork_path, filename + Functions.ArtworkFiletypeToExtension(artwork.filetype));
+					File.WriteAllBytes(pathWithExtension, Convert.FromBase64String(artwork.filedata_base64));
+					Bitmap ret = new(pathWithExtension);
+					ArtworkCache[filename] = ret;
 				}
-			}
-			if(!wasRequested)
-			{
-				Functions.Log($"Skipping artwork for card '{filename}' since it was not requested", severity: Functions.LogSeverity.Warning);
-				continue;
-			}
-			if(artwork.Value.filedata_base64 is not null && artwork.Value.filetype != ServerPackets.ArtworkFiletype.None)
-			{
-				string pathWithExtension = Path.Combine(Program.config.artwork_path, filename + Functions.ArtworkFiletypeToExtension(artwork.Value.filetype));
-				File.WriteAllBytes(pathWithExtension, Convert.FromBase64String(artwork.Value.filedata_base64));
-				Bitmap ret = new(pathWithExtension);
-				ArtworkCache[filename] = ret;
-			}
-			else
-			{
-				ArtworkCache[filename] = null;
+				else
+				{
+					ArtworkCache[filename] = TryLoadArtworkFromDisk(filename);
+				}
 			}
 		}
 	}
-	public static Bitmap? TryLoadArtworkFromDisk(string filename, string pathNoExtension)
+	public static Bitmap? TryLoadArtworkFromDisk(string filename)
 	{
+		if(Program.config.artwork_path is null)
+		{
+			return null;
+		}
+		string pathNoExtension = Path.Combine(Program.config.artwork_path, filename);
 		if(File.Exists(pathNoExtension + ".png"))
 		{
 			Bitmap ret = new(pathNoExtension + ".png");
@@ -184,8 +170,7 @@ public class UIUtils
 		{
 			return null;
 		}
-		string pathNoExtension = Path.Combine(Program.config.artwork_path, filename);
-		Bitmap? fromDisk = TryLoadArtworkFromDisk(filename: filename, pathNoExtension: pathNoExtension);
+		Bitmap? fromDisk = TryLoadArtworkFromDisk(filename: filename);
 		if(ArtworkCache.TryGetValue(filename, out Bitmap? bitmap))
 		{
 			if(bitmap is null)
@@ -207,7 +192,7 @@ public class UIUtils
 			ServerPackets.ArtworkResponse response = Functions.SendAndReceive<ServerPackets.ArtworkResponse>(new ServerPackets.ArtworkRequest(filename), Program.config.server_address, GenericConstants.SERVER_PORT);
 			if(response.filedata_base64 is not null && response.filetype != ServerPackets.ArtworkFiletype.None)
 			{
-				string pathWithExtension = pathNoExtension + Functions.ArtworkFiletypeToExtension(response.filetype);
+				string pathWithExtension = Path.Combine(Program.config.artwork_path, filename) + Functions.ArtworkFiletypeToExtension(response.filetype);
 				File.WriteAllBytes(pathWithExtension, Convert.FromBase64String(response.filedata_base64));
 				Bitmap ret = new(pathWithExtension);
 				ArtworkCache[filename] = ret;
