@@ -29,7 +29,7 @@ public partial class DeckEditWindow : Window
 		{
 			if(Program.config.last_deck_name != null)
 			{
-				foreach(var item in DeckSelectBox.Items)
+				foreach(object? item in DeckSelectBox.Items)
 				{
 					if((string?)item == Program.config.last_deck_name)
 					{
