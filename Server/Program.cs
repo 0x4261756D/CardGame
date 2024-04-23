@@ -429,7 +429,7 @@ class Program
 					payload = Functions.GeneratePayload(new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.None, null));
 					break;
 				}
-				string sanitizedName = Functions.CardNameToFilename(request.name);
+				string sanitizedName = Functions.CardnameToFilename(request.name);
 				string pngPath = Path.Combine(config.artwork_path, sanitizedName + ".png");
 				string jpgPath = Path.Combine(config.artwork_path, sanitizedName + ".jpg");
 				if(File.Exists(pngPath))
@@ -456,7 +456,7 @@ class Program
 				Dictionary<string, ServerPackets.ArtworkResponse> artworks = [];
 				foreach(string name in request.names)
 				{
-					string sanitizedName = Functions.CardNameToFilename(name);
+					string sanitizedName = Functions.CardnameToFilename(name);
 					string pngPath = Path.Combine(config.artwork_path, sanitizedName + ".png");
 					string jpgPath = Path.Combine(config.artwork_path, sanitizedName + ".jpg");
 					if(File.Exists(pngPath))

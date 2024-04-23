@@ -106,7 +106,7 @@ public class UIUtils
 		List<string> filenames = [];
 		foreach(string name in names)
 		{
-			string filename = Functions.CardNameToFilename(name);
+			string filename = Functions.CardnameToFilename(name);
 			if(ArtworkCache.ContainsKey(filename))
 			{
 				continue;
@@ -126,7 +126,7 @@ public class UIUtils
 		}
 		foreach(string filename in filenames)
 		{
-			if(response.artworks.TryGetValue(Functions.CardNameToFilename(filename), out ServerPackets.ArtworkResponse? artwork))
+			if(response.artworks.TryGetValue(Functions.CardnameToFilename(filename), out ServerPackets.ArtworkResponse? artwork))
 			{
 				if(artwork.filedata_base64 is not null && artwork.filetype != ServerPackets.ArtworkFiletype.None)
 				{
@@ -165,7 +165,7 @@ public class UIUtils
 	}
 	public static Bitmap? FetchArtwork(string name)
 	{
-		string filename = Functions.CardNameToFilename(name);
+		string filename = Functions.CardnameToFilename(name);
 		if(Program.config.artwork_path == null)
 		{
 			return null;

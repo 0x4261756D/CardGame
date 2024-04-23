@@ -20,10 +20,12 @@ partial class Functions
 	}
 
 	[GeneratedRegex(@"[^#\|a-zA-Z0-9]")]
-	private static partial Regex CardFileNameRegex();
-	public static string CardNameToFilename(string name)
+	private static partial Regex CardnameFilenameRegex();
+	public static string CardnameToFilename(string name)
 	{
-		return CardFileNameRegex().Replace(name, "");
+		return CardnameFilenameRegex().Replace(name, "");
+	}
+
 	}
 
 	public static void Log(string message, LogSeverity severity = LogSeverity.Debug, bool includeFullPath = false, [CallerLineNumber] int lineNumber = 0, [CallerFilePath] string propertyName = "")

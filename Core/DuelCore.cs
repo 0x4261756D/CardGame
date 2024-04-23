@@ -130,18 +130,18 @@ class DuelCore : Core
 				Log($"Player {config.players[i].name} has no ability, {abilityString} is no suitable ability");
 				return;
 			}
-			Spell ability = (Spell)CreateBasicCard(Type.GetType(CardNameToFilename(abilityString[1..]))!, i);
+			Spell ability = (Spell)CreateBasicCard(Type.GetType(CardnameToFilename(abilityString[1..]))!, i);
 			string questString = config.players[i].decklist[2];
 			if(!questString.StartsWith('|'))
 			{
 				Log($"Player {config.players[i].name} has no quest, {questString} is no suitable ability");
 				return;
 			}
-			Quest quest = (Quest)CreateBasicCard(Type.GetType(CardNameToFilename(questString[1..]))!, i);
+			Quest quest = (Quest)CreateBasicCard(Type.GetType(CardnameToFilename(questString[1..]))!, i);
 			foreach(string cardString in config.players[i].decklist[3..])
 			{
 				Log($"Creating {cardString}");
-				deck.Add(CreateBasicCard(Type.GetType(CardNameToFilename(cardString))!, i));
+				deck.Add(CreateBasicCard(Type.GetType(CardnameToFilename(cardString))!, i));
 			}
 			players[i] = new Player(config.players[i], i, deck, playerClass, ability, quest);
 		}
