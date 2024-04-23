@@ -26,6 +26,11 @@ partial class Functions
 		return CardnameFilenameRegex().Replace(name, "");
 	}
 
+	[GeneratedRegex(@"[^a-zA-Z0-9]")]
+	private static partial Regex UsernameFilenameRegex();
+	public static string UsernameToFilename(string name)
+	{
+		return UsernameFilenameRegex().Replace(name, "_");
 	}
 
 	public static void Log(string message, LogSeverity severity = LogSeverity.Debug, bool includeFullPath = false, [CallerLineNumber] int lineNumber = 0, [CallerFilePath] string propertyName = "")
