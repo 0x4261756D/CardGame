@@ -174,7 +174,7 @@ class Program
 				return File.GetCreationTime(file);
 			}
 		}
-		throw new Exception($"Could not find executable in {baseDir} to generate version hash");
+		throw new Exception($"Could not find executable in {baseDir} to generate version time");
 	}
 
 	public static void GenerateAdditionalCards(string path)
