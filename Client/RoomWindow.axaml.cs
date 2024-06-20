@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -9,7 +10,8 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using CardGameUtils;
-using static CardGameUtils.Structs.NetworkingStructs;
+using Google.Protobuf;
+// using static CardGameUtils.Structs.NetworkingStructs;
 
 namespace CardGameClient;
 
@@ -61,7 +63,7 @@ public partial class RoomWindow : Window
 		{
 			if(client.Connected)
 			{
-				Packet? packet = await Task.Run(() => Functions.TryReceiveRawPacket(client.GetStream(), 100)).ConfigureAwait(false);
+				CardGameUtils.ServerServerToClient.Packet? packet = await Task.Run(() => TryReceiveRawPacket(client.GetStream(), 100)).ConfigureAwait(false);
 				if(packet != null)
 				{
 					await Dispatcher.UIThread.InvokeAsync(() => HandlePacket(packet));
@@ -70,25 +72,44 @@ public partial class RoomWindow : Window
 		}
 	}
 
-	private void HandlePacket(Packet packet)
+	private static async Task<CardGameUtils.ServerServerToClient.Packet?>? TryReceiveRawPacket(NetworkStream stream, int timeoutMilliseconds)
 	{
-		switch(packet)
+		if(!stream.CanRead)
 		{
-			case ServerPackets.OpponentChangedResponse response:
+			return null;
+		}
+		Stopwatch watch = Stopwatch.StartNew();
+		while(!stream.DataAvailable)
+		{
+			await Task.Delay(10).ConfigureAwait(false);
+			if(!stream.CanRead || (timeoutMilliseconds != -1 && timeoutMilliseconds < watch.ElapsedMilliseconds))
 			{
-				string? name = response.name;
+				return null;
+			}
+		}
+		return CardGameUtils.ServerServerToClient.Packet.Parser.ParseDelimitedFrom(stream);
+	}
+
+	private void HandlePacket(CardGameUtils.ServerServerToClient.Packet packet)
+	{
+		switch(packet.KindCase)
+		{
+			case CardGameUtils.ServerServerToClient.Packet.KindOneofCase.OpponentChanged:
+			{
+				CardGameUtils.ServerServerToClient.OpponentChanged response = packet.OpponentChanged;
+				string? name = response.HasName ? response.Name : null;
 				OpponentNameBlock.Text = name;
 			}
 			break;
-			case ServerPackets.StartResponse response:
+			case CardGameUtils.ServerServerToClient.Packet.KindOneofCase.Start:
 			{
-				if(response.success != ServerPackets.StartResponse.Result.Success)
+				if(packet.Start.ResultCase != CardGameUtils.ServerServerToClient.Start.ResultOneofCase.Success)
 				{
-					_ = new ErrorPopup(response.reason ?? "Duel creation failed for unknown reason");
+					_ = new ErrorPopup(packet.Start.Failure?.Reason ?? "Duel creation failed for unknown reason");
 				}
 				else
 				{
-					StartGame(response.port, response.id!);
+					StartGame(packet.Start.Success.Port, packet.Start.Success.Id);
 				}
 			}
 			break;
@@ -120,7 +141,7 @@ public partial class RoomWindow : Window
 			NetworkStream stream = client.GetStream();
 			if(stream.Socket.Connected)
 			{
-				stream.Write(Functions.GeneratePayload(new ServerPackets.LeaveRequest()));
+				new CardGameUtils.ServerClientToServer.Packet { Leave = new() }.WriteDelimitedTo(stream);
 			}
 			client.Close();
 			closed = true;
@@ -138,13 +159,11 @@ public partial class RoomWindow : Window
 			await new ErrorPopup("You have no opponent").ShowDialog(this).ConfigureAwait(false);
 			return;
 		}
-		DeckPackets.ListResponse? listResponse = UIUtils.TrySendAndReceive<DeckPackets.ListResponse>(new DeckPackets.ListRequest(name: deckname),
-			Program.config.deck_edit_url.address, Program.config.deck_edit_url.port, this);
-		if(listResponse == null)
-		{
-			return;
-		}
-		string[]? decklist = listResponse.deck.ToString()?.Split('\n');
+		using TcpClient newClient = new(Program.config.deck_edit_url.address, Program.config.deck_edit_url.port);
+		using NetworkStream stream = newClient.GetStream();
+		new CardGameUtils.DeckClientToServer.Packet { GetDecklist = new() { Name = deckname } }.WriteDelimitedTo(stream);
+		CardGameUtils.DeckServerToClient.GetDecklist? listResponse = CardGameUtils.DeckServerToClient.GetDecklist.Parser.ParseDelimitedFrom(stream);
+		string[]? decklist = Functions.DeckToString(listResponse.Deck)?.Split('\n');
 		if(decklist == null)
 		{
 			await new ErrorPopup("Deck list could not be loaded properly").ShowDialog(this).ConfigureAwait(false);
@@ -152,23 +171,32 @@ public partial class RoomWindow : Window
 		}
 		try
 		{
-			client.GetStream().Write(Functions.GeneratePayload(new ServerPackets.StartRequest
-			(
-				decklist: decklist,
-				noshuffle: NoShuffleBox.IsChecked ?? false
-			)));
-			ServerPackets.StartResponse response = Functions.ReceivePacket<ServerPackets.StartResponse>(client.GetStream());
-			if(response.success == ServerPackets.StartResponse.Result.Failure)
+			CardGameUtils.ServerClientToServer.Start payload = new()
 			{
-				new ErrorPopup(response.reason!).Show();
+				Noshuffle = NoShuffleBox.IsChecked ?? false
+			};
+			payload.Decklist.AddRange(decklist);
+			new CardGameUtils.ServerClientToServer.Packet
+			{
+				Start = payload
+			}.WriteDelimitedTo(client.GetStream());
+			CardGameUtils.ServerServerToClient.Packet response = CardGameUtils.ServerServerToClient.Packet.Parser.ParseDelimitedFrom(client.GetStream());
+			if(response.KindCase != CardGameUtils.ServerServerToClient.Packet.KindOneofCase.Start)
+			{
+				new ErrorPopup("Did not get a start response").Show();
+				return;
+			}
+			if(response.Start.ResultCase == CardGameUtils.ServerServerToClient.Start.ResultOneofCase.Failure)
+			{
+				new ErrorPopup(response.Start.Failure.Reason).Show();
 				return;
 			}
 			else
 			{
 				((Button)sender!).IsEnabled = false;
-				if(response.success == ServerPackets.StartResponse.Result.Success)
+				if(response.Start.ResultCase == CardGameUtils.ServerServerToClient.Start.ResultOneofCase.Success)
 				{
-					StartGame(response.port, response.id!);
+					StartGame(response.Start.Success.Port, response.Start.Success.Id);
 				}
 			}
 		}
@@ -205,13 +233,12 @@ public class RoomWindowViewModel : INotifyPropertyChanged
 
 	public void LoadDecks()
 	{
-		DeckPackets.NamesResponse? packet = UIUtils.TrySendAndReceive<DeckPackets.NamesResponse>(new DeckPackets.NamesRequest(), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port, null);
-		if(packet == null)
-		{
-			return;
-		}
+		using TcpClient client = new(Program.config.deck_edit_url.address, Program.config.deck_edit_url.port);
+		using NetworkStream stream = client.GetStream();
+		new CardGameUtils.DeckClientToServer.Packet { Names = new() }.WriteDelimitedTo(stream);
+		CardGameUtils.DeckServerToClient.Names packet = CardGameUtils.DeckServerToClient.Names.Parser.ParseDelimitedFrom(stream);
 		Decknames.Clear();
-		Decknames.AddRange(packet.names);
+		Decknames.AddRange(packet.Names_);
 	}
 
 	public event PropertyChangedEventHandler? PropertyChanged;

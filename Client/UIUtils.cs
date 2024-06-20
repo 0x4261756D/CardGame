@@ -1,6 +1,6 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -11,8 +11,10 @@ using Avalonia.Media.TextFormatting;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using CardGameUtils;
+using CardGameUtils.CardConstants;
 using CardGameUtils.Structs;
-using static CardGameUtils.Structs.NetworkingStructs;
+using Google.Protobuf;
+using static CardGameUtils.ServerServerToClient.Artworks.Types;
 
 namespace CardGameClient;
 
@@ -27,26 +29,6 @@ public class UIUtils
 			ClientConfig.ThemeVariant.Light => ThemeVariant.Light,
 			_ => ThemeVariant.Default,
 		};
-	}
-
-	public static R? TrySendAndReceive<R>(Packet request, string address, int port, Window? window) where R : Packet
-	{
-		try
-		{
-			return Functions.SendAndReceive<R>(request, address, port);
-		}
-		catch(Exception ex)
-		{
-			if(window != null && window.IsVisible)
-			{
-				new ErrorPopup(ex.Message).Show(window);
-			}
-			else
-			{
-				new ErrorPopup(ex.Message).Show();
-			}
-			return null;
-		}
 	}
 
 	public static async Task<string?> SelectFileAsync(Window window, string title = "Select file", bool allowMultiple = false)
@@ -117,29 +99,43 @@ public class UIUtils
 		{
 			return;
 		}
-		ServerPackets.ArtworksResponse response = Functions.SendAndReceive<ServerPackets.ArtworksResponse>(new ServerPackets.ArtworksRequest([.. filenames]),
-			Program.config.server_address, GenericConstants.SERVER_PORT);
-		if(!response.supports_artworks)
+		using TcpClient client = new(Program.config.server_address, GenericConstants.SERVER_PORT);
+		using NetworkStream stream = client.GetStream();
+		CardGameUtils.ServerClientToServer.Artworks payload = new();
+		payload.Names.AddRange(filenames);
+		new CardGameUtils.ServerClientToServer.Packet
 		{
-			_ = ServersNotSupportingArtworks.Add(Program.config.server_address);
-			return;
-		}
-		foreach(string filename in filenames)
+			Artworks = payload
+		}.WriteDelimitedTo(stream);
+		try
 		{
-			if(response.artworks.TryGetValue(Functions.CardnameToFilename(filename), out ServerPackets.ArtworkResponse? artwork))
+			CardGameUtils.ServerServerToClient.Artworks response = CardGameUtils.ServerServerToClient.Artworks.Parser.ParseDelimitedFrom(stream);
+			if(!response.SupportsArtworks)
 			{
-				if(artwork.filedata_base64 is not null && artwork.filetype != ServerPackets.ArtworkFiletype.None)
+				_ = ServersNotSupportingArtworks.Add(Program.config.server_address);
+				return;
+			}
+			foreach(string filename in filenames)
+			{
+				if(response.Artworks_.TryGetValue(Functions.CardnameToFilename(filename), out Info? artwork))
 				{
-					string pathWithExtension = Path.Combine(Program.config.artwork_path, filename + Functions.ArtworkFiletypeToExtension(artwork.filetype));
-					File.WriteAllBytes(pathWithExtension, Convert.FromBase64String(artwork.filedata_base64));
-					Bitmap ret = new(pathWithExtension);
-					ArtworkCache[filename] = ret;
-				}
-				else
-				{
-					ArtworkCache[filename] = TryLoadArtworkFromDisk(filename);
+					if(artwork.Filetype != Filetype.Unknown && artwork.Data is not null)
+					{
+						string pathWithExtension = Path.Combine(Program.config.artwork_path, filename + Functions.ArtworkFiletypeToExtension(artwork.Filetype));
+						File.WriteAllBytes(pathWithExtension, artwork.Data.ToByteArray());
+						Bitmap ret = new(pathWithExtension);
+						ArtworkCache[filename] = ret;
+					}
+					else
+					{
+						ArtworkCache[filename] = TryLoadArtworkFromDisk(filename);
+					}
 				}
 			}
+		}
+		catch
+		{
+			_ = ServersNotSupportingArtworks.Add(Program.config.server_address);
 		}
 	}
 	public static Bitmap? TryLoadArtworkFromDisk(string filename)
@@ -189,11 +185,23 @@ public class UIUtils
 		}
 		if(!ServersNotSupportingArtworks.Contains(Program.config.server_address))
 		{
-			ServerPackets.ArtworkResponse response = Functions.SendAndReceive<ServerPackets.ArtworkResponse>(new ServerPackets.ArtworkRequest(filename), Program.config.server_address, GenericConstants.SERVER_PORT);
-			if(response.filedata_base64 is not null && response.filetype != ServerPackets.ArtworkFiletype.None)
+			using TcpClient client = new(Program.config.server_address, GenericConstants.SERVER_PORT);
+			using NetworkStream stream = client.GetStream();
+			CardGameUtils.ServerClientToServer.Artworks payload = new();
+			payload.Names.Add(filename);
+			new CardGameUtils.ServerClientToServer.Packet
 			{
-				string pathWithExtension = Path.Combine(Program.config.artwork_path, filename) + Functions.ArtworkFiletypeToExtension(response.filetype);
-				File.WriteAllBytes(pathWithExtension, Convert.FromBase64String(response.filedata_base64));
+				Artworks = payload
+			}.WriteDelimitedTo(stream);
+			CardGameUtils.ServerServerToClient.Artworks response = CardGameUtils.ServerServerToClient.Artworks.Parser.ParseDelimitedFrom(stream);
+			if(!response.SupportsArtworks)
+			{
+				_ = ServersNotSupportingArtworks.Add(Program.config.server_address);
+			}
+			if(response.Artworks_.TryGetValue(filename, out Info? artwork) && artwork.Data is not null && artwork.Filetype != Filetype.Unknown)
+			{
+				string pathWithExtension = Path.Combine(Program.config.artwork_path, filename) + Functions.ArtworkFiletypeToExtension(artwork.Filetype);
+				File.WriteAllBytes(pathWithExtension, artwork.Data.ToByteArray());
 				Bitmap ret = new(pathWithExtension);
 				ArtworkCache[filename] = ret;
 				return ret;
@@ -205,7 +213,7 @@ public class UIUtils
 		}
 		return DefaultArtwork;
 	}
-	public static Viewbox CreateGenericCard(CardStruct c)
+	public static Viewbox CreateGenericCard(CardInfo c)
 	{
 		Viewbox box = new()
 		{
@@ -226,7 +234,7 @@ public class UIUtils
 		{
 			Child = new TextBlock
 			{
-				Text = c.name,
+				Text = c.Name,
 				FontSize = 50,
 				TextAlignment = TextAlignment.Center,
 			},
@@ -246,7 +254,7 @@ public class UIUtils
 			{
 				Child = new Image
 				{
-					Source = FetchArtwork(c.name),
+					Source = FetchArtwork(c.Name),
 				},
 			},
 			Margin = new Thickness(50, 0),
@@ -259,7 +267,7 @@ public class UIUtils
 		{
 			Child = new TextBlock
 			{
-				Text = c.text,
+				Text = c.Text,
 				TextWrapping = TextWrapping.Wrap,
 				FontSize = 40,
 				Foreground = Brushes.White,
@@ -276,16 +284,16 @@ public class UIUtils
 		RelativePanel.SetBelow(textBorder, imageBorder);
 		RelativePanel.SetAlignLeftWithPanel(textBorder, true);
 		RelativePanel.SetAlignRightWithPanel(textBorder, true);
-		switch(c.card_type)
+		switch(c.CardTypeCase)
 		{
-			case GameConstants.CardType.Creature:
+			case CardInfo.CardTypeOneofCase.Creature:
 			{
 				outsideBorder.Background = Brushes.Orange;
 				Border costBorder = new()
 				{
 					Child = new TextBlock
 					{
-						Text = $"Cost: {c.cost} Power/Life: {c.power}/{c.life}",
+						Text = $"Cost: {c.Creature.Cost} Power/Life: {c.Creature.Power}/{c.Creature.Life}",
 						FontSize = 50,
 						TextAlignment = TextAlignment.Center,
 						Margin = new Thickness(20),
@@ -299,14 +307,14 @@ public class UIUtils
 				RelativePanel.SetAlignBottomWith(costBorder, textBorder);
 			}
 			break;
-			case GameConstants.CardType.Spell:
+			case CardInfo.CardTypeOneofCase.Spell:
 			{
 				outsideBorder.Background = Brushes.SkyBlue;
 				Border costBorder = new()
 				{
 					Child = new TextBlock
 					{
-						Text = $"Cost: {c.cost}",
+						Text = $"Cost: {c.Spell.Cost}",
 						FontSize = 50,
 						TextAlignment = TextAlignment.Center,
 						Margin = new Thickness(20),
@@ -320,14 +328,14 @@ public class UIUtils
 				RelativePanel.SetAlignBottomWith(costBorder, textBorder);
 			}
 			break;
-			case GameConstants.CardType.Quest:
+			case CardInfo.CardTypeOneofCase.Quest:
 			{
 				outsideBorder.Background = Brushes.Green;
 				Border goalBorder = new()
 				{
 					Child = new TextBlock
 					{
-						Text = $"{c.position}/{c.cost}",
+						Text = $"{c.Quest.Progress}/{c.Quest.Goal}",
 						FontSize = 50,
 						TextAlignment = TextAlignment.Center,
 						Margin = new Thickness(20),
@@ -352,18 +360,18 @@ public class UIUtils
 		int[] uids = new int[box.SelectedItems?.Count ?? 0];
 		for(int i = 0; i < (box.SelectedItems?.Count ?? 0); i++)
 		{
-			uids[i] = ((CardStruct)box.SelectedItems?[i]!).uid;
+			uids[i] = ((CardInfo)box.SelectedItems?[i]!).Uid;
 		}
 		return uids;
 	}
 
-	public static void CardHover(Panel CardImagePanel, TextBlock CardTextBlock, CardStruct c, bool inDeckEdit)
+	public static void CardHover(Panel CardImagePanel, TextBlock CardTextBlock, CardInfo c, bool inDeckEdit)
 	{
 		CardImagePanel.Children.Clear();
 		Viewbox v = CreateGenericCard(c);
 		CardImagePanel.Children.Add(v);
 
-		CardTextBlock.Text = c.Format(inDeckEdit);
+		CardTextBlock.Text = Functions.FormatCardInfo(c, inDuel: !inDeckEdit);
 		CardTextBlock.PointerMoved += CardTextHover;
 	}
 	private static void CardTextHover(object? sender, PointerEventArgs e)

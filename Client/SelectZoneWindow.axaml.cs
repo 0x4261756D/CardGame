@@ -1,7 +1,6 @@
 using System.IO;
 using Avalonia.Controls;
-using static CardGameUtils.Functions;
-using static CardGameUtils.Structs.NetworkingStructs;
+using Google.Protobuf;
 
 namespace CardGameClient;
 
@@ -23,7 +22,13 @@ public partial class SelectZoneWindow : Window
 			b.Click += (sender, _) =>
 			{
 				int zone = (int)((Button)sender!).Content!;
-				stream.Write(GeneratePayload(new DuelPackets.SelectZoneResponse(zone: zone)));
+				new CardGameUtils.DuelClientToServer.Packet
+				{
+					SelectZone = new()
+					{
+						Zone = zone,
+					}
+				}.WriteDelimitedTo(stream);
 				shouldReallyClose = true;
 				Close();
 			};

@@ -1,0 +1,35 @@
+syntax = "proto3";
+import "Shared.proto";
+package DeckClientToServer;
+option csharp_namespace = "CardGameUtils.DeckClientToServer";
+
+message Packet
+{
+	oneof kind
+	{
+		Names names = 1;
+		GetDecklist get_decklist = 2;
+		Search search = 3;
+		UpdateDecklist update_decklist = 4;
+		DeleteDecklist delete_decklist = 5;
+	}
+}
+message Names {}
+message GetDecklist
+{
+	string name = 1;
+}
+message Search
+{
+	string filter = 1;
+	PlayerClass player_class = 2;
+	bool include_generic_cards = 3;
+}
+message UpdateDecklist
+{
+	Deck deck = 1;
+}
+message DeleteDecklist
+{
+	string name = 1;
+}

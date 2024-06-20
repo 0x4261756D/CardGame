@@ -1,5 +1,6 @@
 // Scripted by Dotlof
 using CardGameCore;
+using CardGameUtils.CardConstants;
 using static CardGameCore.CardUtils;
 using static CardGameUtils.GameConstants;
 
@@ -38,7 +39,7 @@ class PreparetheAltar : Spell
 		RegisterStateReachedTrigger(new StateReachedTrigger(
 			effect: () => PlayerChangeMomentum(player: Controller, amount: target.Cost),
 			state: State.TurnStart,
-			influenceLocation: Location.ALL, oneshot: true), referrer: this);
+			influenceLocation: Location.All, oneshot: true), referrer: this);
 
 	}
 

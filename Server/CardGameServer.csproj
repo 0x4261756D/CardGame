@@ -1,5 +1,4 @@
-<Project
-	 Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net8.0</TargetFramework>
@@ -8,7 +7,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Include="../Utils/**/*.cs"/>
+		<Compile Include="../Utils/**/*.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Google.Protobuf" Version="3.27.1" />
 	</ItemGroup>
 
 </Project>

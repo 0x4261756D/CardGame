@@ -1,0 +1,38 @@
+syntax = "proto3";
+package ServerClientToServer;
+option csharp_namespace = "CardGameUtils.ServerClientToServer";
+
+message Packet
+{
+	oneof kind
+	{
+		AdditionalCards additional_cards = 1;
+		Artworks artworks = 2;
+		Create create = 3;
+		Join join = 4;
+		Leave leave = 5;
+		Rooms rooms = 6;
+		Start start = 7;
+	}
+}
+message AdditionalCards {}
+message Artworks
+{
+	repeated string names = 1;
+}
+message Create
+{
+	string name = 1;
+}
+message Join
+{
+	string own_name = 1;
+	string opp_name = 2;
+}
+message Leave {}
+message Rooms {}
+message Start
+{
+	repeated string decklist = 1;
+	bool noshuffle = 2;
+}

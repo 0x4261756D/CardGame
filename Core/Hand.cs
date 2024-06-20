@@ -1,6 +1,5 @@
 using System.Collections.Generic;
-using CardGameUtils;
-using CardGameUtils.Structs;
+using CardGameUtils.CardConstants;
 
 namespace CardGameCore;
 
@@ -18,11 +17,11 @@ class Hand
 
 	public void Add(Card c)
 	{
-		c.Location = GameConstants.Location.Hand;
+		c.Location = Location.Hand;
 		cards.Add(c);
 	}
 
-	internal CardStruct[] ToStruct()
+	internal CardInfo[] ToStruct()
 	{
 		return [.. cards.ConvertAll(card => card.ToStruct())];
 	}
@@ -35,9 +34,9 @@ class Hand
 	internal void Remove(Card c)
 	{
 		// NOTE: This could be the wrong workaround, if something like a card cast from nowhere sticks in hand, look here
-		if(c.Location != GameConstants.Location.Hand)
+		if(c.Location != Location.Hand)
 		{
-			c.Location &= ~GameConstants.Location.Hand;
+			c.Location &= ~Location.Hand;
 		}
 		_ = cards.Remove(c);
 	}
@@ -47,9 +46,9 @@ class Hand
 		return [.. cards.FindAll(card => card.uid != ignore?.uid && card.CanBeDiscarded())];
 	}
 
-	internal CardStruct[] ToHiddenStruct()
+	internal CardInfo[] ToHiddenStruct()
 	{
-		return [.. cards.ConvertAll(x => new CardStruct())];
+		return [.. cards.ConvertAll(x => new CardInfo())];
 	}
 
 	internal Card GetByUID(int uid)

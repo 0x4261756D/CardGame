@@ -1,0 +1,74 @@
+syntax = "proto3";
+import "Shared.proto";
+package DuelServerToClient;
+option csharp_namespace = "CardGameUtils.DuelServerToClient";
+
+message Packet
+{
+	oneof kind
+	{
+		GameResultPacket game_result = 1;
+		GetOptions get_options = 2;
+		YesNo yes_no = 3;
+		SelectCards select_cards = 4;
+		CustomSelectCards custom_select_cards = 5;
+		CustomSelectCardsIntermediate custom_select_cards_intermediate = 6;
+		FieldUpdate field_update = 7;
+		SelectZone select_zone = 8;
+		ShowCards show_cards = 9;
+	}
+}
+message GameResultPacket
+{
+	GameResult value = 1;
+}
+enum GameResult
+{
+	Draw = 0;
+	Won = 1;
+	Lost = 2;
+}
+message GetOptions
+{
+	Location location = 1;
+	int32 uid = 2;
+	repeated CardAction options = 3;
+}
+message YesNo
+{
+	string question = 1;
+}
+message SelectCards
+{
+	repeated CardInfo cards = 1;
+	string description = 2;
+	int32 amount = 3;
+}
+message CustomSelectCards
+{
+	repeated CardInfo cards = 1;
+	string description = 2;
+	bool initial_state = 3;
+}
+message CustomSelectCardsIntermediate
+{
+	bool is_valid = 1;
+}
+message FieldUpdate
+{
+	Field own_field = 1;
+	Field opp_field = 2;
+	int32 turn = 3;
+	bool has_initiative = 4;
+	bool is_battle_direction_left_to_right = 5;
+	optional int32 marked_zone = 6;
+}
+message SelectZone
+{
+	repeated bool options = 1;
+}
+message ShowCards
+{
+	string message = 1;
+	repeated CardInfo cards = 2;
+}

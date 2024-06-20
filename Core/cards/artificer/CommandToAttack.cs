@@ -1,5 +1,6 @@
 //Scripted by Dotlof
 using CardGameCore;
+using CardGameUtils.CardConstants;
 using static CardGameUtils.GameConstants;
 
 class CommandtoAttack : Spell

@@ -8,7 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using CardGameUtils;
 using CardGameUtils.Structs;
-using static CardGameUtils.Structs.NetworkingStructs;
+using Google.Protobuf;
 
 namespace CardGameServer;
 
@@ -98,12 +98,17 @@ partial class Room
 		Functions.Log("Done reading", severity: Functions.LogSeverity.Warning);
 		foreach(Player? player in players)
 		{
-			player!.stream.Write(Functions.GeneratePayload(new ServerPackets.StartResponse
+			new CardGameUtils.ServerServerToClient.Packet()
 			{
-				success = ServerPackets.StartResponse.Result.Success,
-				id = player.ID,
-				port = port,
-			}));
+				Start = new()
+				{
+					Success = new()
+					{
+						Id = player!.ID,
+						Port = port,
+					}
+				}
+			}.WriteDelimitedTo(player!.stream);
 			player.stream.Close();
 			player.stream.Dispose();
 		}

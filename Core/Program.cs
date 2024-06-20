@@ -6,7 +6,10 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using CardGameUtils;
+using CardGameUtils.CardConstants;
 using CardGameUtils.Structs;
+using Google.Protobuf;
+using Google.Protobuf.WellKnownTypes;
 using static CardGameUtils.Functions;
 namespace CardGameCore;
 
@@ -179,24 +182,25 @@ class Program
 
 	public static void GenerateAdditionalCards(string path)
 	{
-		if(!File.Exists(path) || JsonSerializer.Deserialize<NetworkingStructs.ServerPackets.AdditionalCardsResponse>(File.ReadAllText(path), GenericConstants.packetSerialization)?.time < versionTime)
+		if(!File.Exists(path) || CardGameUtils.ServerServerToClient.AdditionalCards.Parser.ParseFrom(File.ReadAllBytes(path)).Timestamp.ToDateTime() < versionTime)
 		{
 			Log("Generating new additional cards");
-			List<CardStruct> cards = [];
-			foreach(Type card in Array.FindAll(Assembly.GetExecutingAssembly().GetTypes(), IsCardSubclass))
+			List<CardInfo> cards = [];
+			foreach(System.Type card in Array.FindAll<System.Type>(Assembly.GetExecutingAssembly().GetTypes(), IsCardSubclass))
 			{
 				Card c = (Card)Activator.CreateInstance(card)!;
 				cards.Add(c.ToStruct(client: true));
 			}
-			File.WriteAllText(path, JsonSerializer.Serialize(new NetworkingStructs.ServerPackets.AdditionalCardsResponse
-			(
-				cards: [.. cards],
-				time: versionTime
-			), GenericConstants.packetSerialization));
+			CardGameUtils.ServerServerToClient.AdditionalCards packet = new()
+			{
+				Timestamp = versionTime.ToTimestamp()
+			};
+			packet.Cards.AddRange(cards);
+			File.WriteAllBytes(path, packet.ToByteArray());
 		}
 	}
 
-	public static readonly Predicate<Type> IsCardSubclass = card =>
+	public static readonly Predicate<System.Type> IsCardSubclass = card =>
 	{
 		return card != typeof(Token) && (card.BaseType == typeof(Spell) || card.BaseType == typeof(Creature) || card.BaseType == typeof(Quest));
 	};

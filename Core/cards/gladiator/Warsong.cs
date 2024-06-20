@@ -2,6 +2,7 @@
 using CardGameCore;
 using static CardGameUtils.GameConstants;
 using static CardGameCore.CardUtils;
+using CardGameUtils.CardConstants;
 
 class Warsong : Spell
 {

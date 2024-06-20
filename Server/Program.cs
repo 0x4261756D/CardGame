@@ -9,16 +9,20 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using CardGameUtils;
+using CardGameUtils.ServerClientToServer;
 using CardGameUtils.Structs;
-using static CardGameUtils.Structs.NetworkingStructs;
+using Google.Protobuf;
+using Google.Protobuf.WellKnownTypes;
+using static CardGameUtils.ServerServerToClient.Artworks.Types;
 
 namespace CardGameServer;
 
 class Program
 {
+	public static Dictionary<string, Info> artworks = [];
 	public static string baseDir = AppDomain.CurrentDomain.BaseDirectory;
 	public static ServerConfig config = new(additional_cards_path: "additional_cards/", artwork_path: null, port: 7043, room_min_port: 37042, room_max_port: 39942, core_info: new CoreInfo());
-	public static DateTime lastAdditionalCardsTimestamp;
+	public static DateTime lastAdditionalCardsDateTime;
 	public static string? seed;
 	public static SHA384 sha = SHA384.Create();
 	// TODO: MAKE THIS THREAD-SAFE SOMEHOW
@@ -65,7 +69,7 @@ class Program
 		}
 		if(File.Exists(config.additional_cards_path))
 		{
-			lastAdditionalCardsTimestamp = JsonSerializer.Deserialize<ServerPackets.AdditionalCardsResponse>(File.ReadAllText(config.additional_cards_path), GenericConstants.packetSerialization)!.time;
+			lastAdditionalCardsDateTime = CardGameUtils.ServerServerToClient.AdditionalCards.Parser.ParseFrom(File.ReadAllBytes(config.additional_cards_path)).Timestamp.ToDateTime();
 		}
 		TcpListener listener = TcpListener.Create(config.port);
 		byte[] nowBytes = Encoding.UTF8.GetBytes(DateTime.Now.ToString());
@@ -83,7 +87,7 @@ class Program
 				HandlePacketReturn decision = HandlePacketReturn.Continue;
 				try
 				{
-					Packet packet = Functions.ReceiveRawPacket(stream);
+					Packet packet = Packet.Parser.ParseDelimitedFrom(stream);
 					Functions.Log("Server received a request", includeFullPath: true);
 					decision = HandlePacket(packet, stream);
 					if(decision == HandlePacketReturn.Break)
@@ -126,12 +130,12 @@ class Program
 					player.stream.CanRead &&
 					player.stream.DataAvailable)
 				{
-					Packet? packet = Functions.TryReceiveRawPacket(player.stream, 100);
-					if(packet != null)
+					Packet? packet = TryReceiveRawPacket(player.stream, 100);
+					if(packet is not null)
 					{
-						switch(packet)
+						switch(packet.KindCase)
 						{
-							case ServerPackets.LeaveRequest:
+							case Packet.KindOneofCase.Leave:
 							{
 								player.stream.Dispose();
 								room.players[playerIndex] = null;
@@ -146,7 +150,10 @@ class Program
 									{
 										try
 										{
-											room.players[1 - playerIndex]?.stream.Write(Functions.GeneratePayload(new ServerPackets.OpponentChangedResponse(null)));
+											new CardGameUtils.ServerServerToClient.Packet
+											{
+												OpponentChanged = new()
+											}.WriteDelimitedTo(room.players[1 - playerIndex]?.stream);
 										}
 										catch(IOException e)
 										{
@@ -156,30 +163,35 @@ class Program
 								}
 							}
 							break;
-							case ServerPackets.StartRequest request:
+							case Packet.KindOneofCase.Start:
 							{
+								Start request = packet.Start;
 								Functions.Log("----START REQUEST HANDLING----", includeFullPath: true);
-								if(request.decklist.Length != GameConstants.DECK_SIZE + 3)
+								if(request.Decklist.Count != GameConstants.DECK_SIZE + 3)
 								{
-									player.stream.Write(Functions.GeneratePayload(new ServerPackets.StartResponse
+									new CardGameUtils.ServerServerToClient.Start
 									{
-										success = ServerPackets.StartResponse.Result.Failure,
-										reason = "Your deck has the wrong size",
-									}));
+										Failure = new()
+										{
+											Reason = $"Your deck has the wrong size, {request.Decklist.Count} instead of {GameConstants.DECK_SIZE + 3}"
+										}
+									}.WriteDelimitedTo(player.stream);
 									break;
 								}
 								Functions.Log("Player: " + playerIndex, includeFullPath: true);
 								player.ready = true;
-								player.noshuffle = request.noshuffle;
-								player.Decklist = request.decklist;
+								player.noshuffle = request.Noshuffle;
+								player.Decklist = [.. request.Decklist];
 								if(room.players[1 - playerIndex] == null)
 								{
 									Functions.Log("No opponent", includeFullPath: true);
-									player.stream.Write(Functions.GeneratePayload(new ServerPackets.StartResponse
+									new CardGameUtils.ServerServerToClient.Start
 									{
-										success = ServerPackets.StartResponse.Result.Failure,
-										reason = "You have no opponent",
-									}));
+										Failure = new()
+										{
+											Reason = $"You have no opponent"
+										}
+									}.WriteDelimitedTo(player.stream);
 									break;
 								}
 								Functions.Log("Opponent present", includeFullPath: true);
@@ -192,31 +204,35 @@ class Program
 										{
 											if(p != null && p.stream.Socket.Connected)
 											{
-												p.stream.Write(Functions.GeneratePayload(new ServerPackets.StartResponse
+												new CardGameUtils.ServerServerToClient.Start
 												{
-													success = ServerPackets.StartResponse.Result.SuccessButWaiting,
-												}));
+													SuccessButWaiting = new()
+												}.WriteDelimitedTo(p.stream);
 											}
 										}
 									}
 									else
 									{
 										Functions.Log("Could not create the core", severity: Functions.LogSeverity.Error, includeFullPath: true);
-										byte[] startPayload = Functions.GeneratePayload(new ServerPackets.StartResponse
+										new CardGameUtils.ServerServerToClient.Start
 										{
-											success = ServerPackets.StartResponse.Result.Failure,
-											reason = "Could not create a core"
-										});
+											Failure = new()
+											{
+												Reason = "Could not create a core"
+											}
+										}.WriteDelimitedTo(player.stream);
 									}
 								}
 								else
 								{
 									Functions.Log("Opponent not ready", includeFullPath: true);
-									player.stream.Write(Functions.GeneratePayload(new ServerPackets.StartResponse
+									new CardGameUtils.ServerServerToClient.Start
 									{
-										success = ServerPackets.StartResponse.Result.Failure,
-										reason = "Your opponent isn't ready yet"
-									}));
+										Failure = new()
+										{
+											Reason = "Your opponent isn't ready yet"
+										}
+									}.WriteDelimitedTo(player.stream);
 								}
 								Functions.Log("----END----", includeFullPath: true);
 							}
@@ -226,6 +242,24 @@ class Program
 				}
 			}
 		}
+	}
+
+	private static Packet? TryReceiveRawPacket(NetworkStream stream, int timeoutMilliseconds)
+	{
+		if(!stream.CanRead)
+		{
+			return null;
+		}
+		Stopwatch watch = Stopwatch.StartNew();
+		while(!stream.DataAvailable)
+		{
+			Thread.Sleep(timeoutMilliseconds);
+			if(!stream.CanRead || (timeoutMilliseconds != -1 && timeoutMilliseconds < watch.ElapsedMilliseconds))
+			{
+				return null;
+			}
+		}
+		return Packet.Parser.ParseDelimitedFrom(stream);
 	}
 
 	private enum HandlePacketReturn
@@ -255,29 +289,26 @@ class Program
 	{
 		CleanupRooms();
 		// THIS MIGHT CHANGE AS SENDING RAW JSON MIGHT BE TOO EXPENSIVE/SLOW
-		byte[]? payload = null;
-		switch(packet)
+		switch(packet.KindCase)
 		{
-			case ServerPackets.CreateRequest request:
+			case Packet.KindOneofCase.Create:
 			{
-				string name = request.name!;
+				string name = packet.Create.Name;
 				if(string.IsNullOrWhiteSpace(name))
 				{
-					payload = Functions.GeneratePayload(new ServerPackets.CreateResponse
-					(
-						success: false,
-						reason: "Names cannot be empty"
-					));
+					new CardGameUtils.ServerServerToClient.Create
+					{
+						Result = new() { Error = new() { Reason = "Could not create a core" } }
+					}.WriteDelimitedTo(stream);
 				}
 				else
 				{
 					if(waitingList.Exists(x => x.players[0]?.Name == name || x.players[1]?.Name == name))
 					{
-						payload = Functions.GeneratePayload(new ServerPackets.CreateResponse
-						(
-							success: false,
-							reason: "Oh oh, sorry kiddo, looks like someone else already has that name. Why don't you pick something else? (Please watch SAO Abridged if you don't get this reference)"
-						));
+						new CardGameUtils.ServerServerToClient.Create
+						{
+							Result = new() { Error = new() { Reason = "Oh oh, sorry kiddo, looks like someone else already has that name. Why don't you pick something else? (Please watch SAO Abridged if you don't get this reference)" } }
+						}.WriteDelimitedTo(stream);
 					}
 					else
 					{
@@ -311,92 +342,94 @@ class Program
 						if(currentPort == -1)
 						{
 							Functions.Log("No free port found", severity: Functions.LogSeverity.Warning);
-							payload = Functions.GeneratePayload(new ServerPackets.CreateResponse
-							(
-								success: false,
-								reason: "No free port found"
-							));
+							new CardGameUtils.ServerServerToClient.Create
+							{
+								Result = new() { Error = new() { Reason = "No free port found" } }
+							}.WriteDelimitedTo(stream);
 						}
 						else
 						{
 							waitingList.Add(new Room(name, id, currentPort, stream));
-							payload = Functions.GeneratePayload(new ServerPackets.CreateResponse
-							(
-								success: true
-							));
-							stream.Write(payload);
+							new CardGameUtils.ServerServerToClient.Create
+							{
+								Result = new() { Ok = new() }
+							}.WriteDelimitedTo(stream);
 							return HandlePacketReturn.ContinueKeepStream;
 						}
 					}
 				}
 			}
 			break;
-			case ServerPackets.JoinRequest request:
+			case Packet.KindOneofCase.Join:
 			{
-				if(string.IsNullOrWhiteSpace(request.name) || string.IsNullOrWhiteSpace(request.targetName))
+				Join request = packet.Join;
+				if(string.IsNullOrWhiteSpace(request.OwnName) || string.IsNullOrWhiteSpace(request.OppName))
 				{
-					payload = Functions.GeneratePayload(new ServerPackets.JoinResponse
-					(
-						success: false,
-						reason: "Names cannot be empty"
-					));
+					new CardGameUtils.ServerServerToClient.Join
+					{
+						Result = new() { Error = new() { Reason = "Names can't be empty" } }
+					}.WriteDelimitedTo(stream);
 				}
 				else
 				{
-					if(waitingList.FindIndex(x => x.players[0]?.Name == request.name || x.players[1]?.Name == request.name) != -1)
+					if(waitingList.FindIndex(x => x.players[0]?.Name == request.OwnName || x.players[1]?.Name == request.OwnName) != -1)
 					{
-						payload = Functions.GeneratePayload(new ServerPackets.JoinResponse
-						(
-							success: false,
-							reason: "Oh oh, sorry kiddo, looks like someone else already has that name. Why don't you pick something else? (Please watch SAO Abridged if you don't get this reference)"
-						));
+						new CardGameUtils.ServerServerToClient.Create
+						{
+							Result = new() { Error = new() { Reason = "Oh oh, sorry kiddo, looks like someone else already has that name. Why don't you pick something else? (Please watch SAO Abridged if you don't get this reference)" } }
+						}.WriteDelimitedTo(stream);
 					}
 					else
 					{
-						int index = waitingList.FindIndex(x => x.players[0]?.Name == request.targetName || x.players[1]?.Name == request.targetName);
+						int index = waitingList.FindIndex(x => x.players[0]?.Name == request.OppName || x.players[1]?.Name == request.OppName);
 						if(index == -1)
 						{
-							payload = Functions.GeneratePayload(new ServerPackets.JoinResponse
-							(
-								success: false,
-								reason: "No player with that name hosts a game right now"
-							));
+							new CardGameUtils.ServerServerToClient.Create
+							{
+								Result = new() { Error = new() { Reason = "No player with that name is hosting a game right now" } }
+							}.WriteDelimitedTo(stream);
 						}
 						else
 						{
-							string id = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(seed + request.name))).Replace("-", "");
+							string id = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(seed + request.OwnName))).Replace("-", "");
 							int playerIndex = waitingList[index].players[0] == null ? 0 : 1;
-							waitingList[index].players[playerIndex] = new Room.Player(Name: request.name, id: id, stream: stream, ready: false, noshuffle: false);
-							payload = Functions.GeneratePayload(new ServerPackets.JoinResponse
-							(
-								success: true
-							));
+							waitingList[index].players[playerIndex] = new Room.Player(Name: request.OwnName, id: id, stream: stream, ready: false, noshuffle: false);
 							if(waitingList[index].players[1 - playerIndex]!.stream != null && waitingList[index].players[1 - playerIndex]!.stream.Socket.Connected)
 							{
-								waitingList[index].players[1 - playerIndex]!.stream.Write(Functions.GeneratePayload(new ServerPackets.OpponentChangedResponse(request.name)));
+								new CardGameUtils.ServerServerToClient.Packet
+								{
+									OpponentChanged = new()
+									{
+										Name = request.OwnName
+									}
+								}.WriteDelimitedTo(waitingList[index].players[1 - playerIndex]!.stream);
 							}
-							stream.Write(payload);
+							new CardGameUtils.ServerServerToClient.Create
+							{
+								Result = new() { Ok = new() }
+							}.WriteDelimitedTo(stream);
 							return HandlePacketReturn.ContinueKeepStream;
 						}
 					}
 				}
 			}
 			break;
-			case ServerPackets.RoomsRequest:
+			case Packet.KindOneofCase.Rooms:
 			{
 				if(waitingList.Exists(x => x.players[0]?.Name == null && x.players[1]?.Name == null))
 				{
 					Functions.Log($"There is a player whose name is null", severity: Functions.LogSeverity.Error, includeFullPath: true);
 					return HandlePacketReturn.Continue;
 				}
-				payload = Functions.GeneratePayload(new ServerPackets.RoomsResponse([.. waitingList.FindAll(x => !Array.TrueForAll(x.players, y => y?.ready ?? false)).ConvertAll(x => x.players[0]?.Name ?? x.players[1]?.Name)]));
+				CardGameUtils.ServerServerToClient.Rooms payload = new();
+				payload.Rooms_.AddRange(waitingList.FindAll(x => !Array.TrueForAll(x.players, y => y?.ready ?? false)).ConvertAll(x => x.players[0]?.Name ?? x.players[1]?.Name));
+				payload.WriteDelimitedTo(stream);
 			}
 			break;
-			case ServerPackets.AdditionalCardsRequest:
+			case Packet.KindOneofCase.AdditionalCards:
 			{
 				string fullAdditionalCardsPath = Path.Combine(baseDir, config.additional_cards_path);
-				if(!File.Exists(fullAdditionalCardsPath) ||
-					JsonSerializer.Deserialize<ServerPackets.AdditionalCardsResponse>(File.ReadAllText(fullAdditionalCardsPath), GenericConstants.packetSerialization)?.time > lastAdditionalCardsTimestamp)
+				if(!File.Exists(fullAdditionalCardsPath) || CardGameUtils.ServerServerToClient.AdditionalCards.Parser.ParseFrom(File.ReadAllBytes(config.additional_cards_path)).Timestamp.ToDateTime() > lastAdditionalCardsDateTime)
 				{
 					ProcessStartInfo info = new()
 					{
@@ -410,69 +443,60 @@ class Program
 				}
 				if(File.Exists(fullAdditionalCardsPath))
 				{
-					ServerPackets.AdditionalCardsResponse response = JsonSerializer.Deserialize<ServerPackets.AdditionalCardsResponse>(File.ReadAllText(fullAdditionalCardsPath), GenericConstants.packetSerialization)!;
-					lastAdditionalCardsTimestamp = response.time;
-					payload = Functions.GeneratePayload(response);
-					Functions.Log($"additional cards packet length: {payload.Length}");
+					CardGameUtils.ServerServerToClient.AdditionalCards response = CardGameUtils.ServerServerToClient.AdditionalCards.Parser.ParseFrom(File.ReadAllBytes(config.additional_cards_path));
+					lastAdditionalCardsDateTime = response.Timestamp.ToDateTime();
+					response.WriteDelimitedTo(stream);
 				}
 				else
 				{
 					Functions.Log("No additional cards file exists", severity: Functions.LogSeverity.Warning);
-					payload = Functions.GeneratePayload(new ServerPackets.AdditionalCardsResponse(DateTime.Now, []));
+					new CardGameUtils.ServerServerToClient.AdditionalCards
+					{
+						Timestamp = DateTime.Now.ToTimestamp()
+					}.WriteDelimitedTo(stream);
 				}
 			}
 			break;
-			case ServerPackets.ArtworkRequest request:
+			case Packet.KindOneofCase.Artworks:
 			{
 				if(config.artwork_path is null)
 				{
-					payload = Functions.GeneratePayload(new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.None, null));
+					new CardGameUtils.ServerServerToClient.Artworks
+					{
+						SupportsArtworks = false
+					}.WriteDelimitedTo(stream);
 					break;
 				}
-				string sanitizedName = Functions.CardnameToFilename(request.name);
-				string pngPath = Path.Combine(config.artwork_path, sanitizedName + ".png");
-				string jpgPath = Path.Combine(config.artwork_path, sanitizedName + ".jpg");
-				if(File.Exists(pngPath))
+				CardGameUtils.ServerServerToClient.Artworks response = new()
 				{
-					payload = Functions.GeneratePayload(new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.PNG, Convert.ToBase64String(File.ReadAllBytes(pngPath))));
-				}
-				else if(File.Exists(jpgPath))
-				{
-					payload = Functions.GeneratePayload(new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.JPG, Convert.ToBase64String(File.ReadAllBytes(jpgPath))));
-				}
-				else
-				{
-					payload = Functions.GeneratePayload(new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.None, null));
-				}
-			}
-			break;
-			case ServerPackets.ArtworksRequest request:
-			{
-				if(config.artwork_path is null)
-				{
-					payload = Functions.GeneratePayload(new ServerPackets.ArtworksResponse([], false));
-					break;
-				}
-				Dictionary<string, ServerPackets.ArtworkResponse> artworks = [];
-				foreach(string name in request.names)
+					SupportsArtworks = true
+				};
+				foreach(string name in packet.Artworks.Names)
 				{
 					string sanitizedName = Functions.CardnameToFilename(name);
-					string pngPath = Path.Combine(config.artwork_path, sanitizedName + ".png");
-					string jpgPath = Path.Combine(config.artwork_path, sanitizedName + ".jpg");
-					if(File.Exists(pngPath))
+					if(artworks.TryGetValue(sanitizedName, out Info? info) && info is not null)
 					{
-						artworks[sanitizedName] = new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.PNG, Convert.ToBase64String(File.ReadAllBytes(pngPath)));
-					}
-					else if(File.Exists(jpgPath))
-					{
-						artworks[sanitizedName] = new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.JPG, Convert.ToBase64String(File.ReadAllBytes(jpgPath)));
+						response.Artworks_[sanitizedName] = info;
 					}
 					else
 					{
-						artworks[sanitizedName] = new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.None, null);
+						string pngPath = Path.Combine(config.artwork_path, sanitizedName + ".png");
+						string jpgPath = Path.Combine(config.artwork_path, sanitizedName + ".jpg");
+						if(File.Exists(pngPath))
+						{
+							artworks[sanitizedName] = new Info { Filetype = Filetype.Png, Data = ByteString.CopyFrom(File.ReadAllBytes(pngPath)) };
+						}
+						else if(File.Exists(jpgPath))
+						{
+							artworks[sanitizedName] = new Info { Filetype = Filetype.Jpg, Data = ByteString.CopyFrom(File.ReadAllBytes(jpgPath)) };
+						}
+						else
+						{
+							artworks[sanitizedName] = new Info { Filetype = Filetype.Unknown };
+						}
 					}
 				}
-				payload = Functions.GeneratePayload(new ServerPackets.ArtworksResponse(artworks, true));
+				response.WriteDelimitedTo(stream);
 			}
 			break;
 			default:
@@ -480,7 +504,6 @@ class Program
 				throw new Exception($"ERROR: Unable to process this packet: Packet type: {packet.GetType()}");
 			}
 		}
-		stream.Write(payload);
 		return HandlePacketReturn.Continue;
 	}
 }

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -11,7 +10,6 @@ namespace CardGameUtils;
 [JsonSerializable(typeof(CoreConfig))]
 internal partial class PlatformCoreConfigSerializationContext : JsonSerializerContext { }
 
-
 [JsonSourceGenerationOptions(IncludeFields = true)]
 [JsonSerializable(typeof(PlatformClientConfig))]
 internal partial class PlatformClientConfigSerializationContext : JsonSerializerContext { }
@@ -19,10 +17,6 @@ internal partial class PlatformClientConfigSerializationContext : JsonSerializer
 [JsonSourceGenerationOptions(IncludeFields = true)]
 [JsonSerializable(typeof(PlatformServerConfig))]
 internal partial class PlatformServerConfigSerializationContext : JsonSerializerContext { }
-
-[JsonSourceGenerationOptions(IncludeFields = true)]
-[JsonSerializable(typeof(NetworkingStructs.Packet))]
-internal partial class PacketSerializationContext : JsonSerializerContext { }
 
 [JsonSourceGenerationOptions(IncludeFields = true)]
 [JsonSerializable(typeof(Replay))]
@@ -48,11 +42,6 @@ public class GenericConstants
 	public static readonly JsonSerializerOptions platformServerConfigSerialization = new()
 	{
 		TypeInfoResolver = PlatformServerConfigSerializationContext.Default,
-		IncludeFields = true,
-	};
-	public static readonly JsonSerializerOptions packetSerialization = new()
-	{
-		TypeInfoResolver = PacketSerializationContext.Default,
 		IncludeFields = true,
 	};
 	public static readonly JsonSerializerOptions replaySerialization = new()
@@ -87,43 +76,6 @@ public class GameConstants
 		MainActionTaken = MainStart + ActionTaken,
 		ActionTaken = 0x1000,
 		InitGained = 0x10000,
-	}
-	public enum CardType
-	{
-		UNKNOWN,
-		Creature,
-		Spell,
-		Quest,
-	}
-
-	public enum GameResult
-	{
-		Draw,
-		Won,
-		Lost,
-	}
-
-	public enum PlayerClass
-	{
-		UNKNOWN,
-		All,
-		Cultist,
-		Pyromancer,
-		Artificer,
-		Gladiator
-	}
-
-	[Flags]
-	public enum Location
-	{
-		UNKNOWN,
-		Deck = 1 << 0,
-		Hand = 1 << 1,
-		Field = 1 << 2,
-		Grave = 1 << 3,
-		Quest = 1 << 4,
-		Ability = 1 << 5,
-		ALL = Deck | Hand | Field | Grave,
 	}
 }
 

@@ -1,0 +1,75 @@
+syntax = "proto3";
+import "Shared.proto";
+import "google/protobuf/timestamp.proto";
+package ServerServerToClient;
+option csharp_namespace = "CardGameUtils.ServerServerToClient";
+
+message Packet
+{
+	oneof kind
+	{
+		AdditionalCards additional_cards = 1;
+		Artworks artworks = 2;
+		Create create = 3;
+		Join join = 4;
+		OpponentChanged opponent_changed = 5;
+		Rooms rooms = 6;
+		Start start = 7;
+	}
+}
+message AdditionalCards
+{
+	google.protobuf.Timestamp timestamp = 1;
+	repeated CardInfo cards = 2;
+}
+message Artworks
+{
+	bool supports_artworks = 1;
+	map<string, Info> artworks = 2;
+	message Info
+	{
+		Filetype filetype = 1;
+		bytes data = 2;
+	}
+	enum Filetype
+	{
+		Filetype_UNKNOWN = 0;
+		Filetype_JPG = 1;
+		Filetype_PNG = 2;
+	}
+}
+message Create
+{
+	Result result = 1;
+}
+message Join
+{
+	Result result = 1;
+}
+message OpponentChanged
+{
+	optional string name = 1;
+}
+message Rooms
+{
+	repeated string rooms = 1;
+}
+message Start
+{
+	oneof result
+	{
+		Failure failure = 1;
+		Success success = 2;
+		SuccessButWaiting success_but_waiting = 3;
+	}
+	message Failure
+	{
+		string reason = 1;
+	}
+	message Success
+	{
+		string id = 1;
+		int32 port = 2;
+	}
+	message SuccessButWaiting {}
+}

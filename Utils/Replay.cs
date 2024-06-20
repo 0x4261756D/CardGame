@@ -1,26 +1,34 @@
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Text.Json.Serialization;
+using Google.Protobuf;
 
 namespace CardGameUtils;
 
 class Replay(string[] cmdlineArgs, int seed)
 {
+	public interface IPacket {}
+	public class CtoS(DuelClientToServer.Packet packet) : IPacket
+	{
+		public DuelClientToServer.Packet packet = packet;
+	}
+	public class StoC(DuelServerToClient.Packet packet) : IPacket
+	{
+		public DuelServerToClient.Packet packet = packet;
+	}
 	[method: JsonConstructor]
-	public class GameAction(int player, string packetContent, bool clientToServer, uint packetVersion)
+	public class GameAction(int player, string packetContent, bool isClientToServer)
 	{
 		public int player = player;
-		public uint packetVersion = packetVersion;
+		public bool isClientToServer = isClientToServer;
 		public string packetContent = packetContent;
-		public byte[] PacketContentBytes()
+		public IPacket PacketContentToPacket()
 		{
-			return Convert.FromBase64String(packetContent);
+			return isClientToServer ? new CtoS(DuelClientToServer.Packet.Parser.ParseFrom(Convert.FromBase64String(packetContent))) : new StoC(DuelServerToClient.Packet.Parser.ParseFrom(Convert.FromBase64String(packetContent)));
 		}
-		public bool clientToServer = clientToServer;
 
-		public GameAction(int player, Structs.NetworkingStructs.Packet packet, bool clientToServer) :
-			this(player, Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(packet, typeof(Structs.NetworkingStructs.Packet), options: GenericConstants.packetSerialization)), clientToServer, packet.version)
+		public GameAction(int player, IPacket packet) :
+			this(player, Convert.ToBase64String((packet is StoC stoc) ? stoc.packet.ToByteArray() : ((CtoS)packet).packet.ToByteArray()), packet is StoC)
 		{
 		}
 	}

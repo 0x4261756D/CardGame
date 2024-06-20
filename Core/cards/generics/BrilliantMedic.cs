@@ -1,8 +1,8 @@
 // Scripted by 0x4261756D
 using System;
 using CardGameCore;
+using CardGameUtils.CardConstants;
 using static CardGameCore.CardUtils;
-using static CardGameUtils.GameConstants;
 
 class BrilliantMedic : Creature
 {

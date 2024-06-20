@@ -1,0 +1,26 @@
+syntax = "proto3";
+import "Shared.proto";
+package DeckServerToClient;
+option csharp_namespace = "CardGameUtils.DeckServerToClient";
+
+message Packet
+{
+	oneof kind
+	{
+		Names names = 1;
+		GetDecklist get_decklist = 2;
+		Search search = 3;
+	}
+}
+message Names
+{
+	repeated string names = 1;
+}
+message GetDecklist
+{
+	optional Deck deck = 1;
+}
+message Search
+{
+	repeated CardInfo cards = 1;
+}

@@ -1,6 +1,7 @@
 // Scripted by 0x4261756D
 
 using CardGameCore;
+using CardGameUtils.CardConstants;
 using static CardGameUtils.GameConstants;
 
 class PyromancersFury : Spell
@@ -35,7 +36,7 @@ class PyromancersFury : Spell
 	{
 		ChangeIgniteDamage(player: Controller, amount: 1);
 		creatureDiedActive = true;
-		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: ResetEffect, state: State.TurnEnd, influenceLocation: Location.ALL, oneshot: true), referrer: this);
+		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: ResetEffect, state: State.TurnEnd, influenceLocation: Location.All, oneshot: true), referrer: this);
 	}
 
 	public void ResetEffect()

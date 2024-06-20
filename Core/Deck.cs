@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using CardGameUtils;
+using CardGameUtils.CardConstants;
 
 namespace CardGameCore;
 
@@ -17,7 +17,7 @@ class Deck
 
 	internal void Add(Card c)
 	{
-		c.Location = GameConstants.Location.Deck;
+		c.Location = Location.Deck;
 		cards.Add(c);
 	}
 
@@ -29,7 +29,7 @@ class Deck
 		}
 		Card ret = cards[0];
 		cards.RemoveAt(0);
-		ret.Location = GameConstants.Location.UNKNOWN;
+		ret.Location = Location.Unknown;
 		return ret;
 	}
 
@@ -54,7 +54,7 @@ class Deck
 	{
 		if(cards.Remove(card) || revealedCards.Remove(card))
 		{
-			card.Location &= ~GameConstants.Location.Deck;
+			card.Location &= ~Location.Deck;
 		}
 		else
 		{

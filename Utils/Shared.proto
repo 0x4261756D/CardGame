@@ -1,0 +1,112 @@
+syntax = "proto3";
+option csharp_namespace = "CardGameUtils.CardConstants";
+
+enum Location
+{
+	Location_UNKNOWN = 0;
+	Location_Deck = 1;
+	Location_Hand = 2;
+	Location_Field = 4;
+	Location_Grave = 8;
+	Location_Quest = 16;
+	Location_Ability = 32;
+	Location_ALL = 63;
+}
+enum CardType
+{
+	CardType_UNKNOWN = 0;
+	CardType_Creature = 1;
+	CardType_Spell = 2;
+	CardType_Quest = 3;
+}
+enum PlayerClass
+{
+	PlayerClass_UNKNOWN = 0;
+	PlayerClass_All = 1;
+	PlayerClass_Pyromancer = 2;
+	PlayerClass_Artificer = 3;
+	PlayerClass_Gladiator = 4;
+	PlayerClass_Cultist = 5;
+}
+message CardAction
+{
+	int32 uid = 1;
+	string description = 2;
+}
+message CardInfo
+{
+	string name = 1;
+	string text = 2;
+	int32 uid = 3;
+	Location location = 6;
+	PlayerClass card_class = 8;
+	int32 base_controller = 9;
+	int32 controller = 10;
+	oneof card_type
+	{
+		Creature creature = 11;
+		Spell spell = 12;
+		Quest quest = 13;
+	}
+	message Creature
+	{
+		int32 base_life = 1;
+		int32 life = 2;
+		int32 base_power = 3;
+		int32 power = 4;
+		int32 position = 5;
+		int32 base_cost = 6;
+		int32 cost = 7;
+	}
+	message Spell
+	{
+		bool can_be_class_ability = 1;
+		bool is_class_ability = 2;
+		int32 base_cost = 3;
+		int32 cost = 4;
+	}
+	message Quest
+	{
+		int32 progress = 1;
+		int32 goal = 2;
+	}
+}
+message Field
+{
+	int32 life = 1;
+	int32 deck_size = 2;
+	int32 grave_size = 3;
+	int32 momentum = 4;
+	repeated CardInfo hand = 5;
+	map<int32, CardInfo> field = 6;
+	string name = 7;
+	CardInfo ability = 8;
+	CardInfo quest = 9;
+	optional ShownInfo shown_info = 10;
+	message ShownInfo
+	{
+		optional CardInfo card = 1;
+		optional string description = 2;
+	}
+}
+message Deck
+{
+	string name = 1;
+	repeated CardInfo cards = 2;
+	PlayerClass player_class = 3;
+	optional CardInfo ability = 4;
+	optional CardInfo quest = 5;
+}
+message Result
+{
+	oneof value
+	{
+		Ok ok = 1;
+		Error error = 2;
+	}
+	message Ok {}
+	message Error
+	{
+		string reason = 1;
+	}
+}

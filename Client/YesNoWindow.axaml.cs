@@ -1,8 +1,7 @@
 using System.IO;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using static CardGameUtils.Functions;
-using static CardGameUtils.Structs.NetworkingStructs;
+using Google.Protobuf;
 
 namespace CardGameClient;
 public partial class YesNoWindow : Window
@@ -24,14 +23,14 @@ public partial class YesNoWindow : Window
 
 	public void YesClick(object? sender, RoutedEventArgs args)
 	{
-		stream.Write(GeneratePayload(new DuelPackets.YesNoResponse(result: true)));
+		new CardGameUtils.DuelClientToServer.YesNo { Result = true }.WriteDelimitedTo(stream);
 		shouldReallyClose = true;
 		Close();
 	}
 
 	public void NoClick(object? sender, RoutedEventArgs args)
 	{
-		stream.Write(GeneratePayload(new DuelPackets.YesNoResponse(result: false)));
+		new CardGameUtils.DuelClientToServer.YesNo { Result = false }.WriteDelimitedTo(stream);
 		shouldReallyClose = true;
 		Close();
 	}

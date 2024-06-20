@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using CardGameUtils;
-using CardGameUtils.Structs;
+using CardGameUtils.CardConstants;
 
 namespace CardGameCore;
 
@@ -13,7 +13,7 @@ class Field
 
 	}
 
-	internal CardStruct?[] ToStruct()
+	internal CardInfo?[] ToStruct()
 	{
 		return Array.ConvertAll(cards, card => card?.ToStruct());
 	}
@@ -33,7 +33,7 @@ class Field
 		{
 			throw new Exception($"Tried to move {card} to zone {zone} occupied by {cards[zone]}");
 		}
-		card.Location = GameConstants.Location.Field;
+		card.Location = Location.Field;
 		card.Position = zone;
 		cards[zone] = card;
 	}
@@ -158,7 +158,7 @@ class Field
 			if(cards[i] != null && cards[i] == card)
 			{
 				cards[i] = null;
-				card.Location &= ~GameConstants.Location.Field;
+				card.Location &= ~Location.Field;
 				return;
 			}
 		}

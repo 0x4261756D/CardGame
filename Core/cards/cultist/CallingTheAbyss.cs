@@ -1,5 +1,6 @@
 // Scripted by 0x4261756D
 using CardGameCore;
+using CardGameUtils.CardConstants;
 using static CardGameCore.CardUtils;
 using static CardGameUtils.GameConstants;
 
@@ -36,6 +37,6 @@ class CallingtheAbyss : Spell
 		PayLife(Controller, 6);
 		CreateTokenOnField(player: Controller, power: 6, life: 6, name: "Abyssal", source: this);
 		ChangeLifeOfAnyTarget(player: Controller, amount: -6, source: this);
-		RegisterStateReachedTrigger(new StateReachedTrigger(effect: BenefitEffect, state: State.TurnStart, influenceLocation: Location.ALL, oneshot: true), this);
+		RegisterStateReachedTrigger(new StateReachedTrigger(effect: BenefitEffect, state: State.TurnStart, influenceLocation: Location.All, oneshot: true), this);
 	}
 }

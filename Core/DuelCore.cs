@@ -5,12 +5,13 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO.Pipes;
 using System.Net.Sockets;
 using System.Text;
-using System.Text.Json;
 using System.Threading;
 using CardGameUtils;
+using CardGameUtils.CardConstants;
+using CardGameUtils.DuelServerToClient;
 using CardGameUtils.Structs;
+using Google.Protobuf;
 using static CardGameUtils.Functions;
-using static CardGameUtils.Structs.NetworkingStructs;
 
 namespace CardGameCore;
 
@@ -108,11 +109,11 @@ class DuelCore : Core
 
 	public DuelCore(CoreConfig.DuelConfig config, int port) : base(port)
 	{
-		AbilityUseActionDescription = new(uid: CardActionUIDCount, description: "Use");
+		AbilityUseActionDescription = new() { Uid = CardActionUIDCount, Description = "Use" };
 		CardActionUIDCount += 1;
-		CastActionDescription = new(uid: CardActionUIDCount, description: "Cast");
+		CastActionDescription = new() { Uid = CardActionUIDCount, Description = "Cast" };
 		CardActionUIDCount += 1;
-		CreatureMoveActionDescription = new(uid: CardActionUIDCount, description: "Move");
+		CreatureMoveActionDescription = new() { Uid = CardActionUIDCount, Description = "Move" };
 		CardActionUIDCount += 1;
 		this.config = config;
 		RegisterScriptingFunctions();
@@ -123,7 +124,7 @@ class DuelCore : Core
 		{
 			Log("Player created. ID: " + config.players[i].id);
 			Deck deck = new();
-			GameConstants.PlayerClass playerClass = Enum.Parse<GameConstants.PlayerClass>(config.players[i].decklist[0]);
+			PlayerClass playerClass = Enum.Parse<PlayerClass>(config.players[i].decklist[0]);
 			string abilityString = config.players[i].decklist[1];
 			if(!abilityString.StartsWith('#'))
 			{
@@ -277,7 +278,7 @@ class DuelCore : Core
 		bool foundPlayer = false;
 		for(int i = 0; i < players.Length; i++)
 		{
-			if(playerStreams[i] == null)
+			if(playerStreams[i] is null)
 			{
 				Log($"Player id: {players[i].id} ({players[i].id.Length}), found {id} ({id.Length}) | {players[i].id == id}");
 				if(players[i].id == id)
@@ -462,7 +463,7 @@ class DuelCore : Core
 		}
 	}
 
-	private void ProcessCreatureTargetingTriggers(Dictionary<int, List<CreatureTargetingTrigger>> triggers, Creature target, GameConstants.Location location, int uid)
+	private void ProcessCreatureTargetingTriggers(Dictionary<int, List<CreatureTargetingTrigger>> triggers, Creature target, Location location, int uid)
 	{
 		if(triggers.TryGetValue(uid, out List<CreatureTargetingTrigger>? value))
 		{
@@ -494,7 +495,7 @@ class DuelCore : Core
 			EvaluateLingeringEffects();
 		}
 	}
-	public void ProcessLocationBasedTriggers(Dictionary<int, List<LocationBasedTrigger>> triggers, GameConstants.Location location, int uid)
+	public void ProcessLocationBasedTriggers(Dictionary<int, List<LocationBasedTrigger>> triggers, Location location, int uid)
 	{
 		if(triggers.TryGetValue(uid, out List<LocationBasedTrigger>? matchingTriggers))
 		{
@@ -553,7 +554,7 @@ class DuelCore : Core
 						foreach(StateReachedTrigger trigger in handTriggers)
 						{
 							EvaluateLingeringEffects();
-							if(trigger.state == State && trigger.influenceLocation.HasFlag(GameConstants.Location.Hand) && trigger.condition())
+							if(trigger.state == State && trigger.influenceLocation.HasFlag(Location.Hand) && trigger.condition())
 							{
 								trigger.effect();
 								trigger.wasTriggered = true;
@@ -575,7 +576,7 @@ class DuelCore : Core
 						foreach(StateReachedTrigger trigger in fieldTriggers)
 						{
 							EvaluateLingeringEffects();
-							if(trigger.state == State && trigger.influenceLocation.HasFlag(GameConstants.Location.Field) && trigger.condition())
+							if(trigger.state == State && trigger.influenceLocation.HasFlag(Location.Field) && trigger.condition())
 							{
 								trigger.effect();
 								trigger.wasTriggered = true;
@@ -700,7 +701,7 @@ class DuelCore : Core
 							foreach(Card card in cards)
 							{
 								players[i].hand.Remove(card);
-								AddCardToLocation(card, GameConstants.Location.Deck);
+								AddCardToLocation(card, Location.Deck);
 							}
 							players[i].deck.Shuffle();
 							players[i].Draw(cards.Length);
@@ -772,11 +773,11 @@ class DuelCore : Core
 						Creature? card1 = players[1].field.GetByPosition(GetMarkedZoneForPlayer(1));
 						if(card0 != null)
 						{
-							ProcessCreatureTargetingTriggers(triggers: attackTriggers, uid: card0.uid, location: GameConstants.Location.Field, target: card0);
+							ProcessCreatureTargetingTriggers(triggers: attackTriggers, uid: card0.uid, location: Location.Field, target: card0);
 						}
 						if(card1 != null)
 						{
-							ProcessCreatureTargetingTriggers(triggers: attackTriggers, uid: card1.uid, location: GameConstants.Location.Field, target: card1);
+							ProcessCreatureTargetingTriggers(triggers: attackTriggers, uid: card1.uid, location: Location.Field, target: card1);
 						}
 						if(card0 == null)
 						{
@@ -819,28 +820,28 @@ class DuelCore : Core
 								}
 								CreatureChangeLifeImpl(target: card0, amount: -card1.Power, source: card1);
 								CreatureChangeLifeImpl(target: card1, amount: -card0.Power, source: card0);
-								if(!card0.Location.HasFlag(GameConstants.Location.Field) && card1.Location.HasFlag(GameConstants.Location.Field))
+								if(!card0.Location.HasFlag(Location.Field) && card1.Location.HasFlag(Location.Field))
 								{
 									ProcessTriggers(victoriousTriggers, card1.uid);
 									for(int playerIndex = 0; playerIndex < players.Length; playerIndex++)
 									{
-										ProcessCreatureTargetingTriggers(genericVictoriousTriggers, target: card1, location: GameConstants.Location.Quest, uid: players[playerIndex].quest.uid);
+										ProcessCreatureTargetingTriggers(genericVictoriousTriggers, target: card1, location: Location.Quest, uid: players[playerIndex].quest.uid);
 									}
 									foreach(Creature creature in CardUtils.GetBothFieldsUsed())
 									{
-										ProcessCreatureTargetingTriggers(genericVictoriousTriggers, target: card1, location: GameConstants.Location.Field, uid: creature.uid);
+										ProcessCreatureTargetingTriggers(genericVictoriousTriggers, target: card1, location: Location.Field, uid: creature.uid);
 									}
 								}
-								if(!card1.Location.HasFlag(GameConstants.Location.Field) && card0.Location.HasFlag(GameConstants.Location.Field))
+								if(!card1.Location.HasFlag(Location.Field) && card0.Location.HasFlag(Location.Field))
 								{
 									for(int playerIndex = 0; playerIndex < players.Length; playerIndex++)
 									{
-										ProcessCreatureTargetingTriggers(genericVictoriousTriggers, target: card0, location: GameConstants.Location.Quest, uid: players[playerIndex].quest.uid);
+										ProcessCreatureTargetingTriggers(genericVictoriousTriggers, target: card0, location: Location.Quest, uid: players[playerIndex].quest.uid);
 									}
 									ProcessTriggers(victoriousTriggers, card0.uid);
 									foreach(Creature creature in CardUtils.GetBothFieldsUsed())
 									{
-										ProcessCreatureTargetingTriggers(genericVictoriousTriggers, target: card0, location: GameConstants.Location.Field, uid: creature.uid);
+										ProcessCreatureTargetingTriggers(genericVictoriousTriggers, target: card0, location: Location.Field, uid: creature.uid);
 									}
 								}
 							}
@@ -869,7 +870,7 @@ class DuelCore : Core
 								if(creature.Keywords.ContainsKey(Keyword.Decaying))
 								{
 									RegisterLocationTemporaryLingeringEffectImpl(info: LingeringEffectInfo.Create(effect: (target) => target.Life -= 1, referrer: creature));
-									if(creature.Life == 0 && creature.Location.HasFlag(GameConstants.Location.Field))
+									if(creature.Life == 0 && creature.Location.HasFlag(Location.Field))
 									{
 										DestroyImpl(creature);
 									}
@@ -889,14 +890,16 @@ class DuelCore : Core
 						int toDeckCount = player.hand.Count - GameConstants.MAX_HAND_SIZE;
 						if(toDeckCount > 0)
 						{
-							SendPacketToPlayer(new DuelPackets.SelectCardsRequest
-							(
-								amount: toDeckCount,
-								cards: Card.ToStruct(player.hand.GetAll()),
-								desc: "Select cards to shuffle into you deck for hand size"
-							), i);
-							int[] toDeck = ReceivePacketFromPlayer<DuelPackets.SelectCardsResponse>(i).uids;
-							foreach(int uid in toDeck)
+							SelectCards payload = new()
+							{
+								Amount = toDeckCount,
+								Description = "Select cards to shuffle into you deck for hand size",
+							};
+							payload.Cards.AddRange(Card.ToStruct(player.hand.GetAll()));
+							SendPacketToPlayer(new() { SelectCards = payload }, i);
+							CardGameUtils.DuelClientToServer.SelectCards response = CardGameUtils.DuelClientToServer.SelectCards.Parser.ParseDelimitedFrom(playerStreams[i]);
+							Program.replay?.actions.Add(new(player: i, new Replay.CtoS(new() { SelectCards = response })));
+							foreach(int uid in response.Uids)
 							{
 								Card card = player.hand.GetByUID(uid);
 								player.hand.Remove(card);
@@ -929,8 +932,8 @@ class DuelCore : Core
 		if(players[player].life <= 0)
 		{
 			SendFieldUpdates();
-			SendPacketToPlayer(new DuelPackets.GameResultResponse(GameConstants.GameResult.Lost), player);
-			SendPacketToPlayer(new DuelPackets.GameResultResponse(GameConstants.GameResult.Won), 1 - player);
+			SendPacketToPlayer(new() { GameResult = new() { Value = GameResult.Lost } }, player);
+			SendPacketToPlayer(new() { GameResult = new() { Value = GameResult.Won } }, 1 - player);
 		}
 	}
 
@@ -950,7 +953,7 @@ class DuelCore : Core
 		{
 			amount *= multiplicativeDamageModifier;
 		}
-		if(amount < 0 && source.CardType == GameConstants.CardType.Spell)
+		if(amount < 0 && source.CardType == CardType.Spell)
 		{
 			players[source.Controller].dealtSpellDamages[turn] -= amount;
 		}
@@ -977,7 +980,7 @@ class DuelCore : Core
 		}
 		players[player].life -= amount;
 		players[1 - player].dealtDamages[turn] += amount;
-		if(source.CardType == GameConstants.CardType.Spell)
+		if(source.CardType == CardType.Spell)
 		{
 			players[1 - player].dealtSpellDamages[turn] += amount;
 		}
@@ -990,7 +993,7 @@ class DuelCore : Core
 		for(int i = 0; i < Math.Min(damage, players[player].deck.Size); i++)
 		{
 			Card c = players[player].deck.GetAt(i);
-			SendFieldUpdates(shownInfos: new() { { player, new() { card = c.ToStruct(), description = "Revealed" } } });
+			SendFieldUpdates(shownInfos: new() { { player, new() { Card = c.ToStruct(), Description = "Revealed" } } });
 			players[player].deck.PushToRevealed();
 			ProcessTriggers(revelationTriggers, c.uid);
 			SendFieldUpdates();
@@ -1043,8 +1046,8 @@ class DuelCore : Core
 		{
 			if(playerStreams[i]!.DataAvailable)
 			{
-				Packet packet = ReceiveRawPacket(playerStreams[i]!);
-				Program.replay?.actions.Add(new Replay.GameAction(packet: packet, player: i, clientToServer: true));
+				CardGameUtils.DuelClientToServer.Packet packet = CardGameUtils.DuelClientToServer.Packet.Parser.ParseDelimitedFrom(playerStreams[i]);
+				Program.replay?.actions.Add(new Replay.GameAction(packet: new Replay.CtoS(packet), player: i));
 				if(HandlePacket(packet, i))
 				{
 					Log($"{players[i].name} is giving up, closing.");
@@ -1059,39 +1062,38 @@ class DuelCore : Core
 		return false;
 	}
 
-	private bool HandlePacket(Packet packet, int player)
+	private bool HandlePacket(CardGameUtils.DuelClientToServer.Packet packet, int player)
 	{
 		// THIS MIGHT CHANGE AS SENDING RAW JSON MIGHT BE TOO EXPENSIVE/SLOW
 		// possible improvements: Huffman or Burrows-Wheeler+RLE
-		switch(packet)
+		switch(packet.KindCase)
 		{
-			case DuelPackets.SurrenderRequest:
+			case CardGameUtils.DuelClientToServer.Packet.KindOneofCase.Surrender:
 			{
-				SendPacketToPlayer(new DuelPackets.GameResultResponse
-				(
-					result: GameConstants.GameResult.Won
-				), 1 - player);
+				SendPacketToPlayer(new() { GameResult = new() { Value = GameResult.Won } }, 1 - player);
 				Log("Surrender request received");
 				return true;
 			}
-			case DuelPackets.GetOptionsRequest request:
+			case CardGameUtils.DuelClientToServer.Packet.KindOneofCase.GetOptions:
 			{
-				SendPacketToPlayer(new DuelPackets.GetOptionsResponse
-				(
-					location: request.location,
-					uid: request.uid,
-					options: GetCardActions(player, request.uid, request.location)
-				), player);
+				GetOptions payload = new()
+				{
+					Location = packet.GetOptions.Location,
+					Uid = packet.GetOptions.Uid,
+				};
+				payload.Options.AddRange(GetCardActions(player: player, uid: packet.GetOptions.Uid, packet.GetOptions.Location));
+				SendPacketToPlayer(new() { GetOptions = payload }, player);
 			}
 			break;
-			case DuelPackets.SelectOptionRequest request:
+			case CardGameUtils.DuelClientToServer.Packet.KindOneofCase.SelectOption:
 			{
 				bool found = false;
-				foreach(CardAction action in GetCardActions(player, request.uid, request.location))
+				CardGameUtils.DuelClientToServer.SelectOption request = packet.SelectOption;
+				foreach(CardAction action in GetCardActions(player, request.Uid, request.Location))
 				{
-					if(action.uid == request.cardAction.uid)
+					if(action.Uid == request.Action.Uid)
 					{
-						TakeAction(player, request.uid, request.location, request.cardAction.uid);
+						TakeAction(player, request.Uid, request.Location, request.Action.Uid);
 						found = true;
 						break;
 					}
@@ -1104,7 +1106,7 @@ class DuelCore : Core
 				State |= GameConstants.State.ActionTaken;
 			}
 			break;
-			case DuelPackets.PassRequest:
+			case CardGameUtils.DuelClientToServer.Packet.KindOneofCase.Pass:
 			{
 				switch(State)
 				{
@@ -1146,23 +1148,24 @@ class DuelCore : Core
 				}
 			}
 			break;
-			case DuelPackets.ViewGraveRequest request:
+			case CardGameUtils.DuelClientToServer.Packet.KindOneofCase.ViewGrave:
 			{
-				bool opponent = request.opponent;
-				SendPacketToPlayer(new DuelPackets.ViewCardsResponse
-				(
-					cards: Card.ToStruct(players[opponent ? 1 - player : player].grave.GetAll()),
-					message: $"Your {(opponent ? "opponent's" : "")} grave"
-				), player);
+				bool opponent = packet.ViewGrave.OfOpponent;
+				ShowCards payload = new()
+				{
+					Message = $"Your {(opponent ? "opponent's" : "")} grave"
+				};
+				payload.Cards.AddRange(Card.ToStruct(players[opponent ? 1 - player : player].grave.GetAll()));
+				SendPacketToPlayer(new() { ShowCards = payload }, player);
 			}
 			break;
 			default:
-				throw new Exception($"ERROR: Unable to process this packet: ({packet.GetType()} | {JsonSerializer.Serialize(packet, options: GenericConstants.packetSerialization)}");
+				throw new Exception($"ERROR: Unable to process this packet: ({packet.KindCase}");
 		}
 		return false;
 	}
 
-	private void TakeAction(int player, int uid, GameConstants.Location location, int cardActionUid)
+	private void TakeAction(int player, int uid, Location location, int cardActionUid)
 	{
 		if(player != initPlayer)
 		{
@@ -1185,10 +1188,10 @@ class DuelCore : Core
 		}
 		switch(location)
 		{
-			case GameConstants.Location.Hand:
+			case Location.Hand:
 			{
 				Card card = players[player].hand.GetByUID(uid);
-				if(cardActionUid == CastActionDescription.uid)
+				if(cardActionUid == CastActionDescription.Uid)
 				{
 					players[player].momentum -= card.Cost;
 					CastImpl(player, card);
@@ -1199,7 +1202,7 @@ class DuelCore : Core
 				}
 			}
 			break;
-			case GameConstants.Location.Quest:
+			case Location.Quest:
 			{
 				if(players[player].quest.Progress >= players[player].quest.Goal)
 				{
@@ -1207,11 +1210,11 @@ class DuelCore : Core
 				}
 			}
 			break;
-			case GameConstants.Location.Ability:
+			case Location.Ability:
 			{
 				if(players[player].abilityUsable && players[player].momentum > 0 && castTriggers.ContainsKey(players[player].ability.uid))
 				{
-					SendFieldUpdates(shownInfos: new() { { player, new() { card = players[player].ability.ToStruct(), description = "Ability" } } });
+					SendFieldUpdates(shownInfos: new() { { player, new() { Card = players[player].ability.ToStruct(), Description = "Ability" } } });
 					players[player].momentum--;
 					players[player].abilityUsable = false;
 					ProcessTriggers(castTriggers, players[player].ability.uid);
@@ -1226,10 +1229,10 @@ class DuelCore : Core
 				}
 			}
 			break;
-			case GameConstants.Location.Field:
+			case Location.Field:
 			{
 				Creature card = players[player].field.GetByUID(uid);
-				if(cardActionUid == CreatureMoveActionDescription.uid)
+				if(cardActionUid == CreatureMoveActionDescription.Uid)
 				{
 					if(players[player].field.CanMove(card.Position, players[player].momentum))
 					{
@@ -1255,7 +1258,7 @@ class DuelCore : Core
 		SendFieldUpdates();
 	}
 
-	private List<CardAction> GetActivatableActions(int uid, GameConstants.Location location)
+	private List<CardAction> GetActivatableActions(int uid, Location location)
 	{
 		List<CardAction> ret = [];
 		if(activatedEffects.TryGetValue(uid, out List<ActivatedEffectInfo>? matchingInfos))
@@ -1264,7 +1267,7 @@ class DuelCore : Core
 			{
 				if(info.CanActivate(location))
 				{
-					ret.Add(new(uid: info.cardActionUid, description: info.name));
+					ret.Add(new() { Uid = info.cardActionUid, Description = info.name });
 				}
 			}
 		}
@@ -1282,7 +1285,7 @@ class DuelCore : Core
 	// 	// Hand
 	// 	foreach(Card card in players[player].hand.GetAll())
 	// 	{
-	// 		List<CardAction> actions = GetActivatableActions(card.uid, GameConstants.Location.Hand);
+	// 		List<CardAction> actions = GetActivatableActions(card.uid, Location.Hand);
 	// 		if(actions.Count > 0)
 	// 		{
 	// 			infos[card.uid] ??= [];
@@ -1321,7 +1324,7 @@ class DuelCore : Core
 	// 	// Ability
 	// 	{
 	// 		Spell ability = players[player].ability;
-	// 		List<CardAction> actions = GetActivatableActions(ability.uid, GameConstants.Location.Ability);
+	// 		List<CardAction> actions = GetActivatableActions(ability.uid, Location.Ability);
 	// 		if(actions.Count > 0)
 	// 		{
 	// 			infos[ability.uid] ??= [];
@@ -1348,7 +1351,7 @@ class DuelCore : Core
 	// 	// Field
 	// 	foreach(Creature card in players[player].field.GetUsed())
 	// 	{
-	// 		List<CardAction> actions = GetActivatableActions(card.uid, GameConstants.Location.Field);
+	// 		List<CardAction> actions = GetActivatableActions(card.uid, Location.Field);
 	// 		if(actions.Count > 0)
 	// 		{
 	// 			infos[card.uid] ??= [];
@@ -1362,7 +1365,7 @@ class DuelCore : Core
 	// 	}
 	// 	return infos;
 	// }
-	private CardAction[] GetCardActions(int player, int uid, GameConstants.Location location)
+	private CardAction[] GetCardActions(int player, int uid, Location location)
 	{
 		if(player != initPlayer)
 		{
@@ -1372,11 +1375,11 @@ class DuelCore : Core
 		List<CardAction> options = GetActivatableActions(uid, location);
 		switch(location)
 		{
-			case GameConstants.Location.Hand:
+			case Location.Hand:
 			{
 				Card card = players[player].hand.GetByUID(uid);
 				if(card.Cost <= players[player].momentum &&
-					!(State.HasFlag(GameConstants.State.BattleStart) && card.CardType == GameConstants.CardType.Creature))
+					!(State.HasFlag(GameConstants.State.BattleStart) && card.CardType == CardType.Creature))
 				{
 					bool canCast = true;
 					if(castTriggers.TryGetValue(card.uid, out List<Trigger>? matchingTriggers))
@@ -1393,7 +1396,7 @@ class DuelCore : Core
 					}
 					else
 					{
-						canCast = card.CardType != GameConstants.CardType.Spell;
+						canCast = card.CardType != CardType.Spell;
 					}
 					if(canCast)
 					{
@@ -1402,7 +1405,7 @@ class DuelCore : Core
 				}
 			}
 			break;
-			case GameConstants.Location.Ability:
+			case Location.Ability:
 			{
 				if(players[player].abilityUsable && players[player].momentum > 0 && castTriggers.TryGetValue(players[player].ability.uid, out List<Trigger>? matchingTriggers))
 				{
@@ -1422,7 +1425,7 @@ class DuelCore : Core
 				}
 			}
 			break;
-			case GameConstants.Location.Field:
+			case Location.Field:
 			{
 				Creature card = players[player].field.GetByUID(uid);
 				if(players[player].field.CanMove(card.Position, players[player].momentum))
@@ -1431,7 +1434,7 @@ class DuelCore : Core
 				}
 			}
 			break;
-			case GameConstants.Location.Quest:
+			case Location.Quest:
 				Log("Quests are not foreseen to have activated abilities", severity: LogSeverity.Warning);
 				break;
 			default:
@@ -1443,76 +1446,100 @@ class DuelCore : Core
 	public bool AskYesNoImpl(int player, string question)
 	{
 		Log("Asking yes no");
-		SendPacketToPlayer(new DuelPackets.YesNoRequest(question), player);
+		SendPacketToPlayer(new() { YesNo = new() { Question = question } }, player);
 		Log("Receiving");
-		return ReceivePacketFromPlayer<DuelPackets.YesNoResponse>(player).result;
+		CardGameUtils.DuelClientToServer.YesNo response = CardGameUtils.DuelClientToServer.YesNo.Parser.ParseDelimitedFrom(playerStreams[player]);
+		Program.replay?.actions.Add(new(player: player, packet: new Replay.CtoS(new() { YesNo = response })));
+		return response.Result;
 	}
-	private void SendFieldUpdates(Dictionary<int, DuelPackets.FieldUpdateRequest.Field.ShownInfo>? shownInfos = null)
+	private void SendFieldUpdates(Dictionary<int, CardGameUtils.CardConstants.Field.Types.ShownInfo>? shownInfos = null)
 	{
 		EvaluateLingeringEffects();
 		for(int i = 0; i < players.Length; i++)
 		{
-			SendFieldUpdate(i, shownInfos ?? []);
+			SendFieldUpdate(i, shownInfos);
 		}
 	}
-	private void SendFieldUpdate(int player, Dictionary<int, DuelPackets.FieldUpdateRequest.Field.ShownInfo> shownInfos)
+	private void SendFieldUpdate(int player, Dictionary<int, CardGameUtils.CardConstants.Field.Types.ShownInfo>? shownInfos = null)
 	{
-		// TODO: actually handle mask if this is too slow
-		DuelPackets.FieldUpdateRequest request = new
-		(
-			turn: turn + 1,
-			hasInitiative: State != GameConstants.State.UNINITIALIZED && initPlayer == player,
-			battleDirectionLeftToRight: player == turnPlayer,
-			markedZone: player == 0 ? markedZone : (GameConstants.FIELD_SIZE - 1 - markedZone),
-			ownField: new DuelPackets.FieldUpdateRequest.Field
-			(
-				ability: players[player].ability.ToStruct(),
-				quest: players[player].quest.ToStruct(),
-				deckSize: players[player].deck.Size,
-				graveSize: players[player].grave.Size,
-				life: players[player].life,
-				name: players[player].name,
-				momentum: players[player].momentum,
-				field: players[player].field.ToStruct(),
-				hand: players[player].hand.ToStruct(),
-				shownInfo: shownInfos.GetValueOrDefault(player, new())
-			),
-			oppField: new DuelPackets.FieldUpdateRequest.Field
-			(
-				ability: players[1 - player].ability.ToStruct(),
-				quest: players[1 - player].quest.ToStruct(),
-				deckSize: players[1 - player].deck.Size,
-				graveSize: players[1 - player].grave.Size,
-				life: players[1 - player].life,
-				name: players[1 - player].name,
-				momentum: players[1 - player].momentum,
-				field: players[1 - player].field.ToStruct(),
-				hand: players[1 - player].hand.ToHiddenStruct(),
-				shownInfo: shownInfos.GetValueOrDefault(1 - player, new())
-			)
-		);
-		SendPacketToPlayer(request, player);
+		// TODO: Only send partial updates
+		FieldUpdate request = new()
+		{
+			Turn = turn + 1,
+			HasInitiative = initPlayer != player && State != GameConstants.State.UNINITIALIZED,
+			IsBattleDirectionLeftToRight = player == turnPlayer,
+			OwnField = new()
+			{
+				Ability = players[player].ability.ToStruct(),
+				Quest = players[player].quest.ToStruct(),
+				DeckSize = players[player].deck.Size,
+				GraveSize = players[player].grave.Size,
+				Life = players[player].life,
+				Name = players[player].name,
+				Momentum = players[player].momentum,
+			},
+			OppField = new()
+			{
+				Ability = players[1 - player].ability.ToStruct(),
+				Quest = players[1 - player].quest.ToStruct(),
+				DeckSize = players[1 - player].deck.Size,
+				GraveSize = players[1 - player].grave.Size,
+				Life = players[1 - player].life,
+				Name = players[1 - player].name,
+				Momentum = players[1 - player].momentum,
+			}
+		};
+		if(markedZone is not null)
+		{
+			request.MarkedZone = markedZone.Value;
+		}
+		request.OwnField.Hand.AddRange(players[player].hand.ToStruct());
+		request.OppField.Hand.AddRange(players[1 - player].hand.ToHiddenStruct());
+		for(int i = 0; i < GameConstants.FIELD_SIZE; i++)
+		{
+			if(players[player].field.GetByPosition(i) is not null)
+			{
+				request.OwnField.Field_[i] = players[player].field.GetByPosition(i)!.ToStruct();
+			}
+			if(players[1 - player].field.GetByPosition(i) is not null)
+			{
+				request.OppField.Field_[i] = players[1 - player].field.GetByPosition(i)!.ToStruct();
+			}
+		}
+		if(shownInfos is not null)
+		{
+			if(shownInfos.TryGetValue(player, out CardGameUtils.CardConstants.Field.Types.ShownInfo? ownInfo))
+			{
+				request.OwnField.ShownInfo = ownInfo;
+			}
+			if(shownInfos.TryGetValue(1 - player, out CardGameUtils.CardConstants.Field.Types.ShownInfo? oppInfo))
+			{
+				request.OppField.ShownInfo = oppInfo;
+			}
+		}
+		SendPacketToPlayer(new() { FieldUpdate = request }, player);
 	}
 	public static Card[] SelectCardsCustom(int player, string description, Card[] cards, Func<Card[], bool> isValidSelection)
 	{
 		Log("Select cards custom");
-		SendPacketToPlayer(new DuelPackets.CustomSelectCardsRequest
-		(
-			cards: Card.ToStruct(cards),
-			desc: description,
-			initialState: isValidSelection([])
-		), player);
+		CustomSelectCards payload = new()
+		{
+			Description = description,
+			InitialState = isValidSelection([]),
+		};
+		payload.Cards.AddRange(Card.ToStruct(cards));
+		SendPacketToPlayer(new() { CustomSelectCards = payload }, player);
 
 		Log("request sent");
 		while(true)
 		{
-			Packet packet = ReceiveRawPacket(playerStreams[player]!);
+			CardGameUtils.DuelClientToServer.Packet packet = CardGameUtils.DuelClientToServer.Packet.Parser.ParseDelimitedFrom(playerStreams[player]);
 			Log("request received");
-			Program.replay?.actions.Add(new Replay.GameAction(player: player, packet: packet, clientToServer: true));
-			if(packet is DuelPackets.CustomSelectCardsResponse response)
+			Program.replay?.actions.Add(new Replay.GameAction(player: player, packet: new Replay.CtoS(packet)));
+			if(packet.KindCase == CardGameUtils.DuelClientToServer.Packet.KindOneofCase.CustomSelectCards)
 			{
 				Log("final response");
-				Card[] ret = UidsToCards(cards, response.uids);
+				Card[] ret = UidsToCards(cards, [.. packet.CustomSelectCards.Uids]);
 				if(!isValidSelection(ret))
 				{
 					throw new Exception("Player somethow selected invalid cards");
@@ -1520,15 +1547,17 @@ class DuelCore : Core
 				Log("returning");
 				return ret;
 			}
-			if(packet is not DuelPackets.CustomSelectCardsIntermediateRequest)
+			if(packet.KindCase != CardGameUtils.DuelClientToServer.Packet.KindOneofCase.CustomSelectCardsIntermediate)
 			{
 				continue;
 			}
 			Log("deserialized packet");
-			SendPacketToPlayer(new DuelPackets.CustomSelectCardsIntermediateResponse
-			(
-				isValid: isValidSelection(Array.ConvertAll(((DuelPackets.CustomSelectCardsIntermediateRequest)packet).uids, x => Array.Find(cards, y => y.uid == x)!))
-			), player);
+			CustomSelectCardsIntermediate response = new()
+			{
+				IsValid = isValidSelection(Array.ConvertAll([.. packet.CustomSelectCardsIntermediate.Uids], x => Array.Find(cards, y => y.uid == x)!))
+			};
+			Program.replay?.actions.Add(new(player: player, packet: new Replay.StoC(new() { CustomSelectCardsIntermediate = response })));
+			response.WriteDelimitedTo(playerStreams[player]);
 			Log("sent packet");
 		}
 
@@ -1558,11 +1587,12 @@ class DuelCore : Core
 	}
 	private int SelectMovementZone(int player, int position, int momentum)
 	{
-		SendPacketToPlayer(new DuelPackets.SelectZoneRequest
-		(
-			options: players[player].field.GetMovementOptions(position, momentum)
-		), player);
-		return ReceivePacketFromPlayer<DuelPackets.SelectZoneResponse>(player).zone;
+		SelectZone payload = new();
+		payload.Options.AddRange(players[player].field.GetMovementOptions(position, momentum));
+		SendPacketToPlayer(new() { SelectZone = payload }, player);
+		CardGameUtils.DuelClientToServer.SelectZone response = CardGameUtils.DuelClientToServer.SelectZone.Parser.ParseDelimitedFrom(playerStreams[player]);
+		Program.replay?.actions.Add(new(player: player, packet: new Replay.CtoS(new() { SelectZone = response })));
+		return response.Zone;
 	}
 	private int GetCastCountImpl(int player, string name)
 	{
@@ -1584,7 +1614,7 @@ class DuelCore : Core
 	private void MoveToFieldImpl(int choosingPlayer, int targetPlayer, Creature creature, Card? source)
 	{
 		EvaluateLingeringEffects();
-		bool wasAlreadyOnField = creature.Location == GameConstants.Location.Field;
+		bool wasAlreadyOnField = creature.Location == Location.Field;
 		_ = RemoveCardFromItsLocation(creature);
 		int zone = SelectZoneImpl(choosingPlayer: choosingPlayer, targetPlayer: targetPlayer);
 		if(creature.Controller != targetPlayer)
@@ -1627,19 +1657,19 @@ class DuelCore : Core
 			card.isInitialized = true;
 		}
 		_ = RemoveCardFromItsLocation(card);
-		SendFieldUpdates(shownInfos: new() { { player, new() { card = card.ToStruct(), description = CastActionDescription.description } } });
+		SendFieldUpdates(shownInfos: new() { { player, new() { Card = card.ToStruct(), Description = CastActionDescription.Description } } });
 		if(!isNew)
 		{
 			switch(card.CardType)
 			{
-				case GameConstants.CardType.Creature:
+				case CardType.Creature:
 				{
 					MoveToFieldImpl(player, player, (Creature)card, null);
 				}
 				break;
-				case GameConstants.CardType.Spell:
+				case CardType.Spell:
 				{
-					AddCardToLocation(card, GameConstants.Location.Grave);
+					AddCardToLocation(card, Location.Grave);
 				}
 				break;
 				default:
@@ -1706,7 +1736,7 @@ class DuelCore : Core
 	}
 	public void RegisterStateReachedTriggerImpl(StateReachedTrigger trigger, Card referrer)
 	{
-		if(trigger.influenceLocation == GameConstants.Location.ALL)
+		if(trigger.influenceLocation == Location.All)
 		{
 			alwaysActiveStateReachedTriggers.Add(trigger);
 		}
@@ -1718,7 +1748,7 @@ class DuelCore : Core
 	}
 	public void RegisterLingeringEffectImpl(LingeringEffectInfo info)
 	{
-		if(info.influenceLocation == GameConstants.Location.ALL)
+		if(info.influenceLocation == Location.All)
 		{
 			alwaysActiveLingeringEffects.Add(info);
 		}
@@ -1741,9 +1771,9 @@ class DuelCore : Core
 	}
 	public void RegisterActivatedEffectImpl(ActivatedEffectInfo info)
 	{
-		if(info.name == AbilityUseActionDescription.description ||
-			info.name == CastActionDescription.description ||
-			info.name == CreatureMoveActionDescription.description)
+		if(info.name == AbilityUseActionDescription.Description ||
+			info.name == CastActionDescription.Description ||
+			info.name == CreatureMoveActionDescription.Description)
 		{
 			throw new Exception($"Activated Effects should not be named {info.name}, this is a reserved name.");
 		}
@@ -1841,10 +1871,10 @@ class DuelCore : Core
 		EvaluateLingeringEffects();
 		switch(card.Location)
 		{
-			case GameConstants.Location.Deck:
+			case Location.Deck:
 				players[card.Controller].deck.Remove(card);
 				break;
-			case GameConstants.Location.Hand:
+			case Location.Hand:
 			{
 				if(card.Controller == player)
 				{
@@ -1856,16 +1886,16 @@ class DuelCore : Core
 				}
 			}
 			break;
-			case GameConstants.Location.Field:
+			case Location.Field:
 				players[card.Controller].field.Remove((Creature)card);
 				break;
-			case GameConstants.Location.Grave:
+			case Location.Grave:
 				players[card.Controller].grave.Remove(card);
 				break;
 			default:
 				throw new Exception($"Cannot add a card from {card.Location} to hand");
 		}
-		if(!(card.CardType == GameConstants.CardType.Creature && ((Creature)card).Keywords.ContainsKey(Keyword.Token)))
+		if(!(card.CardType == CardType.Creature && ((Creature)card).Keywords.ContainsKey(Keyword.Token)))
 		{
 			if(card.Controller != player)
 			{
@@ -1894,7 +1924,7 @@ class DuelCore : Core
 	{
 		return players[player].hand.GetDiscardable(ignore);
 	}
-	private void RegisterControllerChange(Card card, GameConstants.Location influenceLocation = ~(GameConstants.Location.Grave | GameConstants.Location.Deck))
+	private void RegisterControllerChange(Card card, Location influenceLocation = ~(Location.Grave | Location.Deck))
 	{
 		RegisterLocationTemporaryLingeringEffectImpl(info: LingeringEffectInfo.Create(effect: (target) => target.Controller = 1 - target.Controller, referrer: card, influenceLocation: influenceLocation));
 	}
@@ -1902,13 +1932,13 @@ class DuelCore : Core
 	{
 		switch(card.Location)
 		{
-			case GameConstants.Location.Field:
+			case Location.Field:
 			{
 				players[card.Controller].field.Remove(card);
-				AddCardToLocation(card, GameConstants.Location.Grave);
+				AddCardToLocation(card, Location.Grave);
 			}
 			break;
-			case GameConstants.Location.UNKNOWN:
+			case Location.Unknown:
 			{
 				Log($"Destroying {card.Name} at UNKNOWN", severity: LogSeverity.Warning);
 			}
@@ -1927,20 +1957,20 @@ class DuelCore : Core
 		{
 			foreach(Card fieldCard in player.field.GetUsed())
 			{
-				ProcessCreatureTargetingTriggers(genericDeathTriggers, target: card, uid: fieldCard.uid, location: GameConstants.Location.Field);
+				ProcessCreatureTargetingTriggers(genericDeathTriggers, target: card, uid: fieldCard.uid, location: Location.Field);
 			}
 			foreach(Card graveCard in player.grave.GetAll())
 			{
-				ProcessCreatureTargetingTriggers(genericDeathTriggers, target: card, uid: graveCard.uid, location: GameConstants.Location.Grave);
+				ProcessCreatureTargetingTriggers(genericDeathTriggers, target: card, uid: graveCard.uid, location: Location.Grave);
 			}
 			foreach(Card handCard in player.hand.GetAll())
 			{
-				ProcessCreatureTargetingTriggers(genericDeathTriggers, target: card, uid: handCard.uid, location: GameConstants.Location.Hand);
+				ProcessCreatureTargetingTriggers(genericDeathTriggers, target: card, uid: handCard.uid, location: Location.Hand);
 			}
 		}
 		foreach(Player player in players)
 		{
-			ProcessCreatureTargetingTriggers(triggers: genericDeathTriggers, target: card, location: GameConstants.Location.Quest, uid: player.quest.uid);
+			ProcessCreatureTargetingTriggers(triggers: genericDeathTriggers, target: card, location: Location.Quest, uid: player.quest.uid);
 		}
 	}
 	private void RemoveOutdatedTemporaryLingeringEffects(Card card)
@@ -1951,16 +1981,16 @@ class DuelCore : Core
 	{
 		switch(card.Location)
 		{
-			case GameConstants.Location.Hand:
+			case Location.Hand:
 				players[card.Controller].hand.Remove(card);
 				break;
-			case GameConstants.Location.Field:
+			case Location.Field:
 				players[card.Controller].field.Remove((Creature)card);
 				break;
-			case GameConstants.Location.Grave:
+			case Location.Grave:
 				players[card.Controller].grave.Remove(card);
 				break;
-			case GameConstants.Location.Deck:
+			case Location.Deck:
 				players[card.Controller].deck.Remove(card);
 				break;
 			default:
@@ -1977,7 +2007,7 @@ class DuelCore : Core
 			if(RemoveCardFromItsLocation(card))
 			{
 				shouldShuffle[card.BaseController] = true;
-				AddCardToLocation(card, GameConstants.Location.Deck);
+				AddCardToLocation(card, Location.Deck);
 			}
 			else
 			{
@@ -1998,19 +2028,21 @@ class DuelCore : Core
 		{
 			throw new Exception($"Tried to let a player select from a too small collection ({cards.Length} < {amount})");
 		}
-		SendPacketToPlayer(new DuelPackets.SelectCardsRequest
-		(
-			amount: amount,
-			cards: Card.ToStruct(cards),
-			desc: description
-		), player);
-		int[] uids = ReceivePacketFromPlayer<DuelPackets.SelectCardsResponse>(player).uids;
-		if(uids.Length != amount)
+		SelectCards payload = new()
 		{
-			throw new Exception($"Selected the wrong amount of cards ({uids.Length} != {amount})");
+			Amount = amount,
+			Description = description
+		};
+		payload.Cards.AddRange(Card.ToStruct(cards));
+		SendPacketToPlayer(new() { SelectCards = payload }, player);
+		CardGameUtils.DuelClientToServer.SelectCards response = CardGameUtils.DuelClientToServer.SelectCards.Parser.ParseDelimitedFrom(playerStreams[player]);
+		Program.replay?.actions.Add(new(player: player, packet: new Replay.CtoS(new() { SelectCards = response })));
+		if(response.Uids.Count != amount)
+		{
+			throw new Exception($"Selected the wrong amount of cards ({response.Uids.Count} != {amount})");
 		}
 		// TODO: Make this nicer?
-		return UidsToCards(cards, uids);
+		return UidsToCards(cards, [.. response.Uids]);
 	}
 	public void DiscardAmountImpl(int player, int amount)
 	{
@@ -2026,7 +2058,7 @@ class DuelCore : Core
 			DiscardImpl(target);
 		}
 	}
-	private void AddCardToLocation(Card card, GameConstants.Location location)
+	private void AddCardToLocation(Card card, Location location)
 	{
 		if(card.BaseController < 0)
 		{
@@ -2034,12 +2066,12 @@ class DuelCore : Core
 		}
 		switch(location)
 		{
-			case GameConstants.Location.Deck:
+			case Location.Deck:
 			{
 				players[card.BaseController].deck.Add(card);
 			}
 			break;
-			case GameConstants.Location.Grave:
+			case Location.Grave:
 			{
 				players[card.BaseController].grave.Add(card);
 			}
@@ -2054,23 +2086,23 @@ class DuelCore : Core
 	public void DiscardImpl(Card card)
 	{
 		EvaluateLingeringEffects();
-		if(card.Location != GameConstants.Location.Hand || !card.CanBeDiscarded())
+		if(card.Location != Location.Hand || !card.CanBeDiscarded())
 		{
 			throw new Exception($"Tried to discard a card that is not in the hand but at {card.Location}");
 		}
 		players[card.Controller].hand.Remove(card);
-		AddCardToLocation(card, GameConstants.Location.Grave);
+		AddCardToLocation(card, Location.Grave);
 		players[card.Controller].discardCounts[turn]++;
 		Player player = players[card.Controller];
 		ProcessTriggers(discardTriggers, uid: card.uid);
-		ProcessLocationBasedTriggers(youDiscardTriggers, GameConstants.Location.Quest, player.quest.uid);
+		ProcessLocationBasedTriggers(youDiscardTriggers, Location.Quest, player.quest.uid);
 		foreach(Card c in player.hand.GetAll())
 		{
-			ProcessLocationBasedTriggers(youDiscardTriggers, GameConstants.Location.Hand, uid: c.uid);
+			ProcessLocationBasedTriggers(youDiscardTriggers, Location.Hand, uid: c.uid);
 		}
 		foreach(Creature c in player.field.GetUsed())
 		{
-			ProcessLocationBasedTriggers(youDiscardTriggers, GameConstants.Location.Field, uid: c.uid);
+			ProcessLocationBasedTriggers(youDiscardTriggers, Location.Field, uid: c.uid);
 		}
 	}
 	public void CreateTokenOnFieldImpl(int player, int power, int life, string name, Card source)
@@ -2123,7 +2155,7 @@ class DuelCore : Core
 
 	public void RemoveLingeringEffectImpl(LingeringEffectInfo info)
 	{
-		if(info.influenceLocation == GameConstants.Location.ALL)
+		if(info.influenceLocation == Location.All)
 		{
 			alwaysActiveLingeringEffects.Remove(info);
 		}
@@ -2145,8 +2177,12 @@ class DuelCore : Core
 		{
 			Array.Reverse(options);
 		}
-		SendPacketToPlayer(new DuelPackets.SelectZoneRequest(options), choosingPlayer);
-		int zone = ReceivePacketFromPlayer<DuelPackets.SelectZoneResponse>(choosingPlayer).zone;
+		SelectZone payload = new();
+		payload.Options.AddRange(options);
+		SendPacketToPlayer(new() { SelectZone = payload }, choosingPlayer);
+		CardGameUtils.DuelClientToServer.SelectZone response = CardGameUtils.DuelClientToServer.SelectZone.Parser.ParseDelimitedFrom(playerStreams[choosingPlayer]);
+		Program.replay?.actions.Add(new(player: choosingPlayer, packet: new Replay.CtoS(new() { SelectZone = response })));
+		int zone = response.Zone;
 		if(choosingPlayer != targetPlayer)
 		{
 			zone = GameConstants.FIELD_SIZE - zone - 1;
@@ -2200,16 +2236,9 @@ class DuelCore : Core
 		return players[player].deathCounts[turn - turns];
 	}
 
-	public static T ReceivePacketFromPlayer<T>(int player) where T : Packet
+	public static void SendPacketToPlayer(Packet packet, int player)
 	{
-		T packet = ReceivePacket<T>(playerStreams[player]!);
-		Program.replay?.actions.Add(new Replay.GameAction(player: player, packet: packet, clientToServer: true));
-		return packet;
-	}
-	public static void SendPacketToPlayer<T>(T packet, int player) where T : Packet
-	{
-		byte[] payload = GeneratePayload(packet);
-		Program.replay?.actions.Add(new Replay.GameAction(player: player, packet: packet, clientToServer: false));
-		playerStreams[player]!.Write(payload);
+		Program.replay?.actions.Add(new Replay.GameAction(player: player, packet: new Replay.StoC(packet)));
+		packet.WriteDelimitedTo(playerStreams[player]);
 	}
 }

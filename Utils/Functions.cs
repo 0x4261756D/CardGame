@@ -1,12 +1,9 @@
 using System;
-using System.Diagnostics;
 using System.IO;
-using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Text.Json;
+using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.CardConstants;
 
 namespace CardGameUtils;
 
@@ -55,129 +52,102 @@ partial class Functions
 		Console.ForegroundColor = current;
 	}
 
-	public static Packet DeserializeRaw(byte[] data)
-	{
-		// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
-		//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
-		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
-		// the only difference being the type passed, wondering why one works and the other not...
-		return (Packet?)JsonSerializer.Deserialize(data, typeof(Packet), GenericConstants.packetSerialization) ?? throw new Exception("Deserialization returned null");
-	}
-
-	public static byte[] GeneratePayload(Packet data)
-	{
-		// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
-		//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
-		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
-		// the only difference being the type passed, wondering why one works and the other not...
-		byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(data, typeof(Packet), GenericConstants.packetSerialization);
-		return [.. BitConverter.GetBytes(bytes.Length), .. bytes];
-	}
-	public static byte[] ReadPacketBytes(NetworkStream stream)
-	{
-		byte[] buffer = new byte[4];
-		stream.ReadExactly(buffer);
-		uint length = BitConverter.ToUInt32(buffer);
-		buffer = new byte[length];
-		stream.ReadExactly(buffer);
-		return buffer;
-	}
-
-	public static Packet ReceiveRawPacket(NetworkStream stream)
-	{
-		// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
-		//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
-		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
-		// the only difference being the type passed, wondering why one works and the other not...
-		Packet packet = JsonSerializer.Deserialize<Packet>(ReadPacketBytes(stream), GenericConstants.packetSerialization) ?? throw new Exception("Deserialization returned null");
-		packet.EnsureCompatible();
-		return packet;
-	}
-	public static Packet? TryReceiveRawPacket(NetworkStream stream, long timeoutMs)
-	{
-		Stopwatch watch = Stopwatch.StartNew();
-		if(!stream.CanRead)
-		{
-			return null;
-		}
-		while(!stream.DataAvailable)
-		{
-			Thread.Sleep(10);
-			if(!stream.CanRead || (timeoutMs != -1 && watch.ElapsedMilliseconds > timeoutMs))
-			{
-				return null;
-			}
-		}
-		// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
-		//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
-		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
-		// the only difference being the type passed, wondering why one works and the other not...
-		Packet? packet = JsonSerializer.Deserialize<Packet>(ReadPacketBytes(stream), GenericConstants.packetSerialization);
-		packet?.EnsureCompatible();
-		return packet;
-	}
-	public static T? TryReceivePacket<T>(NetworkStream stream, long timeoutMs) where T : Packet
-	{
-		Stopwatch watch = Stopwatch.StartNew();
-		if(!stream.CanRead)
-		{
-			return null;
-		}
-		while(!stream.DataAvailable)
-		{
-			Thread.Sleep(10);
-			if(!stream.CanRead || (timeoutMs != -1 && watch.ElapsedMilliseconds > timeoutMs))
-			{
-				return null;
-			}
-		}
-		Packet? packet;
-		do
-		{
-			// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
-			//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
-			// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
-			// the only difference being the type passed, wondering why one works and the other not...
-			packet = JsonSerializer.Deserialize<Packet>(ReadPacketBytes(stream), GenericConstants.packetSerialization);
-			packet?.EnsureCompatible();
-		}
-		while(packet is not T);
-
-		return (T?)packet;
-	}
-
-	public static T ReceivePacket<T>(NetworkStream stream) where T : Packet
-	{
-		Packet packet;
-		do
-		{
-			packet = ReceiveRawPacket(stream);
-		}
-		while(packet is not T);
-		return (T)packet;
-	}
-	public static void Send(Packet request, string address, int port)
-	{
-		using TcpClient client = new(address, port);
-		using NetworkStream stream = client.GetStream();
-		stream.Write(GeneratePayload(request));
-	}
-	public static R SendAndReceive<R>(Packet request, string address, int port) where R : Packet
-	{
-		using TcpClient client = new(address, port);
-		using NetworkStream stream = client.GetStream();
-		stream.Write(GeneratePayload(request));
-		return ReceivePacket<R>(stream);
-	}
-
-	public static string ArtworkFiletypeToExtension(ServerPackets.ArtworkFiletype filetype)
+	public static string ArtworkFiletypeToExtension(ServerServerToClient.Artworks.Types.Filetype filetype)
 	{
 		return filetype switch
 		{
-			ServerPackets.ArtworkFiletype.JPG => ".jpg",
-			ServerPackets.ArtworkFiletype.PNG => ".png",
+			ServerServerToClient.Artworks.Types.Filetype.Jpg => ".jpg",
+			ServerServerToClient.Artworks.Types.Filetype.Png => ".png",
 			_ => throw new NotImplementedException(),
 		};
+	}
+
+	public static string FormatCardInfo(CardInfo? info, bool inDuel = false, char separator = '\n')
+	{
+		if(info is null)
+		{
+			return "Card was null";
+		}
+		if(info.CardTypeCase == CardInfo.CardTypeOneofCase.None)
+		{
+			return "UNKNOWN";
+		}
+		StringBuilder builder = new();
+		if(inDuel)
+		{
+			_ = builder.Append("UID: ").Append(info.Uid).Append(separator);
+		}
+		_ = builder.Append("Name: ").Append(info.Name).Append(separator);
+		if(info.CardTypeCase == CardInfo.CardTypeOneofCase.Quest)
+		{
+			_ = builder.Append(separator).Append("Quest Progress: ").Append(info.Quest.Progress).Append('/').Append(info.Quest.Goal);
+		}
+		else if(info.Location == Location.Ability)
+		{
+			_ = builder.Append(separator).Append("Cost: 1");
+		}
+		else
+		{
+			_ = builder.Append(separator).Append("Cost: ").Append((info.CardTypeCase == CardInfo.CardTypeOneofCase.Creature) ? info.Creature.Cost : info.Spell.Cost);
+			if(inDuel)
+			{
+				_ = builder.Append('/').Append((info.CardTypeCase == CardInfo.CardTypeOneofCase.Creature) ? info.Creature.BaseCost : info.Spell.BaseCost);
+			}
+		}
+		if(inDuel)
+		{
+			_ = builder.Append(separator).Append("Controller: ").Append(info.Controller).Append('/').Append(info.BaseController);
+		}
+		_ = builder.Append(separator).Append("Card Type: ").Append(info.CardTypeCase).Append(separator).Append("Class: ").Append(info.CardClass);
+		if(inDuel)
+		{
+			_ = builder.Append(separator).Append("Location: ").Append(info.Location);
+		}
+		if(info.CardTypeCase == CardInfo.CardTypeOneofCase.Creature)
+		{
+			_ = builder.Append(separator).Append(separator).Append("Power: ").Append(info.Creature.Power);
+			if(inDuel)
+			{
+				_ = builder.Append('/').Append(info.Creature.BasePower);
+			}
+			_ = builder.Append(separator).Append("Life: ").Append(info.Creature.Life);
+			if(inDuel)
+			{
+				_ = builder.Append('/').Append(info.Creature.BaseLife);
+			}
+			if(info.Location == Location.Field)
+			{
+				_ = builder.Append(separator).Append("Position: ").Append(info.Creature.Position);
+			}
+		}
+		else if(info.CardTypeCase == CardInfo.CardTypeOneofCase.Spell && !inDuel)
+		{
+			_ = builder.Append(separator).Append("Can be Class ability: ").Append(info.Spell.CanBeClassAbility);
+		}
+		return builder.Append(separator).Append("--------").Append(separator).Append(info.Text).ToString();
+	}
+
+	public static string? DeckToString(Deck deck)
+	{
+		if(deck.Name is null)
+		{
+			return null;
+		}
+		StringBuilder builder = new();
+		_ = builder.Append(deck.PlayerClass);
+		if(deck.Ability is not null)
+		{
+			_ = builder.Append("\n#").Append(deck.Ability.Name);
+		}
+		if(deck.Quest is not null)
+		{
+			_ = builder.Append("\n|").Append(deck.Quest.Name);
+		}
+		foreach(var card in deck.Cards)
+		{
+			_ = builder.Append('\n').Append(card.Name);
+		}
+		return builder.ToString();
 	}
 }
 

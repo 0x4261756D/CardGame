@@ -1,5 +1,6 @@
 //Scripted by Dotlof
 using CardGameCore;
+using CardGameUtils.CardConstants;
 using static CardGameCore.CardUtils;
 using static CardGameUtils.GameConstants;
 
@@ -26,7 +27,7 @@ class EchoingAnthem : Spell
 			RegisterLingeringEffect(LingeringEffectInfo.Create(buffType ? PowerBuff : LifeBuff, creature));
 		}
 		MoveToHand(player: Controller, card: this);
-		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: EndPhaseEffect, condition: EndPhaseCondition, state: State.TurnEnd, influenceLocation: Location.ALL, oneshot: true), referrer: this);
+		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: EndPhaseEffect, condition: EndPhaseCondition, state: State.TurnEnd, influenceLocation: Location.All, oneshot: true), referrer: this);
 	}
 
 

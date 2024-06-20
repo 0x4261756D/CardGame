@@ -1,6 +1,6 @@
 // Scripted by Dotlof
 using CardGameCore;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.CardConstants;
 
 class RagingTitan : Creature
 {
@@ -17,7 +17,7 @@ class RagingTitan : Creature
 	public override void Init()
 	{
 		RegisterKeyword(Keyword.Colossal, 1);
-		RegisterLingeringEffect(info: LingeringEffectInfo.Create(effect: CostReductionEffect, referrer: this, influenceLocation: Location.ALL));
+		RegisterLingeringEffect(info: LingeringEffectInfo.Create(effect: CostReductionEffect, referrer: this, influenceLocation: Location.All));
 		RegisterRevelationTrigger(trigger: new Trigger(effect: GainLifeEffect), referrer: this);
 	}
 

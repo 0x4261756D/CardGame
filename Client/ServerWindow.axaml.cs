@@ -6,7 +6,8 @@ using System.Text;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using CardGameUtils;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.CardConstants;
+using Google.Protobuf;
 
 namespace CardGameClient;
 
@@ -37,8 +38,8 @@ public partial class ServerWindow : Window
 		{
 			using TcpClient updateClient = new(ServerAddressBox.Text, GenericConstants.SERVER_PORT);
 			using NetworkStream updateStream = updateClient.GetStream();
-			updateStream.Write(Functions.GeneratePayload(new ServerPackets.RoomsRequest()));
-			((ServerWindowViewModel)DataContext!).ServerRooms = Functions.ReceivePacket<ServerPackets.RoomsResponse>(updateStream).rooms;
+			new CardGameUtils.ServerClientToServer.Packet { Rooms = new() }.WriteDelimitedTo(updateStream);
+			((ServerWindowViewModel)DataContext!).ServerRooms = [.. CardGameUtils.ServerServerToClient.Rooms.Parser.ParseDelimitedFrom(updateStream).Rooms_];
 		}
 		catch(Exception ex)
 		{
@@ -69,9 +70,9 @@ public partial class ServerWindow : Window
 			}
 			return;
 		}
-		client.GetStream().Write(Functions.GeneratePayload(new ServerPackets.CreateRequest(name: playerName)));
-		ServerPackets.CreateResponse response = Functions.ReceivePacket<ServerPackets.CreateResponse>(client.GetStream());
-		if(response.success)
+		new CardGameUtils.ServerClientToServer.Packet { Create = new() { Name = playerName } }.WriteDelimitedTo(client.GetStream());
+		CardGameUtils.ServerServerToClient.Create response = CardGameUtils.ServerServerToClient.Create.Parser.ParseDelimitedFrom(client.GetStream());
+		if(response.Result.ValueCase == Result.ValueOneofCase.Ok)
 		{
 			RoomWindow w = new(address: ServerAddressBox.Text, client: client)
 			{
@@ -85,7 +86,7 @@ public partial class ServerWindow : Window
 		}
 		else
 		{
-			_ = new ErrorPopup(response.reason!).ShowDialog(this);
+			_ = new ErrorPopup(response.Result.Error?.Reason ?? "No error reason provided").ShowDialog(this);
 		}
 	}
 	void RefreshClick(object? sender, RoutedEventArgs args)
@@ -100,13 +101,16 @@ public partial class ServerWindow : Window
 		}
 		string targetNameText = (string)((Button)sender).Content!;
 		TcpClient client = new(ServerAddressBox.Text, GenericConstants.SERVER_PORT);
-		client.GetStream().Write(Functions.GeneratePayload(new ServerPackets.JoinRequest
-		(
-			name: PlayerNameBox.Text,
-			targetName: targetNameText
-		)));
-		ServerPackets.JoinResponse response = Functions.ReceivePacket<ServerPackets.JoinResponse>(client.GetStream());
-		if(response.success)
+		new CardGameUtils.ServerClientToServer.Packet
+		{
+			Join = new()
+			{
+				OwnName = PlayerNameBox.Text,
+				OppName = targetNameText
+			}
+		}.WriteDelimitedTo(client.GetStream());
+		CardGameUtils.ServerServerToClient.Join response = CardGameUtils.ServerServerToClient.Join.Parser.ParseDelimitedFrom(client.GetStream());
+		if(response.Result.ValueCase == Result.ValueOneofCase.Ok)
 		{
 			new RoomWindow(ServerAddressBox.Text, client, opponentName: targetNameText)
 			{
@@ -116,7 +120,7 @@ public partial class ServerWindow : Window
 		}
 		else
 		{
-			_ = new ErrorPopup(response.reason!).ShowDialog(this);
+			_ = new ErrorPopup(response.Result.Error?.Reason ?? "No error reason provided").ShowDialog(this);
 		}
 	}
 }

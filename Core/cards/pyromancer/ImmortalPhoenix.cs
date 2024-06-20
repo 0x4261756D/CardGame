@@ -1,6 +1,6 @@
 // Scripted by 0x4261756D
 using CardGameCore;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.CardConstants;
 
 class ImmortalPhoenix : Creature
 {
@@ -22,7 +22,7 @@ class ImmortalPhoenix : Creature
 	private void DeathEffect(Creature target)
 	{
 		MoveToHand(player: Controller, card: target);
-		RegisterLingeringEffect(info: LingeringEffectInfo.Create(effect: PhoenixEffect, referrer: target, influenceLocation: Location.ALL));
+		RegisterLingeringEffect(info: LingeringEffectInfo.Create(effect: PhoenixEffect, referrer: target, influenceLocation: Location.All));
 	}
 
 	private void PhoenixEffect(Creature target)

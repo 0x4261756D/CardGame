@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Net.Sockets;
@@ -9,9 +10,8 @@ using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using CardGameUtils.Structs;
-using static CardGameUtils.Functions;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.CardConstants;
+using Google.Protobuf;
 
 namespace CardGameClient;
 
@@ -19,9 +19,9 @@ public partial class CustomSelectCardsWindow : Window
 {
 	private readonly Stream stream;
 	private bool shouldReallyClose;
-	private readonly Action<CardStruct> showCardAction;
+	private readonly Action<CardInfo> showCardAction;
 
-	public CustomSelectCardsWindow(string text, CardStruct[] cards, bool initialState, Stream stream, int playerIndex, Action<CardStruct> showCardAction)
+	public CustomSelectCardsWindow(string text, IEnumerable<CardInfo> cards, bool initialState, Stream stream, int playerIndex, Action<CardInfo> showCardAction)
 	{
 		this.stream = stream;
 		this.showCardAction = showCardAction;
@@ -34,12 +34,12 @@ public partial class CustomSelectCardsWindow : Window
 		CardSelectionList.MaxHeight = Program.config.height / 3;
 		CardSelectionList.DataContext = cards;
 		CardSelectionList.ItemsSource = cards;
-		CardSelectionList.ItemTemplate = new FuncDataTemplate<CardStruct>((value, namescope) =>
+		CardSelectionList.ItemTemplate = new FuncDataTemplate<CardInfo>((value, namescope) =>
 		{
 			TextBlock block = new()
 			{
-				Text = value.name,
-				TextAlignment = (value.controller == playerIndex) ? TextAlignment.Left : TextAlignment.Right,
+				Text = value.Name,
+				TextAlignment = (value.Controller == playerIndex) ? TextAlignment.Left : TextAlignment.Right,
 			};
 			Border border = new()
 			{
@@ -64,20 +64,24 @@ public partial class CustomSelectCardsWindow : Window
 		{
 			return;
 		}
-		showCardAction((CardStruct)((Control)sender).DataContext!);
+		showCardAction((CardInfo)((Control)sender).DataContext!);
 	}
 
 	public void ConfirmClick(object? sender, RoutedEventArgs args)
 	{
-		stream.Write(GeneratePayload(new DuelPackets.CustomSelectCardsResponse(uids: UIUtils.CardListBoxSelectionToUID(CardSelectionList))));
+		CardGameUtils.DuelClientToServer.CustomSelectCards payload = new();
+		payload.Uids.AddRange(UIUtils.CardListBoxSelectionToUID(CardSelectionList));
+		new CardGameUtils.DuelClientToServer.Packet { CustomSelectCards = payload }.WriteDelimitedTo(stream);
 		shouldReallyClose = true;
 		Close();
 	}
 
 	public void CardSelectionChanged(object sender, SelectionChangedEventArgs args)
 	{
-		stream.Write(GeneratePayload(new DuelPackets.CustomSelectCardsIntermediateRequest(uids: UIUtils.CardListBoxSelectionToUID((ListBox)sender))));
-		((CustomSelectCardViewModel)DataContext!).CanConfirm = ReceivePacket<DuelPackets.CustomSelectCardsIntermediateResponse>((NetworkStream)stream)!.isValid;
+		CardGameUtils.DuelClientToServer.CustomSelectCardsIntermediate payload = new();
+		payload.Uids.AddRange(UIUtils.CardListBoxSelectionToUID((ListBox)sender));
+		new CardGameUtils.DuelClientToServer.Packet { CustomSelectCardsIntermediate = payload }.WriteDelimitedTo(stream);
+		((CustomSelectCardViewModel)DataContext!).CanConfirm = CardGameUtils.DuelServerToClient.CustomSelectCardsIntermediate.Parser.ParseDelimitedFrom((NetworkStream)stream).IsValid;
 	}
 }
 public class CustomSelectCardViewModel : INotifyPropertyChanged
