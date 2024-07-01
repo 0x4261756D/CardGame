@@ -52,11 +52,7 @@ class Deck
 
 	internal void Remove(Card card)
 	{
-		if(cards.Remove(card) || revealedCards.Remove(card))
-		{
-			card.Location &= ~GameConstants.Location.Deck;
-		}
-		else
+		if(!cards.Remove(card) && !revealedCards.Remove(card))
 		{
 			throw new Exception($"Tried to remove nonexistent card {card} from the deck");
 		}

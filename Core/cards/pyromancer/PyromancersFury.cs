@@ -35,7 +35,7 @@ class PyromancersFury : Spell
 	{
 		ChangeIgniteDamage(player: Controller, amount: 1);
 		creatureDiedActive = true;
-		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: ResetEffect, state: State.TurnEnd, influenceLocation: Location.ALL, oneshot: true), referrer: this);
+		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: ResetEffect, state: State.TurnEnd, influenceLocation: Location.Any, oneshot: true), referrer: this);
 	}
 
 	public void ResetEffect()

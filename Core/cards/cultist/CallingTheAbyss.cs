@@ -36,6 +36,6 @@ class CallingtheAbyss : Spell
 		PayLife(Controller, 6);
 		CreateTokenOnField(player: Controller, power: 6, life: 6, name: "Abyssal", source: this);
 		ChangeLifeOfAnyTarget(player: Controller, amount: -6, source: this);
-		RegisterStateReachedTrigger(new StateReachedTrigger(effect: BenefitEffect, state: State.TurnStart, influenceLocation: Location.ALL, oneshot: true), this);
+		RegisterStateReachedTrigger(new StateReachedTrigger(effect: BenefitEffect, state: State.TurnStart, influenceLocation: Location.Any, oneshot: true), this);
 	}
 }

@@ -38,7 +38,7 @@ class PreparetheAltar : Spell
 		RegisterStateReachedTrigger(new StateReachedTrigger(
 			effect: () => PlayerChangeMomentum(player: Controller, amount: target.Cost),
 			state: State.TurnStart,
-			influenceLocation: Location.ALL, oneshot: true), referrer: this);
+			influenceLocation: Location.Any, oneshot: true), referrer: this);
 
 	}
 

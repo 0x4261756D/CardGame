@@ -158,7 +158,6 @@ class Field
 			if(cards[i] != null && cards[i] == card)
 			{
 				cards[i] = null;
-				card.Location &= ~GameConstants.Location.Field;
 				return;
 			}
 		}

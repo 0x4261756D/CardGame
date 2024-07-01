@@ -312,7 +312,7 @@ class DuelCore : Core
 		{
 			foreach(LingeringEffectInfo info in list)
 			{
-				if(info.influenceLocation.HasFlag(info.referrer.Location))
+				if(IsInLocation(info.influenceLocation, info.referrer.Location))
 				{
 					if(info.timestamp == 0)
 					{
@@ -335,7 +335,7 @@ class DuelCore : Core
 				{
 					foreach(LingeringEffectInfo info in handInfos)
 					{
-						if(info.influenceLocation.HasFlag(card.Location))
+						if(IsInLocation(info.influenceLocation, card.Location))
 						{
 							if(info.timestamp == 0)
 							{
@@ -354,7 +354,7 @@ class DuelCore : Core
 				{
 					foreach(LingeringEffectInfo info in handTempInfos)
 					{
-						if(info.influenceLocation.HasFlag(card.Location))
+						if(IsInLocation(info.influenceLocation, card.Location))
 						{
 							if(info.timestamp == 0)
 							{
@@ -376,7 +376,7 @@ class DuelCore : Core
 				{
 					foreach(LingeringEffectInfo info in fieldInfos)
 					{
-						if(info.influenceLocation.HasFlag(card.Location))
+						if(IsInLocation(info.influenceLocation, card.Location))
 						{
 							if(info.timestamp == 0)
 							{
@@ -395,7 +395,7 @@ class DuelCore : Core
 				{
 					foreach(LingeringEffectInfo info in fieldTempInfos)
 					{
-						if(info.influenceLocation.HasFlag(card.Location))
+						if(IsInLocation(info.influenceLocation, card.Location))
 						{
 							if(info.timestamp == 0)
 							{
@@ -469,7 +469,7 @@ class DuelCore : Core
 			foreach(CreatureTargetingTrigger trigger in value)
 			{
 				EvaluateLingeringEffects();
-				if(trigger.influenceLocation.HasFlag(location) && trigger.condition(target))
+				if(IsInLocation(trigger.influenceLocation, location) && trigger.condition(target))
 				{
 					trigger.effect(target);
 					CheckQuestReward();
@@ -502,7 +502,7 @@ class DuelCore : Core
 			{
 				LocationBasedTrigger trigger = matchingTriggers[i];
 				EvaluateLingeringEffects();
-				if(trigger.influenceLocation.HasFlag(location) && trigger.condition())
+				if(IsInLocation(trigger.influenceLocation, location) && trigger.condition())
 				{
 					trigger.effect();
 					CheckQuestReward();
@@ -553,7 +553,7 @@ class DuelCore : Core
 						foreach(StateReachedTrigger trigger in handTriggers)
 						{
 							EvaluateLingeringEffects();
-							if(trigger.state == State && trigger.influenceLocation.HasFlag(GameConstants.Location.Hand) && trigger.condition())
+							if(trigger.state == State && IsInLocation(trigger.influenceLocation, GameConstants.Location.Hand) && trigger.condition())
 							{
 								trigger.effect();
 								trigger.wasTriggered = true;
@@ -575,7 +575,7 @@ class DuelCore : Core
 						foreach(StateReachedTrigger trigger in fieldTriggers)
 						{
 							EvaluateLingeringEffects();
-							if(trigger.state == State && trigger.influenceLocation.HasFlag(GameConstants.Location.Field) && trigger.condition())
+							if(trigger.state == State && IsInLocation(trigger.influenceLocation, GameConstants.Location.Field) && trigger.condition())
 							{
 								trigger.effect();
 								trigger.wasTriggered = true;
@@ -819,7 +819,7 @@ class DuelCore : Core
 								}
 								CreatureChangeLifeImpl(target: card0, amount: -card1.Power, source: card1);
 								CreatureChangeLifeImpl(target: card1, amount: -card0.Power, source: card0);
-								if(!card0.Location.HasFlag(GameConstants.Location.Field) && card1.Location.HasFlag(GameConstants.Location.Field))
+								if(card0.Location != GameConstants.Location.Field && card1.Location == GameConstants.Location.Field)
 								{
 									ProcessTriggers(victoriousTriggers, card1.uid);
 									for(int playerIndex = 0; playerIndex < players.Length; playerIndex++)
@@ -831,7 +831,7 @@ class DuelCore : Core
 										ProcessCreatureTargetingTriggers(genericVictoriousTriggers, target: card1, location: GameConstants.Location.Field, uid: creature.uid);
 									}
 								}
-								if(!card1.Location.HasFlag(GameConstants.Location.Field) && card0.Location.HasFlag(GameConstants.Location.Field))
+								if(card1.Location != GameConstants.Location.Field && card0.Location == GameConstants.Location.Field)
 								{
 									for(int playerIndex = 0; playerIndex < players.Length; playerIndex++)
 									{
@@ -869,7 +869,7 @@ class DuelCore : Core
 								if(creature.Keywords.ContainsKey(Keyword.Decaying))
 								{
 									RegisterLocationTemporaryLingeringEffectImpl(info: LingeringEffectInfo.Create(effect: (target) => target.Life -= 1, referrer: creature));
-									if(creature.Life == 0 && creature.Location.HasFlag(GameConstants.Location.Field))
+									if(creature.Life == 0 && creature.Location == GameConstants.Location.Field)
 									{
 										DestroyImpl(creature);
 									}
@@ -1706,7 +1706,7 @@ class DuelCore : Core
 	}
 	public void RegisterStateReachedTriggerImpl(StateReachedTrigger trigger, Card referrer)
 	{
-		if(trigger.influenceLocation == GameConstants.Location.ALL)
+		if(trigger.influenceLocation == GameConstants.Location.Any)
 		{
 			alwaysActiveStateReachedTriggers.Add(trigger);
 		}
@@ -1718,7 +1718,7 @@ class DuelCore : Core
 	}
 	public void RegisterLingeringEffectImpl(LingeringEffectInfo info)
 	{
-		if(info.influenceLocation == GameConstants.Location.ALL)
+		if(info.influenceLocation == GameConstants.Location.Any)
 		{
 			alwaysActiveLingeringEffects.Add(info);
 		}
@@ -1894,9 +1894,9 @@ class DuelCore : Core
 	{
 		return players[player].hand.GetDiscardable(ignore);
 	}
-	private void RegisterControllerChange(Card card, GameConstants.Location influenceLocation = ~(GameConstants.Location.Grave | GameConstants.Location.Deck))
+	private void RegisterControllerChange(Card card)
 	{
-		RegisterLocationTemporaryLingeringEffectImpl(info: LingeringEffectInfo.Create(effect: (target) => target.Controller = 1 - target.Controller, referrer: card, influenceLocation: influenceLocation));
+		RegisterLocationTemporaryLingeringEffectImpl(info: LingeringEffectInfo.Create(effect: (target) => target.Controller = 1 - target.Controller, referrer: card, influenceLocation: GameConstants.Location.Field));
 	}
 	public void DestroyImpl(Creature card)
 	{
@@ -1945,7 +1945,7 @@ class DuelCore : Core
 	}
 	private void RemoveOutdatedTemporaryLingeringEffects(Card card)
 	{
-		locationTemporaryLingeringEffects.GetValueOrDefault(card.uid)?.RemoveAll(info => !info.influenceLocation.HasFlag(card.Location));
+		locationTemporaryLingeringEffects.GetValueOrDefault(card.uid)?.RemoveAll(info => !IsInLocation(info.influenceLocation, card.Location));
 	}
 	public bool RemoveCardFromItsLocation(Card card)
 	{
@@ -2123,7 +2123,7 @@ class DuelCore : Core
 
 	public void RemoveLingeringEffectImpl(LingeringEffectInfo info)
 	{
-		if(info.influenceLocation == GameConstants.Location.ALL)
+		if(info.influenceLocation == GameConstants.Location.Any)
 		{
 			alwaysActiveLingeringEffects.Remove(info);
 		}

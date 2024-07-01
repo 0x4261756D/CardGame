@@ -22,7 +22,7 @@ class ImmortalPhoenix : Creature
 	private void DeathEffect(Creature target)
 	{
 		MoveToHand(player: Controller, card: target);
-		RegisterLingeringEffect(info: LingeringEffectInfo.Create(effect: PhoenixEffect, referrer: target, influenceLocation: Location.ALL));
+		RegisterLingeringEffect(info: LingeringEffectInfo.Create(effect: PhoenixEffect, referrer: target, influenceLocation: Location.Any));
 	}
 
 	private void PhoenixEffect(Creature target)

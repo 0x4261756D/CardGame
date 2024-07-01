@@ -28,10 +28,10 @@ class RiskyGambit : Spell
 	private void CastEffect()
 	{
 		SetDamageMultiplier(GetDamageMultiplier() * 2);
-		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: EndPhaseEffect, state: State.TurnEnd, influenceLocation: Location.ALL, oneshot: true), referrer: this);
+		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: EndPhaseEffect, state: State.TurnEnd, influenceLocation: Location.Any, oneshot: true), referrer: this);
 	}
 
-	private void EndPhaseEffect()
+	private static void EndPhaseEffect()
 	{
 		SetDamageMultiplier(GetDamageMultiplier() / 2);
 	}

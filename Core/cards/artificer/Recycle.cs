@@ -19,7 +19,7 @@ class Recycle : Spell
 
 	public void CastEffect()
 	{
-		RegisterStateReachedTrigger(new StateReachedTrigger(effect: DrawEffect, state: State.TurnEnd, influenceLocation: Location.ALL, oneshot: true), this);
+		RegisterStateReachedTrigger(new StateReachedTrigger(effect: DrawEffect, state: State.TurnEnd, influenceLocation: Location.Any, oneshot: true), this);
 	}
 
 	private void DrawEffect()

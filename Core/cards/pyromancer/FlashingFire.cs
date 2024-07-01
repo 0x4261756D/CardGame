@@ -1,5 +1,6 @@
 // Scripted by 0x4261756D
 using CardGameCore;
+using CardGameUtils;
 using static CardGameCore.CardUtils;
 using static CardGameUtils.GameConstants;
 
@@ -26,7 +27,7 @@ class FlashingFire : Spell
 		{
 			Creature target = SelectSingleCard(player: Controller, cards: fields, description: "Select target to damage");
 			CreatureChangeLife(target, amount: damage, source: this);
-			if(!target.Location.HasFlag(Location.Field))
+			if(!Functions.IsInLocation(Location, Location.Field))
 			{
 				MoveToHand(player: Controller, card: this);
 			}

@@ -181,7 +181,7 @@ public class ActivatedEffectInfo
 
 	public bool CanActivate(GameConstants.Location location)
 	{
-		return uses < maxUses && influenceLocation.HasFlag(location) && referrer.Location == location && condition();
+		return uses < maxUses && Functions.IsInLocation(influenceLocation, location) && Functions.IsInLocation(referrer.Location, location) && condition();
 	}
 }
 

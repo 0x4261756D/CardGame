@@ -34,7 +34,7 @@ class ActiveDefenseSystem : Spell
 		{
 			MoveToHand(player: target.Controller, card: SelectSingleCard(player: target.Controller, cards: FilterValid(GetGrave(target.Controller), EndPhaseFilter), $"Target \"{Name}\" to return to hand"));
 		}
-		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: EndPhaseEffect, condition: EndPhaseCondition, state: State.TurnEnd, influenceLocation: Location.ALL, oneshot: true), referrer: target);
+		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: EndPhaseEffect, condition: EndPhaseCondition, state: State.TurnEnd, influenceLocation: Location.Any, oneshot: true), referrer: target);
 	}
 
 	private bool EndPhaseCondition()

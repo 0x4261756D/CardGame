@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -113,17 +112,16 @@ public class GameConstants
 		Gladiator
 	}
 
-	[Flags]
 	public enum Location
 	{
 		UNKNOWN,
-		Deck = 1 << 0,
-		Hand = 1 << 1,
-		Field = 1 << 2,
-		Grave = 1 << 3,
-		Quest = 1 << 4,
-		Ability = 1 << 5,
-		ALL = Deck | Hand | Field | Grave,
+		Any,
+		Deck,
+		Hand,
+		Field,
+		Grave,
+		Quest,
+		Ability,
 	}
 }
 

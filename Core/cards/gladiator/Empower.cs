@@ -30,7 +30,7 @@ class Empower : Spell
 		Creature target = SelectSingleCard(Controller, GetFieldUsed(Controller), "Select target for Empower");
 		RegisterLingeringEffect(LingeringEffectInfo.Create(Buff, target));
 		target.RegisterKeyword(Keyword.Mighty);
-		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: () => target.Keywords.Remove(Keyword.Mighty), state: State.TurnEnd, influenceLocation: Location.ALL, oneshot: true), referrer: this);
+		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: () => target.Keywords.Remove(Keyword.Mighty), state: State.TurnEnd, influenceLocation: Location.Any, oneshot: true), referrer: this);
 	}
 
 	private void Buff(Creature target)

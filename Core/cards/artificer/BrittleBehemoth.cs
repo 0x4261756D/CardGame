@@ -27,7 +27,7 @@ class BrittleBehemoth : Creature
 		RegisterLocationTemporaryLingeringEffect(info: LingeringEffectInfo.Create(effect: BoostEffect, referrer: this));
 		if(Keywords.Remove(Keyword.Brittle))
 		{
-			RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: ResetBrittleEffect, state: State.TurnEnd, influenceLocation: Location.ALL, oneshot: true), referrer: this);
+			RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: ResetBrittleEffect, state: State.TurnEnd, influenceLocation: Location.Any, oneshot: true), referrer: this);
 		}
 	}
 
@@ -46,7 +46,7 @@ class BrittleBehemoth : Creature
 	{
 		Creature target = SelectSingleCard(player: Controller, cards: FilterValid(cards: GetBothFieldsUsed(), isValid: Filter), description: "Select creature to frighten");
 		target.RegisterKeyword(Keyword.Immovable);
-		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: () => target.Keywords.Remove(Keyword.Immovable), state: State.TurnEnd, influenceLocation: Location.ALL, oneshot: true), referrer: target);
+		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: () => target.Keywords.Remove(Keyword.Immovable), state: State.TurnEnd, influenceLocation: Location.Any, oneshot: true), referrer: target);
 	}
 
 	public bool RevelationCondition()

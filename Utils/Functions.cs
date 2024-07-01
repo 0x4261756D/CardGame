@@ -179,5 +179,10 @@ partial class Functions
 			_ => throw new NotImplementedException(),
 		};
 	}
+
+	public static bool IsInLocation(GameConstants.Location first, GameConstants.Location second)
+	{
+		return first == second || first == GameConstants.Location.Any || second == GameConstants.Location.Any;
+	}
 }
 

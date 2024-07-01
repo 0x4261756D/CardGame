@@ -512,7 +512,7 @@ public partial class DuelWindow : Window
 			DataContext = card,
 			Background = (card.card_type == GameConstants.CardType.Quest && card.text.Contains("REWARD CLAIMED")) ? Brushes.Green : null,
 		};
-		if(!card.location.HasFlag(GameConstants.Location.Hand))
+		if(card.location != GameConstants.Location.Hand)
 		{
 			b.MinWidth = OwnField.Bounds.Width / GameConstants.FIELD_SIZE;
 		}

@@ -34,11 +34,6 @@ class Hand
 
 	internal void Remove(Card c)
 	{
-		// NOTE: This could be the wrong workaround, if something like a card cast from nowhere sticks in hand, look here
-		if(c.Location != GameConstants.Location.Hand)
-		{
-			c.Location &= ~GameConstants.Location.Hand;
-		}
 		_ = cards.Remove(c);
 	}
 
