@@ -6,7 +6,8 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
-using static CardGameUtils.Structs.NetworkingStructs;
+using Google.ProtocolBuffers;
+using CardGameUtils.Packets;
 
 namespace CardGameUtils;
 
@@ -55,36 +56,18 @@ partial class Functions
 		Console.ForegroundColor = current;
 	}
 
-	public static Packet DeserializeRaw(byte[] data)
+	public static Packet DeserializePacket(byte[] data)
 	{
-		// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
-		//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
-		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
-		// the only difference being the type passed, wondering why one works and the other not...
-		return (Packet?)JsonSerializer.Deserialize(data, typeof(Packet), GenericConstants.packetSerialization) ?? throw new Exception("Deserialization returned null");
+		if(!Packet.VerifyPacket(data))
+		{
+			throw new Exception("Invalid packet received");
+		}
+		return Packet.GetRootAsPacket(new ByteBuffer(data));
 	}
 
-	public static byte[] GeneratePayload(Packet data)
+	public static Packet ReceivePacket(NetworkStream stream)
 	{
-		// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
-		//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
-		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
-		// the only difference being the type passed, wondering why one works and the other not...
-		byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(data, typeof(Packet), GenericConstants.packetSerialization);
-		return [.. BitConverter.GetBytes(bytes.Length), .. bytes];
-	}
-	public static byte[] ReadPacketBytes(NetworkStream stream)
-	{
-		byte[] buffer = new byte[4];
-		stream.ReadExactly(buffer);
-		uint length = BitConverter.ToUInt32(buffer);
-		buffer = new byte[length];
-		stream.ReadExactly(buffer);
-		return buffer;
-	}
 
-	public static Packet ReceiveRawPacket(NetworkStream stream)
-	{
 		// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
 		//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
 		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,

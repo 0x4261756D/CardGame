@@ -1,5 +1,4 @@
-<Project
-	 Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net8.0</TargetFramework>
@@ -9,11 +8,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Include="../Utils/**/*.cs"/>
+		<Compile Include="../Utils/**/*.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<RdXmlFile
-			 Include="rd.xml"/>
+		<RdXmlFile Include="rd.xml" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Google.FlatBuffers" Version="24.3.25" />
 	</ItemGroup>
 </Project>

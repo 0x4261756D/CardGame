@@ -1,0 +1,377 @@
+namespace CardGameUtils.Packets;
+
+enum GameResult : byte
+{
+	UNKNOWN,
+	Lost = 1,
+	Draw,
+	Won,
+}
+enum Location : ubyte
+{
+	UNKNOWN,
+	All,
+	Deck,
+	Hand,
+	Field,
+	Grave,
+	Quest,
+	Ability,
+}
+enum PlayerClass : byte
+{
+	UNKNOWN,
+	All = 1,
+	Cultist,
+	Pyromancer,
+	Artificer,
+	Gladiator,
+}
+union TypeSpecifics
+{
+	creature:CreatureSpecifics,
+	spell:SpellSpecifics,
+	quest:QuestSpecifics,
+}
+table CardInfo
+{
+	name:string;
+	text:string;
+	card_class:PlayerClass;
+	location:Location;
+	uid:int32;
+	controller:int32;
+	base_controller:int32;
+	type_specifics:TypeSpecifics;
+}
+table CreatureSpecifics
+{
+	life:int32;
+	base_life:int32;
+	power:int32;
+	base_power:int32;
+	cost:int32;
+	base_cost:int32;
+	position:int32;
+}
+table SpellSpecifics
+{
+	cost:int32;
+	base_cost:int32;
+	is_class_ability:bool;
+	can_be_class_ability:bool;
+}
+table QuestSpecifics
+{
+	progress:int32;
+	goal:int32;
+}
+
+table CardAction
+{
+	uid:int32;
+	description:string;
+}
+
+table DuelClientSurrenderPacket {}
+
+table DuelServerGameResultPacket
+{
+	result:GameResult;
+}
+
+table DuelClientGetOptionsPacket
+{
+	location:Location;
+	uid:int32;
+}
+table DuelServerGetOptionsPacket
+{
+	location:Location;
+	uid:int32;
+	options:[CardAction];
+}
+
+table DuelClientSelectOptionPacket
+{
+	location:Location;
+	uid:int32;
+	action:CardAction;
+}
+
+table DuelServerYesNoPacket
+{
+	question:string;
+}
+table DuelClientYesNoPacket
+{
+	result:bool;
+}
+
+table DuelServerSelectCardsPacket
+{
+	cards:[CardInfo];
+	description:string;
+	amount:int32;
+}
+table DuelClientSelectCardsPacket
+{
+	uids:[int32];
+}
+
+table DuelServerCustomSelectCardsPacket
+{
+	cards:[CardInfo];
+	description:string;
+	initial_state:bool;
+}
+table DuelClientCustomSelectCardsPacket
+{
+	uids:[int32];
+}
+table DuelClientCustomSelectIntermediatePacket
+{
+	uids:[int32];
+}
+table DuelServerCustomSelectIntermediatePacket
+{
+	is_valid:bool;
+}
+
+table DuelServerFieldUpdatePacket
+{
+	own:FieldUpdateField;
+	opp:FieldUpdateField;
+	turn:int32;
+	has_initiative:bool;
+	battle_direction_left_to_right:bool;
+	marked_zone:int32 = -1;
+}
+table FieldUpdateField
+{
+	life:int32;
+	deck_size:int32;
+	grave_size:int32;
+	momentum:int32;
+	hand:[CardInfo];
+	field:[CardInfo];
+	name:string;
+	ability:CardInfo;
+	quest:CardInfo;
+	shown_info:ShownInfo;
+}
+table ShownInfo
+{
+	card:CardInfo;
+	description:string;
+}
+
+table DuelServerSelectZonePacket
+{
+	options:[bool];
+}
+table DuelClientSelectZonePacket
+{
+	zone:int32;
+}
+
+table DuelClientPassPacket {}
+
+table DuelClientViewGravePacket
+{
+	of_opponent:bool;
+}
+
+table DuelServerShowCardsPacket
+{
+	message:string;
+	cards:[CardInfo];
+}
+
+
+table DeckClientNamesPacket {}
+
+table DeckServerNamesPacket
+{
+	names:[string];
+}
+
+table DeckClientListPacket
+{
+	name:string;
+}
+
+table DeckServerListPacket
+{
+	deck:DeckInfo;
+}
+table DeckInfo
+{
+	name:string;
+	cards:[CardInfo];
+	player_class:PlayerClass;
+	ability:CardInfo;
+	quest:CardInfo;
+}
+
+table DeckClientSearchPacket
+{
+	filter:string;
+	player_class:PlayerClass;
+	include_generic_cards:bool;
+}
+
+table DeckServerSearchPacket
+{
+	cards:[CardInfo];
+}
+
+table DeckClientUpdatePacket
+{
+	deck:DeckInfo;
+}
+
+
+table ServerClientAdditionalCardsPacket {}
+
+table ServerServerAdditionalCardsPacket
+{
+	timestamp:int64;
+	cards:[CardInfo];
+}
+
+table ServerClientArtworksPacket
+{
+	names:[string];
+}
+
+table ServerServerArtworksPacket
+{
+	supports_artworks:bool;
+	artworks:[ArtworkInfo];
+}
+enum ArtworkFiletype : uint8
+{
+	UNKNOWN,
+	JPG,
+	PNG,
+}
+table ArtworkInfo
+{
+	filetype:ArtworkFiletype;
+	data:[uint8];
+}
+
+
+table ServerClientCreatePacket
+{
+	name:string;
+}
+table ResultSuccess {}
+table ResultFailure
+{
+	reason:string;
+}
+union Result { ResultSuccess, ResultFailure }
+table ServerServerCreatePacket
+{
+	result:Result;
+}
+
+
+table ServerClientJoinPacket
+{
+	own_name:string;
+	opp_name:string;
+}
+
+table ServerServerJoinPacket
+{
+	result:Result;
+}
+
+table ServerServerOpponentChangedPacket
+{
+	name:string;
+}
+
+table ServerClientLeavePacket {}
+
+table ServerClientRoomsPacket {}
+
+table ServerServerRoomsPacket
+{
+	rooms:[string];
+}
+
+table ServerClientStartPacket
+{
+	decklist:[string];
+	noshuffle:bool;
+}
+
+table ServerServerStartResultFailure
+{
+	reason:string;
+}
+table ServerServerStartResultSuccess
+{
+	room_id:string;
+	port:int;
+}
+table ServerServerStartResultSuccessButWaiting {}
+union ServerServerStartResult { ServerServerStartResultFailure, ServerServerStartResultSuccess, ServerServerStartResultSuccessButWaiting }
+table ServerServerStartPacket
+{
+	result:ServerServerStartResult;
+}
+
+union PacketUnion
+{
+	duel_client_surrender:DuelClientSurrenderPacket,
+	duel_server_gameresult:DuelServerGameResultPacket,
+	duel_client_getoptions:DuelClientGetOptionsPacket,
+	duel_server_getoptions:DuelServerGetOptionsPacket,
+	duel_client_selectoption:DuelClientSelectOptionPacket,
+	duel_server_yesno:DuelServerYesNoPacket,
+	duel_client_yesno:DuelClientYesNoPacket,
+	duel_server_selectcards:DuelServerSelectCardsPacket,
+	duel_client_selectcards:DuelClientSelectCardsPacket,
+	duel_server_customselectcards:DuelServerCustomSelectCardsPacket,
+	duel_client_customselectcards:DuelClientCustomSelectCardsPacket,
+	duel_client_customselectintermediate:DuelClientCustomSelectIntermediatePacket,
+	duel_server_customselectintermediate:DuelServerCustomSelectIntermediatePacket,
+	duel_server_fieldupdate:DuelServerFieldUpdatePacket,
+	duel_server_selectzone:DuelServerSelectZonePacket,
+	duel_client_selectzone:DuelClientSelectZonePacket,
+	duel_client_pass:DuelClientPassPacket,
+	duel_client_viewgrave:DuelClientViewGravePacket,
+	duel_server_showcards:DuelServerShowCardsPacket,
+	deck_client_names:DeckClientNamesPacket,
+	deck_server_names:DeckServerNamesPacket,
+	deck_client_list:DeckClientListPacket,
+	deck_server_list:DeckClientListPacket,
+	deck_client_search:DeckClientSearchPacket,
+	deck_server_search:DeckServerSearchPacket,
+	deck_client_update:DeckClientUpdatePacket,
+	server_client_additional_cards:ServerClientAdditionalCardsPacket,
+	server_server_additional_cards:ServerServerAdditionalCardsPacket,
+	server_client_artworks:ServerClientArtworksPacket,
+	server_server_artworks:ServerServerArtworksPacket,
+	server_client_create:ServerClientCreatePacket,
+	server_server_create:ServerServerCreatePacket,
+	server_client_join:ServerClientJoinPacket,
+	server_server_join:ServerServerJoinPacket,
+	server_server_opponent_changed:ServerServerOpponentChangedPacket,
+	server_client_leave:ServerClientLeavePacket,
+	server_client_rooms:ServerClientRoomsPacket,
+	server_server_rooms:ServerServerRoomsPacket,
+	server_client_start:ServerClientStartPacket,
+	server_server_start:ServerServerStartPacket,
+}
+table Packet
+{
+	value:PacketUnion;
+}
+
+root_type Packet;

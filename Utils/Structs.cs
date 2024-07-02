@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 
 namespace CardGameUtils.Structs;
-
+/*
 public class CardStruct
 {
 	public string name, text;
@@ -117,7 +117,7 @@ public class CardStruct
 		return builder.Append($"{separator}----------{separator}{text}").ToString();
 	}
 }
-
+*/
 
 public class URL(string address, int port)
 {
@@ -165,12 +165,12 @@ public class PlatformClientConfig
 {
 	public ClientConfig? windows, linux;
 }
-
+/*
 public class CardAction(int uid, string description)
 {
 	public int uid = uid;
 	public string description = description;
-}
+}*/
 
 public class ClientConfig(
 	URL deck_edit_url, int width, int height, CoreInfo core_info, bool should_save_player_name, bool should_spawn_core, string server_address, int animation_delay_in_ms, ClientConfig.ThemeVariant? theme, string? artwork_path)
@@ -217,7 +217,7 @@ public class ServerConfig(string additional_cards_path, string? artwork_path, in
 	public string additional_cards_path = additional_cards_path;
 	public string? artwork_path = artwork_path;
 }
-
+/*
 public class NetworkingStructs
 {
 	[JsonDerivedType(typeof(Packet))]
@@ -576,4 +576,4 @@ public class NetworkingStructs
 			public string? reason;
 		}
 	}
-}
+}*/
