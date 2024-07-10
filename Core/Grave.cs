@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CardGameUtils;
+using CardGameUtils.Constants;
 
 namespace CardGameCore;
 
@@ -22,7 +23,7 @@ class Grave
 		{
 			return;
 		}
-		card.Location = GameConstants.Location.Grave;
+		card.Location = Location.Grave;
 		card.ResetToBaseState();
 		cards.Add(card);
 	}

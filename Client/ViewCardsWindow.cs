@@ -1,17 +1,18 @@
 using System;
+using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using CardGameUtils.Structs;
+using CardGameUtils.Constants;
 
 namespace CardGameClient;
 
 public partial class ViewCardsWindow : Window
 {
-	private readonly Action<CardStruct> showCardAction;
+	private readonly Action<CardInfo> showCardAction;
 
-	public ViewCardsWindow(CardStruct[] cards, string? message, Action<CardStruct> showCardAction)
+	public ViewCardsWindow(List<CardInfo> cards, string? message, Action<CardInfo> showCardAction)
 	{
 		InitializeComponent();
 		Width = Program.config.width / 2;
@@ -20,11 +21,11 @@ public partial class ViewCardsWindow : Window
 		CardSelectionList.MaxHeight = Program.config.height / 3;
 		CardSelectionList.DataContext = cards;
 		CardSelectionList.ItemsSource = cards;
-		CardSelectionList.ItemTemplate = new FuncDataTemplate<CardStruct>((value, _) =>
+		CardSelectionList.ItemTemplate = new FuncDataTemplate<CardInfo>((value, _) =>
 		{
 			TextBlock block = new()
 			{
-				Text = value.name,
+				Text = value.Name,
 			};
 			Border border = new()
 			{
@@ -50,7 +51,7 @@ public partial class ViewCardsWindow : Window
 		{
 			return;
 		}
-		showCardAction((CardStruct)((Control)sender).DataContext!);
+		showCardAction((CardInfo)((Control)sender).DataContext!);
 	}
 	public void CloseClick(object? sender, RoutedEventArgs args)
 	{

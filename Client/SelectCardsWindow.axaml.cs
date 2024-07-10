@@ -1,32 +1,34 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using CardGameUtils.Structs;
-using static CardGameUtils.Functions;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Constants;
+using CardGameUtils.Packets.Duel;
+using Thrift.Protocol;
+using Thrift.Transport.Client;
 
 namespace CardGameClient;
 
 public partial class SelectCardsWindow : Window
 {
-	private readonly Stream stream;
+	private readonly TcpClient client;
 	private bool shouldReallyClose;
-	private readonly Action<CardStruct> showCardAction;
+	private readonly Action<CardInfo> showCardAction;
 
-	public SelectCardsWindow(string text, int amount, CardStruct[] cards, Stream stream, int playerIndex, Action<CardStruct> showCardAction)
+	public SelectCardsWindow(string text, int amount, List<CardInfo> cards, TcpClient client, int playerIndex, Action<CardInfo> showCardAction)
 	{
-		if(cards.Length < amount)
+		if(cards.Count < amount)
 		{
-			throw new Exception($"Tried to create a SelectCardWindow requiring to select more cards than possible: {cards.Length}/{amount}");
+			throw new Exception($"Tried to create a SelectCardWindow requiring to select more cards than possible: {cards.Count}/{amount}");
 		}
 		this.showCardAction = showCardAction;
-		this.stream = stream;
+		this.client = client;
 		DataContext = new SelectedCardViewModel(amount);
 		InitializeComponent();
 		Width = Program.config.width / 2;
@@ -34,12 +36,12 @@ public partial class SelectCardsWindow : Window
 		CardSelectionList.MaxHeight = Program.config.height / 3;
 		CardSelectionList.DataContext = cards;
 		CardSelectionList.ItemsSource = cards;
-		CardSelectionList.ItemTemplate = new FuncDataTemplate<CardStruct>((value, namescope) =>
+		CardSelectionList.ItemTemplate = new FuncDataTemplate<CardInfo>((value, namescope) =>
 		{
 			TextBlock block = new()
 			{
-				Text = value.name,
-				TextAlignment = (playerIndex == value.controller) ? TextAlignment.Left : TextAlignment.Right,
+				Text = value.Name,
+				TextAlignment = (playerIndex == value.Controller) ? TextAlignment.Left : TextAlignment.Right,
 			};
 			Border border = new()
 			{
@@ -71,7 +73,7 @@ public partial class SelectCardsWindow : Window
 		{
 			return;
 		}
-		showCardAction((CardStruct)((Control)sender).DataContext!);
+		showCardAction((CardInfo)((Control)sender).DataContext!);
 	}
 
 	public void CardSelectionChanged(object? sender, SelectionChangedEventArgs args)
@@ -84,9 +86,9 @@ public partial class SelectCardsWindow : Window
 		((SelectedCardViewModel)DataContext!).SelectedCount = newCount;
 	}
 
-	public void ConfirmClick(object? sender, RoutedEventArgs args)
+	public async void ConfirmClick(object? sender, RoutedEventArgs args)
 	{
-		stream.Write(GeneratePayload(new DuelPackets.SelectCardsResponse(uids: UIUtils.CardListBoxSelectionToUID(CardSelectionList))));
+		await new ClientPacket.select_cards(new() { Uids = UIUtils.CardListBoxSelectionToUID(CardSelectionList) }).WriteAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
 		shouldReallyClose = true;
 		Close();
 	}

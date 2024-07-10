@@ -1,5 +1,5 @@
 include "Constants.thrift"
-namespace netstd CardGame.Packets.Server
+namespace netstd CardGameUtils.Packets.Server
 
 union ClientPacket
 {

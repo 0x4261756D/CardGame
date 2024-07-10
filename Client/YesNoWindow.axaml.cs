@@ -1,19 +1,20 @@
-using System.IO;
+using System.Net.Sockets;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using static CardGameUtils.Functions;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Packets.Duel;
+using Thrift.Protocol;
+using Thrift.Transport.Client;
 
 namespace CardGameClient;
 public partial class YesNoWindow : Window
 {
-	readonly Stream stream;
+	readonly TcpClient client;
 	private bool shouldReallyClose;
-	public YesNoWindow(string description, Stream stream)
+	public YesNoWindow(string description, TcpClient client)
 	{
 		InitializeComponent();
 		MessageBlock.Text = description;
-		this.stream = stream;
+		this.client = client;
 		Width = Program.config.width / 2;
 		Height = Program.config.height / 2;
 		Closing += (sender, args) =>
@@ -22,16 +23,16 @@ public partial class YesNoWindow : Window
 		};
 	}
 
-	public void YesClick(object? sender, RoutedEventArgs args)
+	public async void YesClick(object? sender, RoutedEventArgs args)
 	{
-		stream.Write(GeneratePayload(new DuelPackets.YesNoResponse(result: true)));
+		await new ClientPacket.yes_no(new() { Yes = true }).WriteAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
 		shouldReallyClose = true;
 		Close();
 	}
 
-	public void NoClick(object? sender, RoutedEventArgs args)
+	public async void NoClick(object? sender, RoutedEventArgs args)
 	{
-		stream.Write(GeneratePayload(new DuelPackets.YesNoResponse(result: false)));
+		await new ClientPacket.yes_no(new() { Yes = false }).WriteAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
 		shouldReallyClose = true;
 		Close();
 	}

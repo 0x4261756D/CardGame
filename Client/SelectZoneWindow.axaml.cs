@@ -1,7 +1,9 @@
-using System.IO;
+using System.Collections.Generic;
+using System.Net.Sockets;
 using Avalonia.Controls;
-using static CardGameUtils.Functions;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Packets.Duel;
+using Thrift.Protocol;
+using Thrift.Transport.Client;
 
 namespace CardGameClient;
 
@@ -9,21 +11,21 @@ public partial class SelectZoneWindow : Window
 {
 	private bool shouldReallyClose;
 
-	public SelectZoneWindow(bool[] options, Stream stream)
+	public SelectZoneWindow(List<bool> options, TcpClient client)
 	{
 		InitializeComponent();
 		Width = Program.config.width / 2;
 		Height = Program.config.height / 2;
-		for(int i = 0; i < options.Length; i++)
+		for(int i = 0; i < options.Count; i++)
 		{
 			Button b = new()
 			{
 				Content = i
 			};
-			b.Click += (sender, _) =>
+			b.Click += async (sender, _) =>
 			{
 				int zone = (int)((Button)sender!).Content!;
-				stream.Write(GeneratePayload(new DuelPackets.SelectZoneResponse(zone: zone)));
+				await new ClientPacket.select_zone(new() { Zone = zone }).WriteAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
 				shouldReallyClose = true;
 				Close();
 			};

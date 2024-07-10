@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using CardGameUtils;
+using CardGameUtils.Constants;
 
 namespace CardGameCore;
 
@@ -17,7 +17,7 @@ class Deck
 
 	internal void Add(Card c)
 	{
-		c.Location = GameConstants.Location.Deck;
+		c.Location = Location.Deck;
 		cards.Add(c);
 	}
 
@@ -29,7 +29,6 @@ class Deck
 		}
 		Card ret = cards[0];
 		cards.RemoveAt(0);
-		ret.Location = GameConstants.Location.UNKNOWN;
 		return ret;
 	}
 

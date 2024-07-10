@@ -1,8 +1,7 @@
 // Scripted by 0x4261756D
 using CardGameCore;
-using CardGameUtils.Structs;
+using CardGameUtils.Constants;
 using static CardGameCore.CardUtils;
-using static CardGameUtils.GameConstants;
 
 class Ignite : Spell
 {
@@ -46,7 +45,7 @@ class Ignite : Spell
 		Cast(card: this, player: Controller);
 	}
 
-	public override CardStruct ToStruct(bool client = false)
+	public override CardInfo ToStruct(bool client = false)
 	{
 		if(!client)
 		{

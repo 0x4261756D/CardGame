@@ -2,6 +2,7 @@
 
 using CardGameCore;
 using static CardGameUtils.GameConstants;
+using CardGameUtils.Constants;
 
 class PyromancersFury : Spell
 {

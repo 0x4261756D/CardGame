@@ -1,12 +1,18 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using CardGameUtils;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Packets.Server;
+using Thrift.Protocol;
+using Thrift.Transport;
+using Thrift.Transport.Client;
+using Avalonia.Threading;
 
 namespace CardGameClient;
 
@@ -16,7 +22,9 @@ public partial class ServerWindow : Window
 	{
 		DataContext = new ServerWindowViewModel();
 		InitializeComponent();
-		UpdateRoomList();
+		Functions.Log("Before UpdateRoomList");
+		Dispatcher.UIThread.Invoke(async () => await UpdateRoomList());
+		Functions.Log("after UpdateRoomList");
 	}
 	public void BackClick(object sender, RoutedEventArgs args)
 	{
@@ -26,7 +34,7 @@ public partial class ServerWindow : Window
 		}.Show();
 		Close();
 	}
-	private void UpdateRoomList()
+	private async Task UpdateRoomList()
 	{
 		if(ServerAddressBox.Text == null)
 		{
@@ -35,10 +43,15 @@ public partial class ServerWindow : Window
 		}
 		try
 		{
-			using TcpClient updateClient = new(ServerAddressBox.Text, GenericConstants.SERVER_PORT);
-			using NetworkStream updateStream = updateClient.GetStream();
-			updateStream.Write(Functions.GeneratePayload(new ServerPackets.RoomsRequest()));
-			((ServerWindowViewModel)DataContext!).ServerRooms = Functions.ReceivePacket<ServerPackets.RoomsResponse>(updateStream).rooms;
+			Functions.Log("Before sending updateroomlist");
+			TTransport transport = new TSocketTransport(host: ServerAddressBox.Text!, port: GenericConstants.SERVER_PORT, timeout: 1000, config: new());
+			await new ClientPacket.rooms(new()).WriteAsync(new TCompactProtocol(transport), default);
+			Functions.Log("after sending updateroomlist");
+			transport.CheckReadBytesAvailable(1);
+			Functions.Log("Bytes are available");
+			ServerPacket packet = await ServerPacket.ReadAsync(new TCompactProtocol(transport), default);
+			((ServerWindowViewModel)DataContext!).ServerRooms = packet.As_rooms!.Rooms!;
+			Functions.Log("after receiving roomlist");
 		}
 		catch(Exception ex)
 		{
@@ -49,17 +62,19 @@ public partial class ServerWindow : Window
 			return;
 		}
 	}
-	private void HostClick(object? sender, RoutedEventArgs args)
+	private async void HostClick(object? sender, RoutedEventArgs args)
 	{
 		if(ServerAddressBox.Text == null)
 		{
 			return;
 		}
 		string playerName = ((ServerWindowViewModel)DataContext!).PlayerName;
+		TTransport transport;
 		TcpClient client;
 		try
 		{
 			client = new(ServerAddressBox.Text, GenericConstants.SERVER_PORT);
+			transport = new TSocketTransport(client, new());
 		}
 		catch(Exception ex)
 		{
@@ -69,9 +84,10 @@ public partial class ServerWindow : Window
 			}
 			return;
 		}
-		client.GetStream().Write(Functions.GeneratePayload(new ServerPackets.CreateRequest(name: playerName)));
-		ServerPackets.CreateResponse response = Functions.ReceivePacket<ServerPackets.CreateResponse>(client.GetStream());
-		if(response.success)
+		await new ClientPacket.create(new() { Name = playerName }).WriteAsync(new TCompactProtocol(transport), default);
+		ServerPacket packet = await ServerPacket.ReadAsync(new TCompactProtocol(transport), default);
+		Result response = packet.As_create!.Result!;
+		if(response is Result.success)
 		{
 			RoomWindow w = new(address: ServerAddressBox.Text, client: client)
 			{
@@ -85,28 +101,26 @@ public partial class ServerWindow : Window
 		}
 		else
 		{
-			_ = new ErrorPopup(response.reason!).ShowDialog(this);
+			_ = new ErrorPopup(response.As_failure!.Result!).ShowDialog(this);
 		}
 	}
-	void RefreshClick(object? sender, RoutedEventArgs args)
+	private async void RefreshClick(object? sender, RoutedEventArgs args)
 	{
-		UpdateRoomList();
+		await UpdateRoomList();
 	}
-	private void JoinClick(object? sender, RoutedEventArgs args)
+	private async void JoinClick(object? sender, RoutedEventArgs args)
 	{
 		if(sender is null || ServerAddressBox.Text == null || PlayerNameBox.Text == null || string.IsNullOrEmpty(PlayerNameBox.Text))
 		{
 			return;
 		}
-		string targetNameText = (string)((Button)sender).Content!;
+		string targetNameText = (string)((Button)sender!).Content!;
 		TcpClient client = new(ServerAddressBox.Text, GenericConstants.SERVER_PORT);
-		client.GetStream().Write(Functions.GeneratePayload(new ServerPackets.JoinRequest
-		(
-			name: PlayerNameBox.Text,
-			targetName: targetNameText
-		)));
-		ServerPackets.JoinResponse response = Functions.ReceivePacket<ServerPackets.JoinResponse>(client.GetStream());
-		if(response.success)
+		TTransport transport = new TSocketTransport(client, new());
+		await new ClientPacket.join(new() { Own_name = PlayerNameBox.Text, Opp_name = targetNameText }).WriteAsync(new TCompactProtocol(transport), default);
+		ServerPacket packet = await ServerPacket.ReadAsync(new TCompactProtocol(transport), default);
+		Result response = packet.As_join!.Result!;
+		if(response is Result.success)
 		{
 			new RoomWindow(ServerAddressBox.Text, client, opponentName: targetNameText)
 			{
@@ -116,7 +130,7 @@ public partial class ServerWindow : Window
 		}
 		else
 		{
-			_ = new ErrorPopup(response.reason!).ShowDialog(this);
+			_ = new ErrorPopup(response.As_failure!.Result!).ShowDialog(this);
 		}
 	}
 }
@@ -167,8 +181,8 @@ public class ServerWindowViewModel : INotifyPropertyChanged
 			}
 		}
 	}
-	private string[] serverRooms = [];
-	public string[] ServerRooms
+	private List<string> serverRooms = [];
+	public List<string> ServerRooms
 	{
 		get => serverRooms;
 		set

@@ -9,7 +9,10 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using CardGameUtils;
-using static CardGameUtils.Structs.NetworkingStructs;
+using Thrift.Protocol;
+using Thrift.Transport;
+using Thrift.Transport.Client;
+using System.Threading;
 
 namespace CardGameClient;
 
@@ -19,19 +22,21 @@ public partial class RoomWindow : Window
 	private readonly TcpClient client;
 	private readonly string address;
 	public bool closed;
+	private CancellationTokenSource cancellationTokenSource;
+
 	public RoomWindow(string address, TcpClient client, string? opponentName = null)
 	{
+		this.cancellationTokenSource = new();
 		this.client = client;
 		this.address = address;
-		networkTask = new Task(HandleNetwork, TaskCreationOptions.LongRunning);
-		networkTask.Start();
+		networkTask = HandleNetwork(cancellationTokenSource.Token);
 		DataContext = new RoomWindowViewModel();
-		Closed += (sender, args) => CloseRoom();
+		Closed += async (sender, args) => await CloseRoom();
 		InitializeComponent();
 		OpponentNameBlock.Text = opponentName;
 		if(DeckSelectBox.ItemCount <= 0)
 		{
-			CloseRoom();
+			CloseRoom().Wait();
 		}
 		else
 		{
@@ -55,40 +60,47 @@ public partial class RoomWindow : Window
 		}
 	}
 
-	private async void HandleNetwork()
+	private async Task HandleNetwork(CancellationToken token)
 	{
-		while(!closed)
+		while(!closed && !token.IsCancellationRequested)
 		{
+			Functions.Log($"Closed: {closed}, cancel: {token.IsCancellationRequested}");
 			if(client.Connected)
 			{
-				Packet? packet = await Task.Run(() => Functions.TryReceiveRawPacket(client.GetStream(), 100)).ConfigureAwait(false);
-				if(packet != null)
+				if(client.Available > 0)
 				{
+					CardGameUtils.Packets.Server.ServerPacket packet = await CardGameUtils.Packets.Server.ServerPacket.ReadAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
 					await Dispatcher.UIThread.InvokeAsync(() => HandlePacket(packet));
-				}
-			}
-		}
-	}
-
-	private void HandlePacket(Packet packet)
-	{
-		switch(packet)
-		{
-			case ServerPackets.OpponentChangedResponse response:
-			{
-				string? name = response.name;
-				OpponentNameBlock.Text = name;
-			}
-			break;
-			case ServerPackets.StartResponse response:
-			{
-				if(response.success != ServerPackets.StartResponse.Result.Success)
-				{
-					_ = new ErrorPopup(response.reason ?? "Duel creation failed for unknown reason");
 				}
 				else
 				{
-					StartGame(response.port, response.id!);
+					await Task.Delay(100);
+				}
+			}
+		}
+		Functions.Log("Returned");
+		return;
+	}
+
+	private void HandlePacket(CardGameUtils.Packets.Server.ServerPacket packet)
+	{
+		switch(packet)
+		{
+			case CardGameUtils.Packets.Server.ServerPacket.opponent_changed:
+			{
+				OpponentNameBlock.Text = packet.As_opponent_changed!.Name;
+			}
+			break;
+			case CardGameUtils.Packets.Server.ServerPacket.start:
+			{
+				CardGameUtils.Packets.Server.ServerStartResult response = packet.As_start!.Result!;
+				if(response is not CardGameUtils.Packets.Server.ServerStartResult.success)
+				{
+					_ = new ErrorPopup(response.As_failure?.Result ?? "Duel creation failed for unknown reason");
+				}
+				else
+				{
+					StartGame(response.As_success!.Port, response.As_success.Room_id!);
 				}
 			}
 			break;
@@ -103,27 +115,32 @@ public partial class RoomWindow : Window
 	{
 		Program.config.last_deck_name = args.AddedItems[0]?.ToString();
 	}
-	public void BackClick(object? sender, RoutedEventArgs? args)
+	public async void BackClick(object? sender, RoutedEventArgs? args)
 	{
-		CloseRoom();
+		await CloseRoom();
 		new ServerWindow
 		{
 			WindowState = WindowState,
 		}.Show();
+		Functions.Log("here");
 		Close();
 	}
-	public void CloseRoom()
+	public async Task CloseRoom()
 	{
+		Functions.Log("Closing");
 		if(!closed)
 		{
-			networkTask.Dispose();
-			NetworkStream stream = client.GetStream();
-			if(stream.Socket.Connected)
+			await cancellationTokenSource.CancelAsync();
+			cancellationTokenSource.Dispose();
+			Functions.Log("nw task disposed");
+			if(client.Connected)
 			{
-				stream.Write(Functions.GeneratePayload(new ServerPackets.LeaveRequest()));
+				await new CardGameUtils.Packets.Server.ClientPacket.leave(new()).WriteAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
+				Functions.Log("left");
 			}
 			client.Close();
 			closed = true;
+			Functions.Log("Close done");
 		}
 	}
 	private async void TryStartClick(object? sender, RoutedEventArgs args)
@@ -138,13 +155,23 @@ public partial class RoomWindow : Window
 			await new ErrorPopup("You have no opponent").ShowDialog(this).ConfigureAwait(false);
 			return;
 		}
-		DeckPackets.ListResponse? listResponse = UIUtils.TrySendAndReceive<DeckPackets.ListResponse>(new DeckPackets.ListRequest(name: deckname),
-			Program.config.deck_edit_url.address, Program.config.deck_edit_url.port, this);
+		CardGameUtils.Packets.Deck.ServerPacket? listResponse = null;
+		try
+		{
+			TTransport transport = new TSocketTransport(host: Program.config.deck_edit_url.address, port: Program.config.deck_edit_url.port, timeout: 100, config: new());
+			await new CardGameUtils.Packets.Deck.ClientPacket.list(new() { Name = deckname }).WriteAsync(new TCompactProtocol(transport), default);
+			listResponse = await CardGameUtils.Packets.Deck.ServerPacket.ReadAsync(new TCompactProtocol(transport), default);
+		}
+		catch(Exception e)
+		{
+			new ErrorPopup(e.Message).Show();
+			return;
+		}
 		if(listResponse == null)
 		{
 			return;
 		}
-		string[]? decklist = listResponse.deck.ToString()?.Split('\n');
+		string[]? decklist = Functions.DeckInfoToString(listResponse.As_list!.Deck!)?.Split('\n');
 		if(decklist == null)
 		{
 			await new ErrorPopup("Deck list could not be loaded properly").ShowDialog(this).ConfigureAwait(false);
@@ -152,23 +179,25 @@ public partial class RoomWindow : Window
 		}
 		try
 		{
-			client.GetStream().Write(Functions.GeneratePayload(new ServerPackets.StartRequest
-			(
-				decklist: decklist,
-				noshuffle: NoShuffleBox.IsChecked ?? false
-			)));
-			ServerPackets.StartResponse response = Functions.ReceivePacket<ServerPackets.StartResponse>(client.GetStream());
-			if(response.success == ServerPackets.StartResponse.Result.Failure)
+			TTransport transport = new TSocketTransport(host: Program.config.deck_edit_url.address, port: Program.config.deck_edit_url.port, timeout: 100, config: new());
+			await new CardGameUtils.Packets.Server.ClientPacket.start(new()
 			{
-				new ErrorPopup(response.reason!).Show();
+				Decklist = [.. decklist],
+				Noshuffle = NoShuffleBox.IsChecked ?? false
+			}).WriteAsync(new TCompactProtocol(transport), default);
+			CardGameUtils.Packets.Server.ServerPacket packet = await CardGameUtils.Packets.Server.ServerPacket.ReadAsync(new TCompactProtocol(transport), default);
+			CardGameUtils.Packets.Server.ServerStartResult response = packet.As_start!.Result!;
+			if(response is CardGameUtils.Packets.Server.ServerStartResult.failure)
+			{
+				new ErrorPopup(response.As_failure!.Result ?? "Failed to start for unknown reasons").Show();
 				return;
 			}
 			else
 			{
 				((Button)sender!).IsEnabled = false;
-				if(response.success == ServerPackets.StartResponse.Result.Success)
+				if(response is CardGameUtils.Packets.Server.ServerStartResult.success)
 				{
-					StartGame(response.port, response.id!);
+					StartGame(response.As_success!.Port, response.As_success!.Room_id!);
 				}
 			}
 		}
@@ -200,18 +229,20 @@ public class RoomWindowViewModel : INotifyPropertyChanged
 {
 	public RoomWindowViewModel()
 	{
-		LoadDecks();
+		LoadDecks().Wait();
 	}
 
-	public void LoadDecks()
+	public async Task LoadDecks()
 	{
-		DeckPackets.NamesResponse? packet = UIUtils.TrySendAndReceive<DeckPackets.NamesResponse>(new DeckPackets.NamesRequest(), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port, null);
+		TTransport transport = new TSocketTransport(host: Program.config.deck_edit_url.address, port: Program.config.deck_edit_url.port, timeout: 1000, config: new());
+		await new CardGameUtils.Packets.Deck.ClientPacket.names(new()).WriteAsync(new TCompactProtocol(transport), default);
+		CardGameUtils.Packets.Deck.ServerPacket packet = await CardGameUtils.Packets.Deck.ServerPacket.ReadAsync(new TCompactProtocol(transport), default);
 		if(packet == null)
 		{
 			return;
 		}
 		Decknames.Clear();
-		Decknames.AddRange(packet.names);
+		Decknames.AddRange(packet.As_names?.Names!);
 	}
 
 	public event PropertyChangedEventHandler? PropertyChanged;

@@ -1,6 +1,6 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -9,37 +9,39 @@ using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using CardGameUtils.Structs;
-using static CardGameUtils.Functions;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Constants;
+using CardGameUtils.Packets.Duel;
+using Thrift.Protocol;
+using Thrift.Transport;
+using Thrift.Transport.Client;
 
 namespace CardGameClient;
 
 public partial class CustomSelectCardsWindow : Window
 {
-	private readonly Stream stream;
+	private readonly TcpClient client;
 	private bool shouldReallyClose;
-	private readonly Action<CardStruct> showCardAction;
+	private readonly Action<CardInfo> showCardAction;
 
-	public CustomSelectCardsWindow(string text, CardStruct[] cards, bool initialState, Stream stream, int playerIndex, Action<CardStruct> showCardAction)
+	public CustomSelectCardsWindow(string text, List<CardInfo> cards, bool initialState, TcpClient client, int playerIndex, Action<CardInfo> showCardAction)
 	{
-		this.stream = stream;
+		this.client = client;
 		this.showCardAction = showCardAction;
-		Monitor.Enter(stream);
+		Monitor.Enter(client);
 		DataContext = new CustomSelectCardViewModel(text, initialState);
 		InitializeComponent();
-		Closed += (_, _) => Monitor.Exit(stream);
+		Closed += (_, _) => Monitor.Exit(client);
 		Width = Program.config.width / 2;
 		Height = Program.config.height / 2;
 		CardSelectionList.MaxHeight = Program.config.height / 3;
 		CardSelectionList.DataContext = cards;
 		CardSelectionList.ItemsSource = cards;
-		CardSelectionList.ItemTemplate = new FuncDataTemplate<CardStruct>((value, namescope) =>
+		CardSelectionList.ItemTemplate = new FuncDataTemplate<CardInfo>((value, namescope) =>
 		{
 			TextBlock block = new()
 			{
-				Text = value.name,
-				TextAlignment = (value.controller == playerIndex) ? TextAlignment.Left : TextAlignment.Right,
+				Text = value.Name,
+				TextAlignment = (value.Controller == playerIndex) ? TextAlignment.Left : TextAlignment.Right,
 			};
 			Border border = new()
 			{
@@ -64,20 +66,22 @@ public partial class CustomSelectCardsWindow : Window
 		{
 			return;
 		}
-		showCardAction((CardStruct)((Control)sender).DataContext!);
+		showCardAction((CardInfo)((Control)sender).DataContext!);
 	}
 
-	public void ConfirmClick(object? sender, RoutedEventArgs args)
+	public async void ConfirmClick(object? sender, RoutedEventArgs args)
 	{
-		stream.Write(GeneratePayload(new DuelPackets.CustomSelectCardsResponse(uids: UIUtils.CardListBoxSelectionToUID(CardSelectionList))));
+		await new ClientPacket.custom_select_cards(new() { Uids = UIUtils.CardListBoxSelectionToUID(CardSelectionList) }).WriteAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
 		shouldReallyClose = true;
 		Close();
 	}
 
-	public void CardSelectionChanged(object sender, SelectionChangedEventArgs args)
+	public async void CardSelectionChanged(object sender, SelectionChangedEventArgs args)
 	{
-		stream.Write(GeneratePayload(new DuelPackets.CustomSelectCardsIntermediateRequest(uids: UIUtils.CardListBoxSelectionToUID((ListBox)sender))));
-		((CustomSelectCardViewModel)DataContext!).CanConfirm = ReceivePacket<DuelPackets.CustomSelectCardsIntermediateResponse>((NetworkStream)stream)!.isValid;
+		TTransport transport = new TSocketTransport(client, new());
+		await new ClientPacket.custom_select_cards_intermediate(new() { Uids = UIUtils.CardListBoxSelectionToUID((ListBox)sender) }).WriteAsync(new TCompactProtocol(transport), default);
+		ServerPacket packet = await ServerPacket.ReadAsync(new TCompactProtocol(transport), default);
+		((CustomSelectCardViewModel)DataContext!).CanConfirm = packet.As_custom_select_cards_intermediate!.Is_valid;
 	}
 }
 public class CustomSelectCardViewModel : INotifyPropertyChanged

@@ -10,7 +10,6 @@ namespace CardGameUtils;
 [JsonSerializable(typeof(CoreConfig))]
 internal partial class PlatformCoreConfigSerializationContext : JsonSerializerContext { }
 
-
 [JsonSourceGenerationOptions(IncludeFields = true)]
 [JsonSerializable(typeof(PlatformClientConfig))]
 internal partial class PlatformClientConfigSerializationContext : JsonSerializerContext { }
@@ -18,14 +17,6 @@ internal partial class PlatformClientConfigSerializationContext : JsonSerializer
 [JsonSourceGenerationOptions(IncludeFields = true)]
 [JsonSerializable(typeof(PlatformServerConfig))]
 internal partial class PlatformServerConfigSerializationContext : JsonSerializerContext { }
-
-[JsonSourceGenerationOptions(IncludeFields = true)]
-[JsonSerializable(typeof(NetworkingStructs.Packet))]
-internal partial class PacketSerializationContext : JsonSerializerContext { }
-
-[JsonSourceGenerationOptions(IncludeFields = true)]
-[JsonSerializable(typeof(Replay))]
-internal partial class ReplaySerializationContext : JsonSerializerContext { }
 
 public class GenericConstants
 {
@@ -47,16 +38,6 @@ public class GenericConstants
 	public static readonly JsonSerializerOptions platformServerConfigSerialization = new()
 	{
 		TypeInfoResolver = PlatformServerConfigSerializationContext.Default,
-		IncludeFields = true,
-	};
-	public static readonly JsonSerializerOptions packetSerialization = new()
-	{
-		TypeInfoResolver = PacketSerializationContext.Default,
-		IncludeFields = true,
-	};
-	public static readonly JsonSerializerOptions replaySerialization = new()
-	{
-		TypeInfoResolver = ReplaySerializationContext.Default,
 		IncludeFields = true,
 	};
 }
@@ -94,35 +75,35 @@ public class GameConstants
 		Spell,
 		Quest,
 	}
-
-	public enum GameResult
-	{
-		Draw,
-		Won,
-		Lost,
-	}
-
-	public enum PlayerClass
-	{
-		UNKNOWN,
-		All,
-		Cultist,
-		Pyromancer,
-		Artificer,
-		Gladiator
-	}
-
-	public enum Location
-	{
-		UNKNOWN,
-		Any,
-		Deck,
-		Hand,
-		Field,
-		Grave,
-		Quest,
-		Ability,
-	}
+	//
+	// public enum GameResult
+	// {
+	// 	Draw,
+	// 	Won,
+	// 	Lost,
+	// }
+	//
+	// public enum PlayerClass
+	// {
+	// 	UNKNOWN,
+	// 	All,
+	// 	Cultist,
+	// 	Pyromancer,
+	// 	Artificer,
+	// 	Gladiator
+	// }
+	//
+	// public enum Location
+	// {
+	// 	UNKNOWN,
+	// 	Any,
+	// 	Deck,
+	// 	Hand,
+	// 	Field,
+	// 	Grave,
+	// 	Quest,
+	// 	Ability,
+	// }
 }
 
 public class ClientConstants

@@ -1,5 +1,5 @@
 include "Constants.thrift"
-namespace netstd CardGame.Packets.Duel
+namespace netstd CardGameUtils.Packets.Duel
 
 union ClientPacket
 {
@@ -10,6 +10,9 @@ union ClientPacket
 	5: ClientSelectCards select_cards;
 	6: ClientCustomSelectCards custom_select_cards;
 	7: ClientCustomSelectCardsIntermediate custom_select_cards_intermediate;
+	8: ClientPass pass;
+	9: ClientShowGrave show_grave;
+	10: ClientSelectZone select_zone;
 }
 
 struct ClientSurrender {}
@@ -40,6 +43,15 @@ struct ClientCustomSelectCardsIntermediate
 {
 	1: list<i32> uids;
 }
+struct ClientPass {}
+struct ClientShowGrave
+{
+	1: bool of_opponent;
+}
+struct ClientSelectZone
+{
+	1: i32 zone;
+}
 
 union ServerPacket
 {
@@ -50,6 +62,8 @@ union ServerPacket
 	5: ServerCustomSelectCards custom_select_cards;
 	6: ServerCustomSelectCardsIntermediate custom_select_cards_intermediate;
 	7: ServerFieldUpdate field_update;
+	8: ServerShowCards show_cards;
+	9: ServerSelectZone select_zone;
 }
 
 struct ServerGameResult
@@ -113,6 +127,15 @@ struct ShownInfo
 	1: optional Constants.CardInfo card;
 	2: optional string description;
 }
+struct ServerShowCards
+{
+	1: list<Constants.CardInfo> cards;
+	2: string description;
+}
+struct ServerSelectZone
+{
+	1: list<bool> possibilities;
+}
 
 struct CardAction
 {
@@ -120,3 +143,21 @@ struct CardAction
 	2: string description;
 }
 
+
+struct Replay
+{
+	2: list<GameAction> actions;
+	3: list<string> cmdline_args;
+	4: i32 seed;
+}
+
+struct GameAction
+{
+	1: i32 player;
+	2: ReplayPacket packet;
+}
+union ReplayPacket
+{
+	1: ClientPacket client;
+	2: ServerPacket server;
+}

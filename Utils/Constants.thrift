@@ -1,4 +1,4 @@
-namespace netstd CardGame.Constants
+namespace netstd CardGameUtils.Constants
 
 enum GameResult
 {
@@ -8,7 +8,7 @@ enum GameResult
 }
 enum Location
 {
-	All = 1
+	Any = 1
 	Deck = 2
 	Hand = 3
 	Field = 4

@@ -23,8 +23,7 @@
 			<TextBox	Grid.Row="0" Grid.Column="0" x:Name="NewDeckName" Watermark="Deck Name"/>
 			<ComboBox 	Grid.Row="1"
 						Grid.Column="0"
-						Name="DeckSelectBox"
-						ItemsSource="{Binding Decknames}"
+						x:Name="DeckSelectBox"
 						SelectionChanged="DeckSelectionChanged"
 						HorizontalAlignment="Stretch">
 				<ComboBox.ItemTemplate>
@@ -48,8 +47,7 @@
 			</TextBlock>
 			<ComboBox 	Grid.Row="3"
 						Grid.Column="1"
-						Name="ClassSelectBox"
-						ItemsSource="{Binding Classes}"
+						x:Name="ClassSelectBox"
 						SelectionChanged="ClassSelectionChanged"
 						HorizontalAlignment="Stretch">
 				<ComboBox.ItemTemplate>

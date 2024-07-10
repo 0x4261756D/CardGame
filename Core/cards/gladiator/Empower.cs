@@ -1,5 +1,6 @@
 // Scripted by Dotlof
 using CardGameCore;
+using CardGameUtils.Constants;
 using static CardGameCore.CardUtils;
 using static CardGameUtils.GameConstants;
 

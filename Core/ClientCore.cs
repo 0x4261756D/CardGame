@@ -4,22 +4,28 @@ using System.IO;
 using System.IO.Pipes;
 using System.Net.Sockets;
 using System.Reflection;
-using System.Text.Json;
 using System.Text.RegularExpressions;
-using CardGameUtils;
 using CardGameUtils.Structs;
 using static CardGameUtils.Functions;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Constants;
+using CardGameUtils.Packets.Deck;
+using Thrift.Protocol;
+using Thrift.Transport.Server;
+using Thrift.Transport.Client;
+using Thrift.Transport;
+using System.Threading.Tasks;
 
 namespace CardGameCore;
 
 partial class ClientCore : Core
 {
-	private readonly List<CardStruct> cards = [];
-	private readonly List<DeckPackets.Deck> decks = [];
+	private readonly List<CardInfo> cards = [];
+	private readonly List<DeckInfo> decks = [];
 	private readonly CoreConfig.DeckConfig config;
+
 	public ClientCore(CoreConfig.DeckConfig config, int port) : base(port)
 	{
+		Log($"Port: {port}");
 		this.config = config;
 		if(!Directory.Exists(config.deck_location))
 		{
@@ -35,7 +41,7 @@ partial class ClientCore : Core
 
 		if(config.should_fetch_additional_cards)
 		{
-			TryFetchAdditionalCards();
+			TryFetchAdditionalCards().Wait();
 		}
 
 		foreach(string deckfile in deckfiles)
@@ -45,72 +51,76 @@ partial class ClientCore : Core
 			{
 				continue;
 			}
-			DeckPackets.Deck deck = new()
+			DeckInfo deck = new()
 			{
-				player_class = Enum.Parse<GameConstants.PlayerClass>(decklist[0]),
-				name = Path.GetFileNameWithoutExtension(deckfile)
+				Player_class = Enum.Parse<PlayerClass>(decklist[0]),
+				Name = Path.GetFileNameWithoutExtension(deckfile)
 			};
 			decklist.RemoveAt(0);
 			if(decklist.Count > 0)
 			{
 				if(decklist[0].StartsWith('#'))
 				{
-					deck.ability = cards[cards.FindIndex(x => x.name == decklist[0][1..])];
+					deck.Ability = cards[cards.FindIndex(x => x.Name == decklist[0][1..])];
 					decklist.RemoveAt(0);
 				}
 				if(decklist[0].StartsWith('|'))
 				{
-					deck.quest = cards[cards.FindIndex(x => x.name == decklist[0][1..])];
+					deck.Quest = cards[cards.FindIndex(x => x.Name == decklist[0][1..])];
 					decklist.RemoveAt(0);
 				}
-				deck.cards = DecklistToCards(decklist);
+				deck.Cards = DecklistToCards(decklist);
 			}
 			else
 			{
-				deck.cards = [];
+				deck.Cards = [];
 			}
 			decks.Add(deck);
 		}
 	}
 
-	public override void Init(PipeStream? pipeStream)
+	public override async Task Init(PipeStream? pipeStream)
 	{
-		HandleNetworking();
+		await HandleNetworking();
 		listener.Stop();
 	}
 
 	//TODO: This could be more elegant
-	public CardStruct[] DecklistToCards(List<string> decklist)
+	public List<CardInfo> DecklistToCards(List<string> decklist)
 	{
-		List<CardStruct> c = [];
+		List<CardInfo> c = [];
 		foreach(string line in decklist)
 		{
-			int index = cards.FindIndex(x => x.name == line);
+			int index = cards.FindIndex(x => x.Name == line);
 			if(index >= 0)
 			{
 				c.Add(cards[index]);
 			}
 		}
-		return [.. c];
+		return c;
 	}
-	public void TryFetchAdditionalCards()
+	public async Task TryFetchAdditionalCards()
 	{
 		try
 		{
-			using TcpClient client = new(config.additional_cards_url.address, config.additional_cards_url.port);
-			using NetworkStream stream = client.GetStream();
-			stream.Write(GeneratePayload(new ServerPackets.AdditionalCardsRequest()));
-			ServerPackets.AdditionalCardsResponse? data = TryReceivePacket<ServerPackets.AdditionalCardsResponse>(stream, 1000);
-			if(data == null)
+			TProtocol protocol = new TCompactProtocol(new TSocketTransport(host: config.additional_cards_url.address, port: config.additional_cards_url.port, new()));
+			await new CardGameUtils.Packets.Server.ClientPacket.additional_cards(new()).WriteAsync(protocol, default);
+			CardGameUtils.Packets.Server.ServerPacket packet = await CardGameUtils.Packets.Server.ServerPacket.ReadAsync(protocol, default);
+			CardGameUtils.Packets.Server.ServerAdditionalCards? data = packet.As_additional_cards;
+			if(data is null)
 			{
 				return;
 			}
-			if(data.time < Program.versionTime)
+			if(data.Timestamp < Program.versionTimestamp)
 			{
-				Log($"Did not apply additional cards as they were older (client: {Program.versionTime}, server: {data.time})");
+				Log($"Did not apply additional cards as they were older (client: {Program.versionTimestamp}, server: {data.Timestamp})");
 				return;
 			}
-			foreach(CardStruct card in data.cards)
+			if(data.Cards is null)
+			{
+				return;
+			}
+			foreach(CardInfo card in data.Cards)
 			{
 				_ = cards.Remove(card);
 				cards.Add(card);
@@ -121,17 +131,18 @@ partial class ClientCore : Core
 			Log($"Could not fetch additional cards {e.Message}", severity: LogSeverity.Warning);
 		}
 	}
-	public override void HandleNetworking()
+	public override async Task HandleNetworking()
 	{
 		listener.Start();
 		while(true)
 		{
 			Log("Waiting for a connection");
-			using TcpClient client = listener.AcceptTcpClient();
+			using TcpClient client = await listener.AcceptTcpClientAsync();
 			using NetworkStream stream = client.GetStream();
-			Packet packet = ReceiveRawPacket(stream);
+			Log("Got client");
+			TTransport transport = new TSocketTransport(client, new());
 			Log("Received a request");
-			if(HandlePacket(packet, stream))
+			if(await HandlePacket(transport))
 			{
 				Log("Received a package that says the server should close");
 				break;
@@ -141,93 +152,110 @@ partial class ClientCore : Core
 		listener.Stop();
 	}
 
-	public bool HandlePacket(Packet packet, NetworkStream stream)
+	public async Task<bool> HandlePacket(TTransport transport)
 	{
-		// THIS MIGHT CHANGE AS SENDING RAW JSON MIGHT BE TOO EXPENSIVE/SLOW
-		// possible improvements: Huffman or Burrows-Wheeler+RLE
-		byte[] payload;
+		TProtocol protocol = new TCompactProtocol(transport);
+		ClientPacket packet = await ClientPacket.ReadAsync(protocol, default);
 		switch(packet)
 		{
-			case DeckPackets.NamesRequest:
+			case ClientPacket.names:
 			{
-				payload = GeneratePayload(new DeckPackets.NamesResponse
-				(
-					names: [.. decks.ConvertAll(x => x.name)]
-				));
-			}
-			break;
-			case DeckPackets.ListRequest request:
-			{
-				payload = GeneratePayload(new DeckPackets.ListResponse
-				(
-					deck: FindDeckByName(request.name!)
-				));
-			}
-			break;
-			case DeckPackets.SearchRequest request:
-			{
-				payload = GeneratePayload(new DeckPackets.SearchResponse
-				(
-					cards: FilterCards(cards, request.filter!, request.playerClass, request.includeGenericCards)
-				));
-			}
-			break;
-			case DeckPackets.ListUpdateRequest request:
-			{
-				DeckPackets.Deck deck = request.deck;
-				deck.name = DeckNameRegex().Replace(deck.name, "");
-				int index = decks.FindIndex(x => x.name == deck.name);
-				if(deck.cards != null)
+				await new ServerPacket.names(new()
 				{
-					if(index == -1)
-					{
-						decks.Add(deck);
-					}
-					else
-					{
-						decks[index] = deck;
-					}
-					SaveDeck(deck);
+					Names = decks.ConvertAll(x => x.Name!)
+				}).WriteAsync(new TCompactProtocol(transport), default);
+			}
+			break;
+			case ClientPacket.list:
+			{
+				Log($"{packet} {packet.As_list?.Name}");
+				await new ServerPacket.list(new()
+				{
+					Deck = FindDeckByName(packet.As_list!.Name!)
+				}).WriteAsync(new TCompactProtocol(transport), default);
+			}
+			break;
+			case ClientPacket.search:
+			{
+				ClientSearch request = packet.As_search!;
+				await new ServerPacket.search(new()
+				{
+					Cards = FilterCards(cards, request.Filter, request.Player_class, request.Include_generic_cards)
+				}).WriteAsync(new TCompactProtocol(transport), default);
+			}
+			break;
+			case ClientPacket.update_list:
+			{
+				DeckInfo? deck = packet.As_update_list?.Deck;
+				if(deck is null)
+				{
+					break;
+				}
+				if(string.IsNullOrWhiteSpace(deck.Name))
+				{
+					break;
+				}
+				deck.Name = DeckNameRegex().Replace(deck.Name, "");
+				int index = decks.FindIndex(x => x.Name == deck.Name);
+				if(index == -1)
+				{
+					decks.Add(deck);
 				}
 				else
 				{
-					if(index != -1)
-					{
-						decks.RemoveAt(index);
-						File.Delete(Path.Combine(config.deck_location, deck.name + ".dek"));
-					}
+					decks[index] = deck;
 				}
-				payload = GeneratePayload(new DeckPackets.ListUpdateResponse(shouldUpdate: index == -1));
+				SaveDeck(deck);
+			}
+			break;
+			case ClientPacket.delete_list:
+			{
+				string? maybeName = packet.As_delete_list?.Name;
+				if(string.IsNullOrWhiteSpace(maybeName))
+				{
+					break;
+				}
+				string name = DeckNameRegex().Replace(maybeName, "");
+				int index = decks.FindIndex(x => x.Name == name);
+				if(index != -1)
+				{
+					decks.RemoveAt(index);
+					File.Delete(Path.Combine(config.deck_location, name + ".dek"));
+				}
 			}
 			break;
 			default:
-				throw new Exception($"ERROR: Unable to process this packet: ({packet.GetType()}) | {JsonSerializer.Serialize(packet, options: GenericConstants.packetSerialization)}");
+			{
+				Log($"Unknown server packet: {packet}", LogSeverity.Error);
+				return true;
+			}
 		}
-		stream.Write(payload);
 		return false;
 	}
 
-	private void SaveDeck(DeckPackets.Deck deck)
+	private void SaveDeck(DeckInfo deck)
 	{
-		string? deckString = deck.ToString();
+
+		string? deckString = DeckInfoToString(deck);
 		if(deckString == null)
 		{
 			return;
 		}
-		File.WriteAllText(Path.Combine(config.deck_location, deck.name + ".dek"), deckString);
+		File.WriteAllText(Path.Combine(config.deck_location, deck.Name + ".dek"), deckString);
 	}
 
-	private static CardStruct[] FilterCards(List<CardStruct> cards, string filter, GameConstants.PlayerClass playerClass, bool includeGenericCards)
+	private static List<CardInfo> FilterCards(List<CardInfo> cards, string? filter, PlayerClass playerClass, bool includeGenericCards)
 	{
-		return Array.FindAll(cards.ToArray(), card =>
-			(playerClass == GameConstants.PlayerClass.All || (includeGenericCards && card.card_class == GameConstants.PlayerClass.All) || card.card_class == playerClass)
-			&& card.ToString().Contains(filter, StringComparison.CurrentCultureIgnoreCase));
+		return cards.FindAll(card =>
+			(playerClass == PlayerClass.All || (includeGenericCards && card.Card_class == PlayerClass.All) || card.Card_class == playerClass)
+			&& card.ToString().Contains(filter ?? "", StringComparison.CurrentCultureIgnoreCase));
 	}
 
-	private DeckPackets.Deck FindDeckByName(string name)
+	private DeckInfo FindDeckByName(string name)
 	{
 		name = DeckNameRegex().Replace(name, "");
-		return decks[decks.FindIndex(x => x.name == name)];
+		Log(name);
+		return decks[decks.FindIndex(x => x.Name == name)];
 	}
 
 	[GeneratedRegex(@"[\./\\]")]

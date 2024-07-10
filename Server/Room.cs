@@ -1,37 +1,40 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
+using System.Threading.Tasks;
 using CardGameUtils;
+using CardGameUtils.Packets.Server;
 using CardGameUtils.Structs;
-using static CardGameUtils.Structs.NetworkingStructs;
+using Thrift.Protocol;
+using Thrift.Transport.Client;
 
 namespace CardGameServer;
 
 partial class Room
 {
-	public class Player(string Name, string id, bool ready, bool noshuffle, NetworkStream stream)
+	public class Player(string Name, string id, bool ready, bool noshuffle, TcpClient client)
 	{
 		public string Name = Name;
-		public string[]? Decklist;
+		public List<string>? Decklist;
 		public string ID = id;
 		public bool ready = ready;
 		public bool noshuffle = noshuffle;
-		public NetworkStream stream = stream;
+		public TcpClient client = client;
 	}
 	public bool isFinished;
 	public int port;
 	public Player?[] players = new Player?[2];
 	public Process? core;
 	public DateTime startTime;
-	public Room(string name, string id, int port, NetworkStream stream)
+	public Room(string name, string id, int port, TcpClient client)
 	{
 		this.port = port;
-		players[0] = new Player(Name: name, ready: false, id: id, noshuffle: false, stream: stream);
+		players[0] = new Player(Name: name, ready: false, id: id, noshuffle: false, client: client);
 		Functions.Log("Creating a new room. Host name: " + name, includeFullPath: true);
 		startTime = DateTime.Now;
 	}
@@ -50,11 +53,11 @@ partial class Room
 				Functions.Log($"Unable to generate player string, player {i} ({players[i]?.Name}) has no decklist", severity: Functions.LogSeverity.Error, includeFullPath: true);
 				return null;
 			}
-			infos[i] = new CoreConfig.PlayerConfig(name: players[i]!.Name!, id: players[i]!.ID, decklist: players[i]!.Decklist!);
+			infos[i] = new CoreConfig.PlayerConfig(name: players[i]!.Name!, id: players[i]!.ID, decklist: [.. players[i]!.Decklist!]);
 		}
 		return JsonSerializer.Serialize(infos, options: GenericConstants.platformCoreConfigSerialization);
 	}
-	public bool StartGame()
+	public async Task<bool> StartGame()
 	{
 		if(!(players[0]?.ready ?? false) || !(players[1]?.ready ?? false) || core != null)
 		{
@@ -93,19 +96,14 @@ partial class Room
 		Functions.Log("reading", severity: Functions.LogSeverity.Warning);
 		while(reader.Read() != 42)
 		{
-			Thread.Sleep(10);
+			await Task.Delay(10);
 		}
 		Functions.Log("Done reading", severity: Functions.LogSeverity.Warning);
 		foreach(Player? player in players)
 		{
-			player!.stream.Write(Functions.GeneratePayload(new ServerPackets.StartResponse
-			{
-				success = ServerPackets.StartResponse.Result.Success,
-				id = player.ID,
-				port = port,
-			}));
-			player.stream.Close();
-			player.stream.Dispose();
+			await new ServerPacket.start(new() { Result = new ServerStartResult.success(new() { Port = port, Room_id = player!.ID }) }).WriteAsync(new TCompactProtocol(new TSocketTransport(player.client, new())), default);
+			player.client.Close();
+			player.client.Dispose();
 		}
 		return true;
 	}

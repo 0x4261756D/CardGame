@@ -2,6 +2,7 @@
 using CardGameCore;
 using static CardGameCore.CardUtils;
 using static CardGameUtils.GameConstants;
+using CardGameUtils.Constants;
 
 class ActiveDefenseSystem : Spell
 {

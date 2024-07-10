@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -10,21 +8,22 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Reactive;
 using CardGameUtils;
-using CardGameUtils.Structs;
-using static CardGameUtils.Functions;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Constants;
+using CardGameUtils.Packets.Deck;
+using Thrift.Protocol;
+using Thrift.Transport;
+using Thrift.Transport.Client;
 
 namespace CardGameClient;
 
 public partial class DeckEditWindow : Window
 {
 	private readonly Flyout moveFlyout = new();
-	private CardStruct[]? cardpool;
+	private List<CardInfo> cardpool = [];
 
 	public DeckEditWindow()
 	{
 		InitializeComponent();
-		DataContext = new DeckEditWindowViewModel();
 		if(DeckSelectBox.SelectedItem == null && DeckSelectBox.ItemCount > 0)
 		{
 			if(Program.config.last_deck_name != null)
@@ -50,11 +49,14 @@ public partial class DeckEditWindow : Window
 		DecklistPanel.LayoutUpdated += DecklistPanelInitialized;
 	}
 
-	private void DecklistPanelInitialized(object? sender, EventArgs e)
+	private async void DecklistPanelInitialized(object? sender, EventArgs e)
 	{
 		DecklistPanel.LayoutUpdated -= DecklistPanelInitialized;
-		LoadSidebar("");
-		LoadDeck(DeckSelectBox.SelectedItem!.ToString()!);
+		await LoadSidebar("");
+		await LoadDecks();
+		ClassSelectBox.ItemsSource = Enum.GetValues<PlayerClass>();
+		DeckSelectBox.SelectedIndex = 0;
+		await LoadDeck(DeckSelectBox.SelectedItem!.ToString()!);
 	}
 
 	public void BackClick(object sender, RoutedEventArgs args)
@@ -65,27 +67,33 @@ public partial class DeckEditWindow : Window
 		}.Show();
 		this.Close();
 	}
-	public void SidebarGenericIncludeBoxClick(object? sender, RoutedEventArgs args)
+	public async void SidebarGenericIncludeBoxClick(object? sender, RoutedEventArgs args)
 	{
-		LoadSidebar(SidebarTextBox?.Text ?? "");
+		await LoadSidebar(SidebarTextBox?.Text ?? "");
 	}
-	public void LoadSidebar(string fil)
+	public async Task LoadSidebar(string fil)
 	{
-		GameConstants.PlayerClass playerClass = (GameConstants.PlayerClass?)ClassSelectBox.SelectedItem ?? GameConstants.PlayerClass.All;
-		cardpool = SendAndReceive<DeckPackets.SearchResponse>(new DeckPackets.SearchRequest(filter: fil, playerClass: playerClass, includeGenericCards: SidebarGenericIncludeBox.IsChecked ?? false),
-			Program.config.deck_edit_url.address, Program.config.deck_edit_url.port).cards;
-		UIUtils.CacheArtworkBatchFromServer(Array.ConvertAll(cardpool, x => x.name));
+		PlayerClass playerClass = (PlayerClass?)ClassSelectBox.SelectedItem ?? PlayerClass.All;
+		Functions.Log("Now sending search request");
+		Functions.Log($"{Program.config.deck_edit_url.address}:{Program.config.deck_edit_url.port}");
+		TTransport transport = new TSocketTransport(host: Program.config.deck_edit_url.address, port: Program.config.deck_edit_url.port, new());
+		await new ClientPacket.search(new() { Filter = fil, Include_generic_cards = SidebarGenericIncludeBox.IsChecked ?? false, Player_class = playerClass }).WriteAsync(new TCompactProtocol(transport), default);
+		Functions.Log("Sent");
+		ServerPacket packet = await ServerPacket.ReadAsync(new TCompactProtocol(transport), default);
+		Functions.Log("got search request");
+		cardpool = packet.As_search!.Cards ?? [];
+		await UIUtils.CacheArtworkBatchFromServer(cardpool.ConvertAll(x => x.Name!));
 		List<Control> items = [];
-		foreach(CardStruct c in cardpool)
+		foreach(CardInfo c in cardpool)
 		{
-			Viewbox v = UIUtils.CreateGenericCard(c);
+			Viewbox v = await UIUtils.CreateGenericCard(c);
 			v.PointerEntered += CardHover;
 			items.Add(v);
 		}
 		SidebarList.ItemsSource = items;
 	}
 
-	private void CardHover(object? sender, PointerEventArgs args)
+	private async void CardHover(object? sender, PointerEventArgs args)
 	{
 		if(sender == null)
 		{
@@ -95,11 +103,11 @@ public partial class DeckEditWindow : Window
 		{
 			return;
 		}
-		CardStruct c = (CardStruct)((Control)sender).DataContext!;
-		UIUtils.CardHover(CardImagePanel, CardTextBlock, c, true);
+		CardInfo c = (CardInfo)((Control)sender).DataContext!;
+		await UIUtils.CardHover(CardImagePanel, CardTextBlock, c, true);
 	}
 
-	public void SidebarSelectionChanged(object? sender, SelectionChangedEventArgs args)
+	public async void SidebarSelectionChanged(object? sender, SelectionChangedEventArgs args)
 	{
 		if(sender == null || cardpool == null || args.AddedItems.Count != 1 || args.RemovedItems.Count != 0)
 		{
@@ -108,11 +116,11 @@ public partial class DeckEditWindow : Window
 		args.Handled = true;
 		SidebarList.SelectedItem = null;
 		Viewbox v = (Viewbox)args.AddedItems[0]!;
-		CardStruct card = (CardStruct)v.DataContext!;
-		if(card.card_type == GameConstants.CardType.Quest)
+		CardInfo card = (CardInfo)v.DataContext!;
+		if(card.Card_type_specifics is CardTypeSpecifics.quest)
 		{
 			ClassQuestButton.Content = UIUtils.CreateGenericCard(card);
-			ColorWrongThings((GameConstants.PlayerClass?)ClassSelectBox.SelectedItem);
+			ColorWrongThings((PlayerClass?)ClassSelectBox.SelectedItem);
 		}
 		else
 		{
@@ -123,7 +131,7 @@ public partial class DeckEditWindow : Window
 			int i = 0;
 			foreach(Control c in DecklistPanel.Children)
 			{
-				if(((CardStruct)((Viewbox)((Button)c).Content!).DataContext!).name == card.name)
+				if(((CardInfo)((Viewbox)((Button)c).Content!).DataContext!).Name == card.Name)
 				{
 					i++;
 					if(i >= GameConstants.MAX_CARD_MULTIPLICITY)
@@ -132,7 +140,7 @@ public partial class DeckEditWindow : Window
 					}
 				}
 			}
-			DecklistPanel.Children.Add(CreateDeckButton(card));
+			DecklistPanel.Children.Add(await CreateDeckButton(card));
 		}
 		SetDeckSize();
 	}
@@ -145,7 +153,7 @@ public partial class DeckEditWindow : Window
 	private void ContentRemoveClick(object sender, RoutedEventArgs args)
 	{
 		((Button)sender).Content = null;
-		ColorWrongThings((GameConstants.PlayerClass?)ClassSelectBox.SelectedItem);
+		ColorWrongThings((PlayerClass?)ClassSelectBox.SelectedItem);
 	}
 
 	private void SortDeckClick(object sender, RoutedEventArgs args)
@@ -153,12 +161,12 @@ public partial class DeckEditWindow : Window
 		Control[] children = new Control[DecklistPanel.Children.Count];
 		DecklistPanel.Children.CopyTo(children, 0);
 		// This is fun, see no problem with this...
-		Array.Sort(children, (child1, child2) => ((CardStruct)((Control)((Button)child1).Content!).DataContext!).name.CompareTo(((CardStruct)((Control)((Button)child2).Content!).DataContext!).name));
+		Array.Sort(children, (child1, child2) => ((CardInfo)((Control)((Button)child1).Content!).DataContext!).Name!.CompareTo(((CardInfo)((Control)((Button)child2).Content!).DataContext!).Name!));
 		DecklistPanel.Children.Clear();
 		DecklistPanel.Children.AddRange(children);
 	}
 
-	public Button CreateDeckButton(CardStruct c)
+	public async Task<Button> CreateDeckButton(CardInfo c)
 	{
 		Button b = new()
 		{
@@ -172,7 +180,7 @@ public partial class DeckEditWindow : Window
 			b.Width = (a.Width - DecklistBorder.BorderThickness.Left - DecklistBorder.BorderThickness.Right - 20) / xAmount - (b.BorderThickness.Left + b.BorderThickness.Right);
 			b.Height = (a.Height - DecklistBorder.BorderThickness.Top - DecklistBorder.BorderThickness.Bottom - 20) / yAmount - (b.BorderThickness.Top + b.BorderThickness.Bottom);
 		}));
-		Viewbox v = UIUtils.CreateGenericCard(c);
+		Viewbox v = await UIUtils.CreateGenericCard(c);
 		b.Content = v;
 		b.PointerPressed += RemoveCardClick;
 		b.Click += MoveClick;
@@ -221,8 +229,8 @@ public partial class DeckEditWindow : Window
 			DecklistPanel.Children.RemoveAt(index);
 			DecklistPanel.Children.Insert(newInd, button);
 		};
-		CardStruct c = (CardStruct)((Viewbox)button.Content!).DataContext!;
-		if(c.can_be_class_ability)
+		CardInfo c = (CardInfo)((Viewbox)button.Content!).DataContext!;
+		if(c.Card_type_specifics is CardTypeSpecifics.spell && c.Card_type_specifics.As_spell!.Can_be_class_ability)
 		{
 			Button setAbilityButton = new()
 			{
@@ -231,12 +239,12 @@ public partial class DeckEditWindow : Window
 					Text = "Set as ability"
 				}
 			};
-			setAbilityButton.Click += (_, _) =>
+			setAbilityButton.Click += async (_, _) =>
 			{
-				Viewbox v = UIUtils.CreateGenericCard(c);
+				Viewbox v = await UIUtils.CreateGenericCard(c);
 				v.PointerEntered += CardHover;
 				ClassAbilityButton.Content = v;
-				ColorWrongThings((GameConstants.PlayerClass?)ClassSelectBox.SelectedItem);
+				ColorWrongThings((PlayerClass?)ClassSelectBox.SelectedItem);
 			};
 			panel.Children.Add(setAbilityButton);
 		}
@@ -244,63 +252,73 @@ public partial class DeckEditWindow : Window
 		moveFlyout.Content = panel;
 		moveFlyout.ShowAt(button, true);
 	}
-	public void DeckSelectionChanged(object sender, SelectionChangedEventArgs args)
+	public async void DeckSelectionChanged(object sender, SelectionChangedEventArgs args)
 	{
 		if(args.AddedItems.Count > 0 && DecklistPanel.Bounds.Width > 0 && DecklistPanel.Bounds.Height > 0)
 		{
 			Program.config.last_deck_name = args.AddedItems[0]?.ToString();
-			LoadDeck(args?.AddedItems[0]!.ToString()!);
+			await LoadDeck(args?.AddedItems[0]!.ToString()!);
 		}
 	}
-	public void LoadDeck(string deckName)
+	public async Task LoadDeck(string deckName)
 	{
 		DecklistPanel.Children.Clear();
-		DeckPackets.Deck deck = SendAndReceive<DeckPackets.ListResponse>(new DeckPackets.ListRequest(name: deckName), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port).deck;
-		if(deck.player_class == GameConstants.PlayerClass.UNKNOWN)
+		TTransport transport = new TSocketTransport(host: Program.config.deck_edit_url.address, port: Program.config.deck_edit_url.port, new());
+		await new ClientPacket.list(new() { Name = deckName }).WriteAsync(new TCompactProtocol(transport), default);
+		ServerPacket packet = await ServerPacket.ReadAsync(new TCompactProtocol(transport), default);
+		DeckInfo? deck = packet.As_list!.Deck;
+		if(deck is null)
+		{
+			return;
+		}
+		if(deck.Player_class == PlayerClass.All)
 		{
 			ClassSelectBox.SelectedIndex = -1;
 		}
 		else
 		{
-			ClassSelectBox.SelectedItem = deck.player_class;
+			ClassSelectBox.SelectedItem = deck.Player_class;
 		}
-		UIUtils.CacheArtworkBatchFromServer(Array.ConvertAll(deck.cards, x => x.name));
-		foreach(CardStruct c in deck.cards)
+		if(deck.Cards is not null)
 		{
-			DecklistPanel.Children.Add(CreateDeckButton(c));
+			await UIUtils.CacheArtworkBatchFromServer(deck.Cards.ConvertAll(x => x.Name!));
+			foreach(CardInfo c in deck.Cards)
+			{
+				DecklistPanel.Children.Add(await CreateDeckButton(c));
+			}
 		}
 		ClassAbilityButton.Content = null;
-		if(deck.ability != null)
+		if(deck.Ability is not null)
 		{
-			Viewbox v = UIUtils.CreateGenericCard(deck.ability);
+			Viewbox v = await UIUtils.CreateGenericCard(deck.Ability);
 			v.PointerEntered += CardHover;
 			ClassAbilityButton.Content = v;
 		}
 		ClassQuestButton.Content = null;
-		if(deck.quest != null)
+		if(deck.Quest is not null)
 		{
-			Viewbox v = UIUtils.CreateGenericCard(deck.quest);
+			Viewbox v = await UIUtils.CreateGenericCard(deck.Quest);
 			v.PointerEntered += CardHover;
 			ClassQuestButton.Content = v;
 		}
 		SetDeckSize();
-		ColorWrongThings(deck.player_class);
+		ColorWrongThings(deck.Player_class);
 	}
-	public void ClassSelectionChanged(object sender, SelectionChangedEventArgs args)
+	public async void ClassSelectionChanged(object sender, SelectionChangedEventArgs args)
 	{
-		GameConstants.PlayerClass? playerClass = args.AddedItems.Count > 0 ? (GameConstants.PlayerClass?)args.AddedItems?[0] : null;
-		LoadSidebar(SidebarTextBox?.Text ?? "");
+		PlayerClass? playerClass = args.AddedItems.Count > 0 ? (PlayerClass?)args.AddedItems?[0] : null;
+		await LoadSidebar(SidebarTextBox?.Text ?? "");
 		ColorWrongThings(playerClass);
 	}
 
-	private void ColorWrongThings(GameConstants.PlayerClass? playerClass)
+	private void ColorWrongThings(PlayerClass? playerClass)
 	{
 		foreach(Control c in DecklistPanel.Children)
 		{
 			Button child = (Button)c;
 			// Oh boy, do I love GUI programming...
-			GameConstants.PlayerClass cardClass = ((CardStruct)((Viewbox)child.Content!).DataContext!).card_class;
-			if(cardClass != GameConstants.PlayerClass.All && playerClass != GameConstants.PlayerClass.All &&
+			PlayerClass cardClass = ((CardInfo)((Viewbox)child.Content!).DataContext!).Card_class;
+			if(cardClass != PlayerClass.All && playerClass != PlayerClass.All &&
 				cardClass != playerClass)
 			{
 				child.BorderBrush = Brushes.Red;
@@ -314,8 +332,8 @@ public partial class DeckEditWindow : Window
 		}
 		if(ClassQuestButton.Content != null)
 		{
-			GameConstants.PlayerClass cardClass = ((CardStruct)((Viewbox)ClassQuestButton.Content).DataContext!).card_class;
-			if(cardClass != GameConstants.PlayerClass.All && playerClass != GameConstants.PlayerClass.All &&
+			PlayerClass cardClass = ((CardInfo)((Viewbox)ClassQuestButton.Content).DataContext!).Card_class;
+			if(cardClass != PlayerClass.All && playerClass != PlayerClass.All &&
 				cardClass != playerClass)
 			{
 				ClassQuestButton.BorderBrush = Brushes.Red;
@@ -334,8 +352,8 @@ public partial class DeckEditWindow : Window
 		}
 		if(ClassAbilityButton.Content != null)
 		{
-			GameConstants.PlayerClass cardClass = ((CardStruct)((Viewbox)ClassAbilityButton.Content).DataContext!).card_class;
-			if(cardClass != GameConstants.PlayerClass.All && playerClass != GameConstants.PlayerClass.All &&
+			PlayerClass cardClass = ((CardInfo)((Viewbox)ClassAbilityButton.Content).DataContext!).Card_class;
+			if(cardClass != PlayerClass.All && playerClass != PlayerClass.All &&
 				cardClass != playerClass)
 			{
 				ClassAbilityButton.BorderBrush = Brushes.Red;
@@ -354,118 +372,60 @@ public partial class DeckEditWindow : Window
 		}
 	}
 
-	public void CreateNewDeckClick(object? sender, RoutedEventArgs args)
+	public async void CreateNewDeckClick(object? sender, RoutedEventArgs args)
 	{
 		string? newName = NewDeckName.Text;
 		if(newName is null or "")
 		{
 			return;
 		}
-		Send(new DeckPackets.ListUpdateRequest
-		(
-			deck: new DeckPackets.Deck
-			{
-				cards = [],
-				name = newName,
-			}
-		), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port);
-		((DeckEditWindowViewModel)DataContext!).Decknames.Add(newName);
+		TTransport transport = new TSocketTransport(host: Program.config.deck_edit_url.address, port: Program.config.deck_edit_url.port, new());
+		await new ClientPacket.update_list(new() { Deck = new() { Name = newName } }).WriteAsync(new TCompactProtocol(transport), default);
+		_ = DeckSelectBox.Items.Add(newName);
 		DeckSelectBox.SelectedItem = newName;
 		DeckSizeBlock.Text = "Deck size: 0";
 		NewDeckName.Text = "";
 	}
-	public void SaveDeckClick(object? sender, RoutedEventArgs args)
+	public async void SaveDeckClick(object? sender, RoutedEventArgs args)
 	{
 		if(DeckSelectBox.SelectedItem == null || string.IsNullOrEmpty((string)DeckSelectBox.SelectedItem))
 		{
 			return;
 		}
-		GameConstants.PlayerClass playerClass = (GameConstants.PlayerClass?)ClassSelectBox.SelectedItem ?? GameConstants.PlayerClass.UNKNOWN;
-		if(playerClass == GameConstants.PlayerClass.All)
-		{
-			playerClass = GameConstants.PlayerClass.UNKNOWN;
-		}
+		PlayerClass playerClass = (PlayerClass?)ClassSelectBox.SelectedItem ?? PlayerClass.All;
 		Viewbox? abilityBox = (Viewbox?)ClassAbilityButton.Content;
-		CardStruct? ability = abilityBox == null ? null : (CardStruct?)abilityBox.DataContext;
+		CardInfo? ability = abilityBox == null ? null : (CardInfo?)abilityBox.DataContext;
 		Viewbox? questBox = (Viewbox?)ClassQuestButton.Content;
-		CardStruct? quest = questBox == null ? null : (CardStruct?)questBox.DataContext;
+		CardInfo? quest = questBox == null ? null : (CardInfo?)questBox.DataContext;
 		Control[] children = new Control[DecklistPanel.Children.Count];
 		DecklistPanel.Children.CopyTo(children, 0);
-		Send(new DeckPackets.ListUpdateRequest
-		(
-			deck: new DeckPackets.Deck
-			{
-				cards = Array.ConvertAll(children, child => (CardStruct)((Viewbox)((Button)child).Content!).DataContext!),
-				ability = ability,
-				quest = quest,
-				player_class = playerClass,
-				name = (string)DeckSelectBox.SelectedItem!
-			}
-		), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port);
+		TTransport transport = new TSocketTransport(host: Program.config.deck_edit_url.address, port: Program.config.deck_edit_url.port, new());
+		await new ClientPacket.update_list(new() { Deck = new() { Cards = [.. Array.ConvertAll(children, child => (CardInfo)((Viewbox)((Button)child).Content!).DataContext!)], Ability = ability, Quest = quest, Player_class = playerClass, Name = (string)DeckSelectBox.SelectedItem! } }).WriteAsync(new TCompactProtocol(transport), default);
 	}
-	public void DeleteDeckClick(object? sender, RoutedEventArgs args)
+	public async void DeleteDeckClick(object? sender, RoutedEventArgs args)
 	{
-		Send(new DeckPackets.ListUpdateRequest
-		(
-			deck: new DeckPackets.Deck
-			{
-				name = (string)DeckSelectBox.SelectedItem!
-			}
-		), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port);
-		_ = ((DeckEditWindowViewModel)DataContext!).Decknames.Remove((string)DeckSelectBox.SelectedItem!);
+		TTransport transport = new TSocketTransport(host: Program.config.deck_edit_url.address, port: Program.config.deck_edit_url.port, new());
+		await new ClientPacket.delete_list(new()).WriteAsync(new TCompactProtocol(transport), default);
+		_ = DeckSelectBox.Items.Remove((string)DeckSelectBox.SelectedItem!);
 		DeckSelectBox.SelectedIndex = DeckSelectBox.ItemCount - 1;
 	}
-	public void SidebarTextInput(object? sender, KeyEventArgs args)
+	public async void SidebarTextInput(object? sender, KeyEventArgs args)
 	{
 		TextBox? tb = (TextBox?)sender;
-		LoadSidebar(tb?.Text ?? "");
-	}
-}
-
-
-public class DeckEditWindowViewModel : INotifyPropertyChanged
-{
-	public DeckEditWindowViewModel()
-	{
-		LoadDecks();
+		await LoadSidebar(tb?.Text ?? "");
 	}
 
-	public void LoadDecks()
+	public async Task LoadDecks()
 	{
-		string[] names = SendAndReceive<DeckPackets.NamesResponse>(new DeckPackets.NamesRequest(), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port).names;
-		Array.Sort(names);
-		Decknames.Clear();
+		TTransport transport = new TSocketTransport(host: Program.config.deck_edit_url.address, port: Program.config.deck_edit_url.port, config: new());
+		await new ClientPacket.names(new()).WriteAsync(new TCompactProtocol(transport), default);
+		ServerPacket packet = await ServerPacket.ReadAsync(new TCompactProtocol(transport), default);
+		List<string> names = packet.As_names!.Names ?? [];
+		names.Sort();
+		DeckSelectBox.Items.Clear();
 		foreach(string name in names)
 		{
-			Decknames.Add(name);
-		}
-		_ = classes.Remove(GameConstants.PlayerClass.UNKNOWN);
-	}
-
-	public event PropertyChangedEventHandler? PropertyChanged;
-
-
-	private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
-	{
-		PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-	}
-
-	private readonly ObservableCollection<GameConstants.PlayerClass> classes = new(Enum.GetValues<GameConstants.PlayerClass>());
-	public ObservableCollection<GameConstants.PlayerClass> Classes
-	{
-		get => classes;
-	}
-	private ObservableCollection<string> decknames = [];
-	public ObservableCollection<string> Decknames
-	{
-		get => decknames;
-		set
-		{
-			if(value != decknames)
-			{
-				decknames = value;
-				NotifyPropertyChanged();
-			}
+			_ = DeckSelectBox.Items.Add(name);
 		}
 	}
 }

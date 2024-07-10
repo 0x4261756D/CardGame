@@ -1,5 +1,6 @@
 // Scripted by 0x4261756D
 using CardGameCore;
+using CardGameUtils.Constants;
 using static CardGameUtils.GameConstants;
 
 class CourageousKnight : Creature

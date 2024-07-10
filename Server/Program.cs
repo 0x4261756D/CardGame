@@ -7,10 +7,12 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
+using System.Threading.Tasks;
 using CardGameUtils;
+using CardGameUtils.Packets.Server;
 using CardGameUtils.Structs;
-using static CardGameUtils.Structs.NetworkingStructs;
+using Thrift.Protocol;
+using Thrift.Transport.Client;
 
 namespace CardGameServer;
 
@@ -18,12 +20,12 @@ class Program
 {
 	public static string baseDir = AppDomain.CurrentDomain.BaseDirectory;
 	public static ServerConfig config = new(additional_cards_path: "additional_cards/", artwork_path: null, port: 7043, room_min_port: 37042, room_max_port: 39942, core_info: new CoreInfo());
-	public static DateTime lastAdditionalCardsTimestamp;
+	public static long lastAdditionalCardsTimestamp;
 	public static string? seed;
 	public static SHA384 sha = SHA384.Create();
 	// TODO: MAKE THIS THREAD-SAFE SOMEHOW
 	public static List<Room> waitingList = [];
-	static void Main(string[] args)
+	static async Task Main(string[] args)
 	{
 		string? configLocation = null;
 		for(int i = 0; i < args.Length; i++)
@@ -54,7 +56,7 @@ class Program
 			Functions.Log("Please provide a config file with '--config=path/to/config'", severity: Functions.LogSeverity.Error);
 			return;
 		}
-		PlatformServerConfig platformConfig = JsonSerializer.Deserialize<PlatformServerConfig>(File.ReadAllText(configLocation), GenericConstants.platformServerConfigSerialization);
+		PlatformServerConfig platformConfig = JsonSerializer.Deserialize<PlatformServerConfig>(await File.ReadAllTextAsync(configLocation), GenericConstants.platformServerConfigSerialization);
 		if(Environment.OSVersion.Platform == PlatformID.Unix)
 		{
 			config = platformConfig.linux;
@@ -65,7 +67,9 @@ class Program
 		}
 		if(File.Exists(config.additional_cards_path))
 		{
-			lastAdditionalCardsTimestamp = JsonSerializer.Deserialize<ServerPackets.AdditionalCardsResponse>(File.ReadAllText(config.additional_cards_path), GenericConstants.packetSerialization)!.time;
+			ServerAdditionalCards additionalCards = new();
+			await additionalCards.ReadAsync(new TCompactProtocol(new Functions.TSimpleFileTransport(config.additional_cards_path, Functions.TSimpleFileTransport.OpenMode.Read)), default);
+			lastAdditionalCardsTimestamp = additionalCards.Timestamp;
 		}
 		TcpListener listener = TcpListener.Create(config.port);
 		byte[] nowBytes = Encoding.UTF8.GetBytes(DateTime.Now.ToString());
@@ -76,16 +80,15 @@ class Program
 			if(listener.Pending())
 			{
 				Functions.Log("Server waiting for a connection", includeFullPath: true);
-				TcpClient client = listener.AcceptTcpClient();
+				TcpClient client = await listener.AcceptTcpClientAsync();
 				Functions.Log("Server connected", includeFullPath: true);
-				NetworkStream stream = client.GetStream();
 				Functions.Log("Waiting for data", includeFullPath: true);
 				HandlePacketReturn decision = HandlePacketReturn.Continue;
 				try
 				{
-					Packet packet = Functions.ReceiveRawPacket(stream);
+					ClientPacket packet = await ClientPacket.ReadAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
 					Functions.Log("Server received a request", includeFullPath: true);
-					decision = HandlePacket(packet, stream);
+					decision = await HandlePacket(packet, client);
 					if(decision == HandlePacketReturn.Break)
 					{
 						Functions.Log("Server received a request signalling it should stop", includeFullPath: true);
@@ -99,22 +102,20 @@ class Program
 				}
 				if(decision != HandlePacketReturn.ContinueKeepStream)
 				{
-					stream.Close();
 					client.Close();
 					client.Dispose();
-					stream.Dispose();
 				}
 			}
-			HandleRooms();
+			await HandleRooms();
 		}
 		listener.Stop();
 	}
 
-	private static void HandleRooms()
+	private static async Task HandleRooms()
 	{
 		if(waitingList.Count == 0)
 		{
-			Thread.Sleep(100);
+			await Task.Delay(100);
 		}
 		for(int roomIndex = waitingList.Count - 1; roomIndex >= 0; roomIndex--)
 		{
@@ -122,18 +123,18 @@ class Program
 			for(int playerIndex = 0; playerIndex < waitingList[roomIndex].players.Length; playerIndex++)
 			{
 				Room.Player? player = room.players[playerIndex];
-				if(player != null && player.stream != null &&
-					player.stream.CanRead &&
-					player.stream.DataAvailable)
+				if(player != null && player.client != null &&
+					player.client.Connected &&
+					player.client.Available > 0)
 				{
-					Packet? packet = Functions.TryReceiveRawPacket(player.stream, 100);
+					ClientPacket packet = await ClientPacket.ReadAsync(new TCompactProtocol(new TSocketTransport(player.client, new())), default);
 					if(packet != null)
 					{
 						switch(packet)
 						{
-							case ServerPackets.LeaveRequest:
+							case ClientPacket.leave:
 							{
-								player.stream.Dispose();
+								player.client.Dispose();
 								room.players[playerIndex] = null;
 								if(room.players[0] == null && room.players[1] == null)
 								{
@@ -142,11 +143,11 @@ class Program
 								}
 								else
 								{
-									if(room.players[1 - playerIndex]?.stream.Socket.Connected ?? false)
+									if(room.players[1 - playerIndex]?.client.Connected ?? false)
 									{
 										try
 										{
-											room.players[1 - playerIndex]?.stream.Write(Functions.GeneratePayload(new ServerPackets.OpponentChangedResponse(null)));
+											await new ServerPacket.opponent_changed(new()).WriteAsync(new TCompactProtocol(new TSocketTransport(room.players[1 - playerIndex]?.client, new())), default);
 										}
 										catch(IOException e)
 										{
@@ -156,67 +157,54 @@ class Program
 								}
 							}
 							break;
-							case ServerPackets.StartRequest request:
+							case ClientPacket.start:
 							{
+								ClientStart request = packet.As_start!;
 								Functions.Log("----START REQUEST HANDLING----", includeFullPath: true);
-								if(request.decklist.Length != GameConstants.DECK_SIZE + 3)
+								if(request.Decklist is null)
 								{
-									player.stream.Write(Functions.GeneratePayload(new ServerPackets.StartResponse
-									{
-										success = ServerPackets.StartResponse.Result.Failure,
-										reason = "Your deck has the wrong size",
-									}));
+									await new ServerPacket.start(new() { Result = new ServerStartResult.failure(new() { Result = "Missing deck" }) }).WriteAsync(new TCompactProtocol(new TSocketTransport(player.client, new())), default);
+									break;
+								}
+								if(request.Decklist.Count != GameConstants.DECK_SIZE + 3)
+								{
+									await new ServerPacket.start(new() { Result = new ServerStartResult.failure(new() { Result = "Your deck has the wrong size" }) }).WriteAsync(new TCompactProtocol(new TSocketTransport(player.client, new())), default);
 									break;
 								}
 								Functions.Log("Player: " + playerIndex, includeFullPath: true);
 								player.ready = true;
-								player.noshuffle = request.noshuffle;
-								player.Decklist = request.decklist;
+								player.noshuffle = request.Noshuffle;
+								player.Decklist = request.Decklist;
 								if(room.players[1 - playerIndex] == null)
 								{
 									Functions.Log("No opponent", includeFullPath: true);
-									player.stream.Write(Functions.GeneratePayload(new ServerPackets.StartResponse
-									{
-										success = ServerPackets.StartResponse.Result.Failure,
-										reason = "You have no opponent",
-									}));
+									await new ServerPacket.start(new() { Result = new ServerStartResult.failure(new() { Result = "You have no opponent" }) }).WriteAsync(new TCompactProtocol(new TSocketTransport(player.client, new())), default);
 									break;
 								}
 								Functions.Log("Opponent present", includeFullPath: true);
 								if(Array.TrueForAll(waitingList[roomIndex].players, x => x?.ready ?? false))
 								{
 									Functions.Log("All players ready", includeFullPath: true);
-									if(room.StartGame())
+									if(await room.StartGame())
 									{
 										foreach(Room.Player? p in room.players)
 										{
-											if(p != null && p.stream.Socket.Connected)
+											if(p != null && p.client.Connected)
 											{
-												p.stream.Write(Functions.GeneratePayload(new ServerPackets.StartResponse
-												{
-													success = ServerPackets.StartResponse.Result.SuccessButWaiting,
-												}));
+												await new ServerPacket.start(new() { Result = new ServerStartResult.success_but_waiting(new()) }).WriteAsync(new TCompactProtocol(new TSocketTransport(p.client, new())), default);
 											}
 										}
 									}
 									else
 									{
 										Functions.Log("Could not create the core", severity: Functions.LogSeverity.Error, includeFullPath: true);
-										byte[] startPayload = Functions.GeneratePayload(new ServerPackets.StartResponse
-										{
-											success = ServerPackets.StartResponse.Result.Failure,
-											reason = "Could not create a core"
-										});
+										await new ServerPacket.start(new() { Result = new ServerStartResult.failure(new() { Result = "Could not create core" }) }).WriteAsync(new TCompactProtocol(new TSocketTransport(player.client, new())), default);
 									}
 								}
 								else
 								{
 									Functions.Log("Opponent not ready", includeFullPath: true);
-									player.stream.Write(Functions.GeneratePayload(new ServerPackets.StartResponse
-									{
-										success = ServerPackets.StartResponse.Result.Failure,
-										reason = "Your opponent isn't ready yet"
-									}));
+									await new ServerPacket.start(new() { Result = new ServerStartResult.failure(new() { Result = "Your opponent isn't ready yet" }) }).WriteAsync(new TCompactProtocol(new TSocketTransport(player.client, new())), default);
 								}
 								Functions.Log("----END----", includeFullPath: true);
 							}
@@ -242,8 +230,8 @@ class Program
 		{
 			if((DateTime.Now - waitingList[i].startTime).Days > 1 || waitingList[i].isFinished)
 			{
-				waitingList[i].players[0]?.stream.Close();
-				waitingList[i].players[1]?.stream.Close();
+				waitingList[i].players[0]?.client.Close();
+				waitingList[i].players[1]?.client.Close();
 				waitingList.RemoveAt(i);
 				waitingCount++;
 			}
@@ -251,33 +239,24 @@ class Program
 		Functions.Log($"Cleaned up {waitingCount} abandoned waiting rooms, {waitingList.Count} rooms still open", includeFullPath: true);
 	}
 
-	private static HandlePacketReturn HandlePacket(Packet packet, NetworkStream stream)
+	private static async Task<HandlePacketReturn> HandlePacket(ClientPacket packet, TcpClient client)
 	{
 		CleanupRooms();
 		// THIS MIGHT CHANGE AS SENDING RAW JSON MIGHT BE TOO EXPENSIVE/SLOW
-		byte[]? payload = null;
 		switch(packet)
 		{
-			case ServerPackets.CreateRequest request:
+			case ClientPacket.create:
 			{
-				string name = request.name!;
+				string? name = packet.As_create!.Name;
 				if(string.IsNullOrWhiteSpace(name))
 				{
-					payload = Functions.GeneratePayload(new ServerPackets.CreateResponse
-					(
-						success: false,
-						reason: "Names cannot be empty"
-					));
+					await new ServerPacket.create(new() { Result = new Result.failure(new() { Result = "Names can't be empty" }) }).WriteAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
 				}
 				else
 				{
 					if(waitingList.Exists(x => x.players[0]?.Name == name || x.players[1]?.Name == name))
 					{
-						payload = Functions.GeneratePayload(new ServerPackets.CreateResponse
-						(
-							success: false,
-							reason: "Oh oh, sorry kiddo, looks like someone else already has that name. Why don't you pick something else? (Please watch SAO Abridged if you don't get this reference)"
-						));
+						await new ServerPacket.create(new() { Result = new Result.failure(new() { Result = "Oh oh, sorry kiddo, looks like someone else already has that name. Why don't you pick something else? (Please watch SAO Abridged if you don't get this reference)" }) }).WriteAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
 					}
 					else
 					{
@@ -311,92 +290,87 @@ class Program
 						if(currentPort == -1)
 						{
 							Functions.Log("No free port found", severity: Functions.LogSeverity.Warning);
-							payload = Functions.GeneratePayload(new ServerPackets.CreateResponse
-							(
-								success: false,
-								reason: "No free port found"
-							));
+							await new ServerPacket.create(new() { Result = new Result.failure(new() { Result = "No free port found" }) }).WriteAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
 						}
 						else
 						{
-							waitingList.Add(new Room(name, id, currentPort, stream));
-							payload = Functions.GeneratePayload(new ServerPackets.CreateResponse
-							(
-								success: true
-							));
-							stream.Write(payload);
+							waitingList.Add(new Room(name, id, currentPort, client));
+							await new ServerPacket.create(new() { Result = new Result.success(new()) }).WriteAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
 							return HandlePacketReturn.ContinueKeepStream;
 						}
 					}
 				}
 			}
 			break;
-			case ServerPackets.JoinRequest request:
+			case ClientPacket.join:
 			{
-				if(string.IsNullOrWhiteSpace(request.name) || string.IsNullOrWhiteSpace(request.targetName))
+				ClientJoin request = packet.As_join!;
+				if(string.IsNullOrWhiteSpace(request.Own_name) || string.IsNullOrWhiteSpace(request.Own_name))
 				{
-					payload = Functions.GeneratePayload(new ServerPackets.JoinResponse
-					(
-						success: false,
-						reason: "Names cannot be empty"
-					));
+					await new ServerPacket.join(new() { Result = new Result.failure(new() { Result = "Names can't be empty" }) }).WriteAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
 				}
 				else
 				{
-					if(waitingList.FindIndex(x => x.players[0]?.Name == request.name || x.players[1]?.Name == request.name) != -1)
+					if(waitingList.FindIndex(x => x.players[0]?.Name == request.Own_name || x.players[1]?.Name == request.Own_name) != -1)
 					{
-						payload = Functions.GeneratePayload(new ServerPackets.JoinResponse
-						(
-							success: false,
-							reason: "Oh oh, sorry kiddo, looks like someone else already has that name. Why don't you pick something else? (Please watch SAO Abridged if you don't get this reference)"
-						));
+						await new ServerPacket.join(new() { Result = new Result.failure(new() { Result = "Oh oh, sorry kiddo, looks like someone else already has that name. Why don't you pick something else? (Please watch SAO Abridged if you don't get this reference)" }) }).WriteAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
 					}
 					else
 					{
-						int index = waitingList.FindIndex(x => x.players[0]?.Name == request.targetName || x.players[1]?.Name == request.targetName);
+						int index = waitingList.FindIndex(x => x.players[0]?.Name == request.Opp_name || x.players[1]?.Name == request.Opp_name);
 						if(index == -1)
 						{
-							payload = Functions.GeneratePayload(new ServerPackets.JoinResponse
-							(
-								success: false,
-								reason: "No player with that name hosts a game right now"
-							));
+							await new ServerPacket.join(new() { Result = new Result.failure(new() { Result = "No player with that name hosts a game right now" }) }).WriteAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
 						}
 						else
 						{
-							string id = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(seed + request.name))).Replace("-", "");
+							string id = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(seed + request.Own_name))).Replace("-", "");
 							int playerIndex = waitingList[index].players[0] == null ? 0 : 1;
-							waitingList[index].players[playerIndex] = new Room.Player(Name: request.name, id: id, stream: stream, ready: false, noshuffle: false);
-							payload = Functions.GeneratePayload(new ServerPackets.JoinResponse
-							(
-								success: true
-							));
-							if(waitingList[index].players[1 - playerIndex]!.stream != null && waitingList[index].players[1 - playerIndex]!.stream.Socket.Connected)
+							waitingList[index].players[playerIndex] = new Room.Player(Name: request.Own_name, id: id, client: client, ready: false, noshuffle: false);
+							await new ServerPacket.join(new() { Result = new Result.success(new()) }).WriteAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
+							if(waitingList[index].players[1 - playerIndex]!.client != null && waitingList[index].players[1 - playerIndex]!.client.Connected)
 							{
-								waitingList[index].players[1 - playerIndex]!.stream.Write(Functions.GeneratePayload(new ServerPackets.OpponentChangedResponse(request.name)));
+								try
+								{
+									await new ServerPacket.opponent_changed(new() { Name = request.Own_name }).WriteAsync(new TCompactProtocol(new TSocketTransport(waitingList[index].players[1 - playerIndex]!.client, config: new())), default);
+								}
+								catch(Exception e)
+								{
+									Functions.Log($"Could not send opponent_changed to opponent: {e.Message}");
+								}
 							}
-							stream.Write(payload);
 							return HandlePacketReturn.ContinueKeepStream;
 						}
 					}
 				}
 			}
 			break;
-			case ServerPackets.RoomsRequest:
+			case ClientPacket.rooms:
 			{
 				if(waitingList.Exists(x => x.players[0]?.Name == null && x.players[1]?.Name == null))
 				{
 					Functions.Log($"There is a player whose name is null", severity: Functions.LogSeverity.Error, includeFullPath: true);
 					return HandlePacketReturn.Continue;
 				}
-				payload = Functions.GeneratePayload(new ServerPackets.RoomsResponse([.. waitingList.FindAll(x => !Array.TrueForAll(x.players, y => y?.ready ?? false)).ConvertAll(x => x.players[0]?.Name ?? x.players[1]?.Name)]));
+				Functions.Log("Before sending rooms list");
+				await new ServerPacket.rooms(new() { Rooms = waitingList.FindAll(x => !Array.TrueForAll(x.players, y => y?.ready ?? false)).ConvertAll(x => x.players[0]?.Name ?? x.players[1]?.Name ?? "") }).WriteAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
+				Functions.Log("After sending rooms list");
 			}
 			break;
-			case ServerPackets.AdditionalCardsRequest:
+			case ClientPacket.additional_cards:
 			{
 				string fullAdditionalCardsPath = Path.Combine(baseDir, config.additional_cards_path);
-				if(!File.Exists(fullAdditionalCardsPath) ||
-					JsonSerializer.Deserialize<ServerPackets.AdditionalCardsResponse>(File.ReadAllText(fullAdditionalCardsPath), GenericConstants.packetSerialization)?.time > lastAdditionalCardsTimestamp)
+				bool isUpToDate = File.Exists(fullAdditionalCardsPath);
+				if(isUpToDate)
+				{
+					ServerAdditionalCards additionalCards = new();
+					await additionalCards.ReadAsync(new TCompactProtocol(new Functions.TSimpleFileTransport(fullAdditionalCardsPath, Functions.TSimpleFileTransport.OpenMode.Read)), default);
+					if(additionalCards.Timestamp > lastAdditionalCardsTimestamp)
+					{
+						isUpToDate = false;
+					}
+				}
+				if(!isUpToDate)
 				{
 					ProcessStartInfo info = new()
 					{
@@ -406,73 +380,46 @@ class Program
 						FileName = config.core_info.FileName,
 						WorkingDirectory = config.core_info.WorkingDirectory,
 					};
-					_ = (Process.Start(info)?.WaitForExit(10000));
+					await Process.Start(info)!.WaitForExitAsync();
 				}
 				if(File.Exists(fullAdditionalCardsPath))
 				{
-					ServerPackets.AdditionalCardsResponse response = JsonSerializer.Deserialize<ServerPackets.AdditionalCardsResponse>(File.ReadAllText(fullAdditionalCardsPath), GenericConstants.packetSerialization)!;
-					lastAdditionalCardsTimestamp = response.time;
-					payload = Functions.GeneratePayload(response);
-					Functions.Log($"additional cards packet length: {payload.Length}");
+					ServerAdditionalCards additionalCards = new();
+					await additionalCards.ReadAsync(new TCompactProtocol(new Functions.TSimpleFileTransport(fullAdditionalCardsPath, Functions.TSimpleFileTransport.OpenMode.Read)), default);
+					lastAdditionalCardsTimestamp = additionalCards.Timestamp;
+					await new ServerPacket.additional_cards(additionalCards).WriteAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
 				}
 				else
 				{
 					Functions.Log("No additional cards file exists", severity: Functions.LogSeverity.Warning);
-					payload = Functions.GeneratePayload(new ServerPackets.AdditionalCardsResponse(DateTime.Now, []));
+					await new ServerPacket.additional_cards(new()).WriteAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
 				}
 			}
 			break;
-			case ServerPackets.ArtworkRequest request:
+			case ClientPacket.artworks:
 			{
+				ClientArtworks request = packet.As_artworks!;
 				if(config.artwork_path is null)
 				{
-					payload = Functions.GeneratePayload(new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.None, null));
+					await new ServerPacket.artworks(new() { Supports_artworks = false }).WriteAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
 					break;
 				}
-				string sanitizedName = Functions.CardnameToFilename(request.name);
-				string pngPath = Path.Combine(config.artwork_path, sanitizedName + ".png");
-				string jpgPath = Path.Combine(config.artwork_path, sanitizedName + ".jpg");
-				if(File.Exists(pngPath))
-				{
-					payload = Functions.GeneratePayload(new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.PNG, Convert.ToBase64String(File.ReadAllBytes(pngPath))));
-				}
-				else if(File.Exists(jpgPath))
-				{
-					payload = Functions.GeneratePayload(new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.JPG, Convert.ToBase64String(File.ReadAllBytes(jpgPath))));
-				}
-				else
-				{
-					payload = Functions.GeneratePayload(new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.None, null));
-				}
-			}
-			break;
-			case ServerPackets.ArtworksRequest request:
-			{
-				if(config.artwork_path is null)
-				{
-					payload = Functions.GeneratePayload(new ServerPackets.ArtworksResponse([], false));
-					break;
-				}
-				Dictionary<string, ServerPackets.ArtworkResponse> artworks = [];
-				foreach(string name in request.names)
+				Dictionary<string, ArtworkInfo> artworks = [];
+				foreach(string name in request.Names ?? [])
 				{
 					string sanitizedName = Functions.CardnameToFilename(name);
 					string pngPath = Path.Combine(config.artwork_path, sanitizedName + ".png");
 					string jpgPath = Path.Combine(config.artwork_path, sanitizedName + ".jpg");
 					if(File.Exists(pngPath))
 					{
-						artworks[sanitizedName] = new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.PNG, Convert.ToBase64String(File.ReadAllBytes(pngPath)));
+						artworks[sanitizedName] = new() { Filetype = ArtworkFiletype.PNG, Data = await File.ReadAllBytesAsync(pngPath) };
 					}
 					else if(File.Exists(jpgPath))
 					{
-						artworks[sanitizedName] = new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.JPG, Convert.ToBase64String(File.ReadAllBytes(jpgPath)));
-					}
-					else
-					{
-						artworks[sanitizedName] = new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.None, null);
+						artworks[sanitizedName] = new() { Filetype = ArtworkFiletype.JPG, Data = await File.ReadAllBytesAsync(jpgPath) };
 					}
 				}
-				payload = Functions.GeneratePayload(new ServerPackets.ArtworksResponse(artworks, true));
+				await new ServerPacket.artworks(new() { Supports_artworks = true, Artworks = artworks }).WriteAsync(new TCompactProtocol(new TSocketTransport(client, new())), default);
 			}
 			break;
 			default:
@@ -480,7 +427,6 @@ class Program
 				throw new Exception($"ERROR: Unable to process this packet: Packet type: {packet.GetType()}");
 			}
 		}
-		stream.Write(payload);
 		return HandlePacketReturn.Continue;
 	}
 }

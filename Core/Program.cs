@@ -2,12 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Reflection;
 using CardGameUtils;
 using CardGameUtils.Structs;
 using static CardGameUtils.Functions;
+using Thrift.Protocol;
+using CardGameUtils.Packets.Server;
+using System.Threading.Tasks;
+using CardGameUtils.Constants;
+using CardGameUtils.Packets.Duel;
+
 namespace CardGameCore;
 
 class Program
@@ -15,12 +21,13 @@ class Program
 	public static string baseDir = AppDomain.CurrentDomain.BaseDirectory;
 	public static Replay? replay;
 	public static int seed;
-	public static DateTime versionTime;
-	public static void Main(string[] args)
+	public static long versionTimestamp;
+
+	public static async Task Main(string[] args)
 	{
 		seed = new Random().Next();
 		string? configPath = null;
-		versionTime = GenerateVersionTime();
+		versionTimestamp = GenerateVersionTimestamp();
 		for(int i = 0; i < args.Length; i++)
 		{
 			string[] parts = args[i].Split('=');
@@ -41,8 +48,8 @@ class Program
 						}
 						break;
 					case "--additional_cards_path":
-						GenerateAdditionalCards(path);
-						Log($"Done generating new additional cards referring to {versionTime}");
+						await GenerateAdditionalCards(path);
+						Log($"Done generating new additional cards referring to {versionTimestamp}");
 						return;
 				}
 			}
@@ -57,7 +64,8 @@ class Program
 			Log($"Missing a config at {configPath}.", severity: LogSeverity.Error);
 			return;
 		}
-		PlatformCoreConfig? platformConfig = JsonSerializer.Deserialize<PlatformCoreConfig>(File.ReadAllText(Path.GetFullPath(configPath)), GenericConstants.platformCoreConfigSerialization);
+		using FileStream stream = File.OpenRead(Path.GetFullPath(configPath));
+		PlatformCoreConfig? platformConfig = await JsonSerializer.DeserializeAsync<PlatformCoreConfig>(stream, GenericConstants.platformCoreConfigSerialization);
 		if(platformConfig == null)
 		{
 			Log("Could not parse a platform config", LogSeverity.Error);
@@ -117,7 +125,11 @@ class Program
 						break;
 					case "replay":
 						Log("Recording replay");
-						replay = new Replay(args, seed);
+						replay = new Replay
+						{
+							Seed = seed,
+							Cmdline_args = [.. args],
+						};
 						break;
 					case "additional_cards_url":
 						if(config.deck_config != null)
@@ -153,47 +165,54 @@ class Program
 		{
 			core = new DuelCore(config.duel_config!, config.port);
 		}
-		core.Init(pipeStream);
+		await core.Init(pipeStream);
 		Log("EXITING");
 		if(replay != null)
 		{
 			string replayPath = Path.Combine(baseDir, "replays");
 			_ = Directory.CreateDirectory(replayPath);
 			string filePath = Path.Combine(replayPath, $"{DateTime.UtcNow:yyyyMMdd_HHmmss}_{UsernameToFilename(config.duel_config!.players[0].name)}_vs_{UsernameToFilename(config.duel_config!.players[1].name)}.replay");
-			File.WriteAllText(filePath, JsonSerializer.Serialize(replay, GenericConstants.replaySerialization));
+			// TODO: Check if this actually works
+			await replay.WriteAsync(new TJsonProtocol(new Functions.TSimpleFileTransport(filePath, Functions.TSimpleFileTransport.OpenMode.Write)), default);
 			Log("Wrote replay to " + filePath);
 		}
 	}
 
-	private static DateTime GenerateVersionTime()
+	private static long GenerateVersionTimestamp()
 	{
 		foreach(string file in Directory.EnumerateFiles(baseDir))
 		{
 			if(Path.GetFileName(file) is "CardGameCore.dll" or "CardGameCore" or "CardGameCore.exe")
 			{
-				return File.GetCreationTime(file);
+				return new DateTimeOffset(File.GetCreationTime(file)).ToUnixTimeSeconds();
 			}
 		}
 		throw new Exception($"Could not find executable in {baseDir} to generate version time");
 	}
 
-	public static void GenerateAdditionalCards(string path)
+	public static async Task GenerateAdditionalCards(string path)
 	{
-		if(!File.Exists(path) || JsonSerializer.Deserialize<NetworkingStructs.ServerPackets.AdditionalCardsResponse>(File.ReadAllText(path), GenericConstants.packetSerialization)?.time < versionTime)
+		if(File.Exists(path))
 		{
-			Log("Generating new additional cards");
-			List<CardStruct> cards = [];
-			foreach(Type card in Array.FindAll(Assembly.GetExecutingAssembly().GetTypes(), IsCardSubclass))
+			ServerAdditionalCards additional = new();
+			await additional.ReadAsync(new TCompactProtocol(new TSimpleFileTransport(path, TSimpleFileTransport.OpenMode.Read)), default);
+			if(additional.Timestamp >= versionTimestamp)
 			{
-				Card c = (Card)Activator.CreateInstance(card)!;
-				cards.Add(c.ToStruct(client: true));
+				return;
 			}
-			File.WriteAllText(path, JsonSerializer.Serialize(new NetworkingStructs.ServerPackets.AdditionalCardsResponse
-			(
-				cards: [.. cards],
-				time: versionTime
-			), GenericConstants.packetSerialization));
 		}
+		Log("Generating new additional cards");
+		List<CardInfo> cards = [];
+		foreach(Type card in Array.FindAll(Assembly.GetExecutingAssembly().GetTypes(), IsCardSubclass))
+		{
+			Card c = (Card)Activator.CreateInstance(card)!;
+			cards.Add(c.ToStruct(client: true));
+		}
+		await new ServerAdditionalCards()
+		{
+			Cards = [.. cards],
+			Timestamp = versionTimestamp,
+		}.WriteAsync(new TCompactProtocol(new TSimpleFileTransport(path, TSimpleFileTransport.OpenMode.Write)), default);
 	}
 
 	public static readonly Predicate<Type> IsCardSubclass = card =>

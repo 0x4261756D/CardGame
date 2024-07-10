@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using CardGameUtils;
-using CardGameUtils.Structs;
+using CardGameUtils.Constants;
+using CardGameUtils.Packets.Duel;
 
 namespace CardGameCore;
 
@@ -13,9 +14,9 @@ class Field
 
 	}
 
-	internal CardStruct?[] ToStruct()
+	internal List<FieldCardInfo> ToStruct()
 	{
-		return Array.ConvertAll(cards, card => card?.ToStruct());
+		return [.. Array.ConvertAll(cards, card => card is null ? new FieldCardInfo() : new FieldCardInfo() { Info = card.ToStruct() })];
 	}
 
 	internal Creature?[] GetAll()
@@ -33,13 +34,14 @@ class Field
 		{
 			throw new Exception($"Tried to move {card} to zone {zone} occupied by {cards[zone]}");
 		}
-		card.Location = GameConstants.Location.Field;
+		card.Location = Location.Field;
 		card.Position = zone;
 		cards[zone] = card;
 	}
 
 	internal bool[] GetMovementOptions(int position, int momentum)
 	{
+
 		bool[] ret = new bool[GameConstants.FIELD_SIZE];
 		Creature? card = cards[position];
 		if(card == null)
