@@ -1,0 +1,89 @@
+include "Constants.fbs";
+include "Shared.fbs";
+
+namespace CardGameUtils.Packets.Server;
+file_identifier "srvr";
+
+table ServerAdditionalCardsPacket
+{
+	timestamp:int64;
+	cards:[Shared.CardInfo];
+}
+
+table ServerArtworksPacket
+{
+	supports_artworks:bool;
+	artworks:[ArtworkInfo];
+}
+enum ArtworkFiletype : uint8
+{
+	UNKNOWN,
+	JPG,
+	PNG,
+}
+table ArtworkInfo
+{
+	data:[uint8];
+	filetype:ArtworkFiletype;
+	name:string;
+}
+
+table ResultSuccess {}
+table ResultFailure
+{
+	reason:string;
+}
+union Result { ResultSuccess, ResultFailure }
+table ServerCreatePacket
+{
+	result:Result;
+}
+
+table ServerJoinPacket
+{
+	result:Result;
+}
+
+table ServerOpponentChangedPacket
+{
+	name:string;
+}
+
+table ServerRoomsPacket
+{
+	rooms:[string];
+}
+
+table ServerStartResultFailure
+{
+	reason:string;
+}
+table ServerStartResultSuccess
+{
+	room_id:string;
+	port:int;
+}
+table ServerStartResultSuccessButWaiting {}
+union ServerStartResult { ServerStartResultFailure, ServerStartResultSuccess, ServerStartResultSuccessButWaiting }
+table ServerStartPacket
+{
+	result:ServerStartResult;
+}
+
+union ServerContent
+{
+	additional_cards:ServerAdditionalCardsPacket,
+	artworks:ServerArtworksPacket,
+	create:ServerCreatePacket,
+	join:ServerJoinPacket,
+	opponent_changed:ServerOpponentChangedPacket,
+	rooms:ServerRoomsPacket,
+	start:ServerStartPacket,
+}
+
+table ServerPacket
+{
+	content:ServerContent;
+}
+
+root_type ServerPacket;

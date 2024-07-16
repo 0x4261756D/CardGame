@@ -11,8 +11,11 @@ using Avalonia.Media.TextFormatting;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using CardGameUtils;
+using Google.FlatBuffers;
 using CardGameUtils.Structs;
-using static CardGameUtils.Structs.NetworkingStructs;
+using System.Net.Sockets;
+using CardGameUtils.Constants;
+using CardGameUtils.Shared;
 
 namespace CardGameClient;
 
@@ -29,25 +32,25 @@ public class UIUtils
 		};
 	}
 
-	public static R? TrySendAndReceive<R>(Packet request, string address, int port, Window? window) where R : Packet
-	{
-		try
-		{
-			return Functions.SendAndReceive<R>(request, address, port);
-		}
-		catch(Exception ex)
-		{
-			if(window != null && window.IsVisible)
-			{
-				new ErrorPopup(ex.Message).Show(window);
-			}
-			else
-			{
-				new ErrorPopup(ex.Message).Show();
-			}
-			return null;
-		}
-	}
+	// public static R? TrySendAndReceive<R>(Packet request, string address, int port, Window? window) where R : Packet
+	// {
+	// 	try
+	// 	{
+	// 		return Functions.SendAndReceive<R>(request, address, port);
+	// 	}
+	// 	catch(Exception ex)
+	// 	{
+	// 		if(window != null && window.IsVisible)
+	// 		{
+	// 			new ErrorPopup(ex.Message).Show(window);
+	// 		}
+	// 		else
+	// 		{
+	// 			new ErrorPopup(ex.Message).Show();
+	// 		}
+	// 		return null;
+	// 	}
+	// }
 
 	public static async Task<string?> SelectFileAsync(Window window, string title = "Select file", bool allowMultiple = false)
 	{
@@ -81,9 +84,7 @@ public class UIUtils
 		}).ConfigureAwait(true);
 		if(files.Count > 0)
 		{
-#pragma warning disable CA2007
-			await using Stream stream = await files[0].OpenReadAsync();
-#pragma warning restore CA2007
+			using Stream stream = await files[0].OpenReadAsync().ConfigureAwait(true);
 			using StreamReader reader = new(stream);
 			return await reader.ReadToEndAsync().ConfigureAwait(true);
 		}
@@ -93,7 +94,7 @@ public class UIUtils
 	private static readonly Dictionary<string, Bitmap?> ArtworkCache = [];
 	private static Bitmap? DefaultArtwork;
 	private static readonly HashSet<string> ServersNotSupportingArtworks = [];
-	public static void CacheArtworkBatchFromServer(string[] names)
+	public static void CacheArtworkBatchFromServer(List<string> names)
 	{
 		if(ServersNotSupportingArtworks.Contains(Program.config.server_address))
 		{
@@ -117,27 +118,58 @@ public class UIUtils
 		{
 			return;
 		}
-		ServerPackets.ArtworksResponse response = Functions.SendAndReceive<ServerPackets.ArtworksResponse>(new ServerPackets.ArtworksRequest([.. filenames]),
-			Program.config.server_address, GenericConstants.SERVER_PORT);
-		if(!response.supports_artworks)
+		FlatBufferBuilder builder = new(1);
+		builder.FinishSizePrefixed(CardGameUtils.Packets.Server.ClientPacket.Pack(builder, new()
+		{
+			Content = new()
+			{
+				Type = CardGameUtils.Packets.Server.ClientContent.artworks,
+				Value = new CardGameUtils.Packets.Server.ClientArtworksPacketT
+				{
+					Names = filenames
+				}
+			}
+		}).Value);
+		CardGameUtils.Packets.Server.ServerPacket packet;
+		try
+		{
+			using TcpClient client = new(Program.config.server_address, InternalConstants.SERVER_PORT);
+			using NetworkStream stream = client.GetStream();
+			stream.Write(builder.DataBuffer.ToSizedArray());
+			packet = Functions.ReadSizedServerServerPacketFromStream(stream);
+		}
+		catch(Exception e)
+		{
+			Functions.Log(e.Message);
+			ServersNotSupportingArtworks.Add(Program.config.server_address);
+			return;
+		}
+		if(packet.ContentType != CardGameUtils.Packets.Server.ServerContent.artworks)
+		{
+			Functions.Log($"Expected packet of type `artworks` but got {packet.ContentType}", severity: Functions.LogSeverity.Warning);
+			_ = ServersNotSupportingArtworks.Add(Program.config.server_address);
+			return;
+		}
+		CardGameUtils.Packets.Server.ServerArtworksPacket response = packet.ContentAsartworks();
+		if(!response.SupportsArtworks)
 		{
 			_ = ServersNotSupportingArtworks.Add(Program.config.server_address);
 			return;
 		}
-		foreach(string filename in filenames)
+		for(int i = 0; i < response.ArtworksLength; i++)
 		{
-			if(response.artworks.TryGetValue(Functions.CardnameToFilename(filename), out ServerPackets.ArtworkResponse? artwork))
+			CardGameUtils.Packets.Server.ArtworkInfo? info = response.Artworks(i);
+			if(info.HasValue && filenames.Contains(info.Value.Name))
 			{
-				if(artwork.filedata_base64 is not null && artwork.filetype != ServerPackets.ArtworkFiletype.None)
+				if(info.Value.Filetype != CardGameUtils.Packets.Server.ArtworkFiletype.UNKNOWN && info.Value.DataLength > 0)
 				{
-					string pathWithExtension = Path.Combine(Program.config.artwork_path, filename + Functions.ArtworkFiletypeToExtension(artwork.filetype));
-					File.WriteAllBytes(pathWithExtension, Convert.FromBase64String(artwork.filedata_base64));
-					Bitmap ret = new(pathWithExtension);
-					ArtworkCache[filename] = ret;
+					string pathWithExtension = Path.Combine(Program.config.artwork_path, info.Value.Name + Functions.ArtworkToFiletypeExtension(info.Value.Filetype));
+					File.WriteAllBytes(pathWithExtension, info.Value.GetDataArray());
+					ArtworkCache[info.Value.Name] = new(pathWithExtension);
 				}
 				else
 				{
-					ArtworkCache[filename] = TryLoadArtworkFromDisk(filename);
+					ArtworkCache[info.Value.Name] = TryLoadArtworkFromDisk(info.Value.Name);
 				}
 			}
 		}
@@ -189,14 +221,43 @@ public class UIUtils
 		}
 		if(!ServersNotSupportingArtworks.Contains(Program.config.server_address))
 		{
-			ServerPackets.ArtworkResponse response = Functions.SendAndReceive<ServerPackets.ArtworkResponse>(new ServerPackets.ArtworkRequest(filename), Program.config.server_address, GenericConstants.SERVER_PORT);
-			if(response.filedata_base64 is not null && response.filetype != ServerPackets.ArtworkFiletype.None)
+			FlatBufferBuilder builder = new(1);
+			builder.FinishSizePrefixed(CardGameUtils.Packets.Server.ClientPacket.Pack(builder, new()
 			{
-				string pathWithExtension = Path.Combine(Program.config.artwork_path, filename) + Functions.ArtworkFiletypeToExtension(response.filetype);
-				File.WriteAllBytes(pathWithExtension, Convert.FromBase64String(response.filedata_base64));
-				Bitmap ret = new(pathWithExtension);
-				ArtworkCache[filename] = ret;
-				return ret;
+				Content = new()
+				{
+					Type = CardGameUtils.Packets.Server.ClientContent.artworks,
+					Value = new CardGameUtils.Packets.Server.ClientArtworksPacketT
+					{
+						Names = [filename]
+					}
+				}
+			}).Value);
+			using TcpClient client = new(Program.config.server_address, InternalConstants.SERVER_PORT);
+			using NetworkStream stream = client.GetStream();
+			stream.Write(builder.DataBuffer.ToSizedArray());
+			CardGameUtils.Packets.Server.ServerPacket packet = Functions.ReadSizedServerServerPacketFromStream(stream);
+			if(packet.ContentType != CardGameUtils.Packets.Server.ServerContent.artworks)
+			{
+				Functions.Log($"Expected packet of type `artworks` but got {packet.ContentType}", severity: Functions.LogSeverity.Warning);
+				_ = ServersNotSupportingArtworks.Add(Program.config.server_address);
+				return null;
+			}
+			CardGameUtils.Packets.Server.ServerArtworksPacket response = packet.ContentAsartworks();
+			if(!response.SupportsArtworks)
+			{
+				_ = ServersNotSupportingArtworks.Add(Program.config.server_address);
+				return null;
+			}
+			CardGameUtils.Packets.Server.ArtworkInfo? info = response.Artworks(0);
+			if(info.HasValue && filename == info.Value.Name)
+			{
+				if(info.Value.Filetype != CardGameUtils.Packets.Server.ArtworkFiletype.UNKNOWN && info.Value.DataLength > 0)
+				{
+					string pathWithExtension = Path.Combine(Program.config.artwork_path, info.Value.Name + Functions.ArtworkToFiletypeExtension(info.Value.Filetype));
+					File.WriteAllBytes(pathWithExtension, info.Value.GetDataArray());
+					ArtworkCache[info.Value.Name] = new(pathWithExtension);
+				}
 			}
 		}
 		if(DefaultArtwork == null && File.Exists(Path.Combine(Program.config.artwork_path, "default_artwork.png")))
@@ -205,7 +266,7 @@ public class UIUtils
 		}
 		return DefaultArtwork;
 	}
-	public static Viewbox CreateGenericCard(CardStruct c)
+	public static Viewbox CreateGenericCard(CardInfoT c)
 	{
 		Viewbox box = new()
 		{
@@ -226,7 +287,7 @@ public class UIUtils
 		{
 			Child = new TextBlock
 			{
-				Text = c.name,
+				Text = c.Name,
 				FontSize = 50,
 				TextAlignment = TextAlignment.Center,
 			},
@@ -246,7 +307,7 @@ public class UIUtils
 			{
 				Child = new Image
 				{
-					Source = FetchArtwork(c.name),
+					Source = FetchArtwork(c.Name),
 				},
 			},
 			Margin = new Thickness(50, 0),
@@ -259,7 +320,7 @@ public class UIUtils
 		{
 			Child = new TextBlock
 			{
-				Text = c.text,
+				Text = c.Text,
 				TextWrapping = TextWrapping.Wrap,
 				FontSize = 40,
 				Foreground = Brushes.White,
@@ -276,16 +337,17 @@ public class UIUtils
 		RelativePanel.SetBelow(textBorder, imageBorder);
 		RelativePanel.SetAlignLeftWithPanel(textBorder, true);
 		RelativePanel.SetAlignRightWithPanel(textBorder, true);
-		switch(c.card_type)
+		switch(c.TypeSpecifics.Type)
 		{
-			case GameConstants.CardType.Creature:
+			case TypeSpecifics.creature:
 			{
+				CreatureSpecificsT specifics = c.TypeSpecifics.Ascreature();
 				outsideBorder.Background = Brushes.Orange;
 				Border costBorder = new()
 				{
 					Child = new TextBlock
 					{
-						Text = $"Cost: {c.cost} Power/Life: {c.power}/{c.life}",
+						Text = $"Cost: {specifics.Cost} Power/Life: {specifics.Power}/{specifics.Life}",
 						FontSize = 50,
 						TextAlignment = TextAlignment.Center,
 						Margin = new Thickness(20),
@@ -299,14 +361,14 @@ public class UIUtils
 				RelativePanel.SetAlignBottomWith(costBorder, textBorder);
 			}
 			break;
-			case GameConstants.CardType.Spell:
+			case TypeSpecifics.spell:
 			{
 				outsideBorder.Background = Brushes.SkyBlue;
 				Border costBorder = new()
 				{
 					Child = new TextBlock
 					{
-						Text = $"Cost: {c.cost}",
+						Text = $"Cost: {c.TypeSpecifics.Asspell().Cost}",
 						FontSize = 50,
 						TextAlignment = TextAlignment.Center,
 						Margin = new Thickness(20),
@@ -320,14 +382,15 @@ public class UIUtils
 				RelativePanel.SetAlignBottomWith(costBorder, textBorder);
 			}
 			break;
-			case GameConstants.CardType.Quest:
+			case TypeSpecifics.quest:
 			{
+				QuestSpecificsT specifics = c.TypeSpecifics.Asquest();
 				outsideBorder.Background = Brushes.Green;
 				Border goalBorder = new()
 				{
 					Child = new TextBlock
 					{
-						Text = $"{c.position}/{c.cost}",
+						Text = $"{specifics.Progress}/{specifics.Goal}",
 						FontSize = 50,
 						TextAlignment = TextAlignment.Center,
 						Margin = new Thickness(20),
@@ -347,23 +410,23 @@ public class UIUtils
 		box.DataContext = c;
 		return box;
 	}
-	public static int[] CardListBoxSelectionToUID(ListBox box)
+	public static List<int> CardListBoxSelectionToUID(ListBox box)
 	{
-		int[] uids = new int[box.SelectedItems?.Count ?? 0];
+		List<int> uids = new List<int>(box.SelectedItems?.Count ?? 0);
 		for(int i = 0; i < (box.SelectedItems?.Count ?? 0); i++)
 		{
-			uids[i] = ((CardStruct)box.SelectedItems?[i]!).uid;
+			uids[i] = ((CardInfoT)box.SelectedItems?[i]!).Uid;
 		}
 		return uids;
 	}
 
-	public static void CardHover(Panel CardImagePanel, TextBlock CardTextBlock, CardStruct c, bool inDeckEdit)
+	public static void CardHover(Panel CardImagePanel, TextBlock CardTextBlock, CardInfoT c, bool inDeckEdit)
 	{
 		CardImagePanel.Children.Clear();
 		Viewbox v = CreateGenericCard(c);
 		CardImagePanel.Children.Add(v);
 
-		CardTextBlock.Text = c.Format(inDeckEdit);
+		CardTextBlock.Text = Functions.CardInfoTToString(c, inDeckEdit: inDeckEdit);
 		CardTextBlock.PointerMoved += CardTextHover;
 	}
 	private static void CardTextHover(object? sender, PointerEventArgs e)
@@ -386,7 +449,7 @@ public class UIUtils
 				if(start >= 0 && end >= 0 && end < block.Text.Length && start != end)
 				{
 					string possibleKeyword = block.Text.Substring(start + 1, end - start - 1);
-					if(!possibleKeyword.Contains(' ') && ClientConstants.KeywordDescriptions.TryGetValue(possibleKeyword, out string? value))
+					if(!possibleKeyword.Contains(' ') && InternalConstants.KeywordDescriptions.TryGetValue(possibleKeyword, out string? value))
 					{
 						string description = value;
 						ToolTip.SetTip(block, description);

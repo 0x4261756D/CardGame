@@ -6,8 +6,10 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Google.ProtocolBuffers;
-using CardGameUtils.Packets;
+using Google.FlatBuffers;
+using CardGameUtils.Constants;
+using CardGameUtils.Shared;
+using System.Text;
 
 namespace CardGameUtils;
 
@@ -56,116 +58,198 @@ partial class Functions
 		Console.ForegroundColor = current;
 	}
 
-	public static Packet DeserializePacket(byte[] data)
+	public static CardGameUtils.Packets.Deck.ServerPacket ReadSizedDeckServerPacketFromStream(Stream stream)
 	{
-		if(!Packet.VerifyPacket(data))
+		byte[] sizeBuff = new byte[sizeof(int)];
+		stream.ReadExactly(sizeBuff);
+		int size = BitConverter.ToInt32(sizeBuff);
+		Console.WriteLine(size);
+		byte[] bytes = new byte[size];
+		stream.ReadExactly(bytes);
+		ByteBuffer buffer = new(bytes);
+		Verifier verifier = new(buffer);
+		if(!verifier.VerifyBuffer("deck", false, CardGameUtils.Packets.Deck.ServerPacketVerify.Verify))
 		{
-			throw new Exception("Invalid packet received");
+			throw new Exception("Could not read packet");
 		}
-		return Packet.GetRootAsPacket(new ByteBuffer(data));
+		return CardGameUtils.Packets.Deck.ServerPacket.GetRootAsServerPacket(buffer);
+	}
+	public static CardGameUtils.Packets.Deck.ClientPacket ReadSizedDeckClientPacketFromStream(Stream stream)
+	{
+		byte[] sizeBuff = new byte[sizeof(int)];
+		stream.ReadExactly(sizeBuff);
+		int size = BitConverter.ToInt32(sizeBuff);
+		Console.WriteLine(size);
+		byte[] bytes = new byte[size];
+		stream.ReadExactly(bytes);
+		ByteBuffer buffer = new(bytes);
+		Verifier verifier = new(buffer);
+		if(!CardGameUtils.Packets.Deck.ClientPacket.VerifyClientPacket(buffer))
+		{
+			throw new Exception("Could not read packet");
+		}
+		return CardGameUtils.Packets.Deck.ClientPacket.GetRootAsClientPacket(buffer);
+	}
+	public static CardGameUtils.Packets.Duel.ServerPacket ReadSizedDuelServerPacketFromStream(Stream stream)
+	{
+		byte[] sizeBuff = new byte[sizeof(int)];
+		stream.ReadExactly(sizeBuff);
+		int size = BitConverter.ToInt32(sizeBuff);
+		Console.WriteLine(size);
+		byte[] bytes = new byte[size];
+		stream.ReadExactly(bytes);
+		ByteBuffer buffer = new(bytes);
+		Verifier verifier = new(buffer);
+		if(!CardGameUtils.Packets.Duel.ServerPacket.VerifyServerPacket(buffer))
+		{
+			throw new Exception("Could not read packet");
+		}
+		return CardGameUtils.Packets.Duel.ServerPacket.GetRootAsServerPacket(buffer);
+	}
+	public static CardGameUtils.Packets.Duel.ClientPacket ReadSizedDuelClientPacketFromStream(Stream stream)
+	{
+		byte[] sizeBuff = new byte[sizeof(int)];
+		stream.ReadExactly(sizeBuff);
+		int size = BitConverter.ToInt32(sizeBuff);
+		Console.WriteLine(size);
+		byte[] bytes = new byte[size];
+		stream.ReadExactly(bytes);
+		ByteBuffer buffer = new(bytes);
+		if(!CardGameUtils.Packets.Duel.ClientPacket.VerifyClientPacket(buffer))
+		{
+			throw new Exception("Could not read packet");
+		}
+		return CardGameUtils.Packets.Duel.ClientPacket.GetRootAsClientPacket(buffer);
+	}
+	public static CardGameUtils.Packets.Server.ServerPacket ReadSizedServerServerPacketFromStream(Stream stream)
+	{
+		byte[] sizeBuff = new byte[sizeof(int)];
+		stream.ReadExactly(sizeBuff);
+		int size = BitConverter.ToInt32(sizeBuff);
+		Console.WriteLine(size);
+		byte[] bytes = new byte[size];
+		stream.ReadExactly(bytes);
+		ByteBuffer buffer = new(bytes);
+		Verifier verifier = new(buffer);
+		if(!CardGameUtils.Packets.Server.ServerPacket.VerifyServerPacket(buffer))
+		{
+			throw new Exception("Could not read packet");
+		}
+		return CardGameUtils.Packets.Server.ServerPacket.GetRootAsServerPacket(buffer);
+	}
+	public static CardGameUtils.Packets.Server.ClientPacket ReadSizedServerClientPacketFromStream(Stream stream)
+	{
+		byte[] sizeBuff = new byte[sizeof(int)];
+		stream.ReadExactly(sizeBuff);
+		int size = BitConverter.ToInt32(sizeBuff);
+		Console.WriteLine(size);
+		byte[] bytes = new byte[size];
+		stream.ReadExactly(bytes);
+		ByteBuffer buffer = new(bytes);
+		Verifier verifier = new(buffer);
+		if(!CardGameUtils.Packets.Server.ClientPacket.VerifyClientPacket(buffer))
+		{
+			throw new Exception("Could not read packet");
+		}
+		return CardGameUtils.Packets.Server.ClientPacket.GetRootAsClientPacket(buffer);
 	}
 
-	public static Packet ReceivePacket(NetworkStream stream)
+		public static int TypeSpecificsCreatureOrSpellCost(TypeSpecificsUnion t) => t.Type switch
 	{
-
-		// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
-		//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
-		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
-		// the only difference being the type passed, wondering why one works and the other not...
-		Packet packet = JsonSerializer.Deserialize<Packet>(ReadPacketBytes(stream), GenericConstants.packetSerialization) ?? throw new Exception("Deserialization returned null");
-		packet.EnsureCompatible();
-		return packet;
+		TypeSpecifics.creature => t.Ascreature().Cost,
+		TypeSpecifics.spell => t.Asspell().Cost,
+		_ => throw new Exception($"Tried to get cost of card of type {t.Type}")
+	};
+	public static int TypeSpecificsCreatureOrSpellBaseCost(TypeSpecificsUnion t) => t.Type switch
+	{
+		TypeSpecifics.creature => t.Ascreature().BaseCost,
+		TypeSpecifics.spell => t.Asspell().BaseCost,
+		_ => throw new Exception($"Tried to get base cost of card of type {t.Type}"),
+	};
+	public static string CardInfoTToString(CardInfoT card, bool inDeckEdit = false, char separator = '\n')
+	{
+		StringBuilder builder = new();
+		if(!inDeckEdit)
+		{
+			_ = builder.Append("UID: ").Append(card.Uid).Append(separator);
+		}
+		_ = builder.Append("name: ").Append(card.Name).Append(separator).Append(separator);
+		if(card.TypeSpecifics.Type == TypeSpecifics.quest)
+		{
+			_ = builder.Append("quest progress: ").Append(card.TypeSpecifics.Asquest().Progress).Append('/').Append(card.TypeSpecifics.Asquest().Goal);
+		}
+		else if(card.Location == Location.Ability)
+		{
+			_ = builder.Append("cost: 1");
+		}
+		else
+		{
+			_ = builder.Append("cost: ").Append(TypeSpecificsCreatureOrSpellCost(card.TypeSpecifics)).Append('/').Append(TypeSpecificsCreatureOrSpellBaseCost(card.TypeSpecifics));
+		}
+		if(!inDeckEdit)
+		{
+			_ = builder.Append(separator).Append("controller: ").Append(card.Controller).Append('/').Append(card.BaseController)
+				.Append(separator).Append("location: ").Append(card.Location);
+		}
+		_ = builder.Append(separator).Append("card type: ").Append(card.TypeSpecifics.Type);
+		if(card.TypeSpecifics.Type == TypeSpecifics.creature)
+		{
+			CreatureSpecificsT creatureSpecifics = card.TypeSpecifics.Ascreature();
+			_ = builder.Append(separator).Append(separator).Append("power: ").Append(creatureSpecifics.Power);
+			if(!inDeckEdit)
+			{
+				_ = builder.Append('/').Append(creatureSpecifics.BasePower);
+			}
+			_ = builder.Append(separator).Append("life: ").Append(creatureSpecifics.Life);
+			if(!inDeckEdit)
+			{
+				_ = builder.Append('/').Append(creatureSpecifics.BaseLife);
+			}
+			if(card.Location == Location.Field)
+			{
+				_ = builder.Append(separator).Append("position: ").Append(creatureSpecifics.Position);
+			}
+		}
+		else if(inDeckEdit && card.TypeSpecifics.Type == TypeSpecifics.spell)
+		{
+			_ = builder.Append(separator).Append("can be class ability: ").Append(card.TypeSpecifics.Asspell().CanBeClassAbility);
+		}
+		return builder.Append(separator).Append("---------").Append(separator).Append(card.Text).ToString();
 	}
-	public static Packet? TryReceiveRawPacket(NetworkStream stream, long timeoutMs)
+
+	public static string? DeckInfoTToString(CardGameUtils.Shared.DeckInfoT deck)
 	{
-		Stopwatch watch = Stopwatch.StartNew();
-		if(!stream.CanRead)
+		if(deck.Name is null)
 		{
 			return null;
 		}
-		while(!stream.DataAvailable)
+		StringBuilder builder = new();
+		_ = builder.Append(deck.PlayerClass);
+		if(deck.Ability is not null)
 		{
-			Thread.Sleep(10);
-			if(!stream.CanRead || (timeoutMs != -1 && watch.ElapsedMilliseconds > timeoutMs))
-			{
-				return null;
-			}
+			_ = builder.AppendLine().Append('#').Append(deck.Ability.Name);
 		}
-		// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
-		//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
-		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
-		// the only difference being the type passed, wondering why one works and the other not...
-		Packet? packet = JsonSerializer.Deserialize<Packet>(ReadPacketBytes(stream), GenericConstants.packetSerialization);
-		packet?.EnsureCompatible();
-		return packet;
-	}
-	public static T? TryReceivePacket<T>(NetworkStream stream, long timeoutMs) where T : Packet
-	{
-		Stopwatch watch = Stopwatch.StartNew();
-		if(!stream.CanRead)
+		if(deck.Quest is not null)
 		{
-			return null;
+			_ = builder.AppendLine().Append('|').Append(deck.Quest.Name);
 		}
-		while(!stream.DataAvailable)
+		foreach(CardInfoT card in deck.Cards)
 		{
-			Thread.Sleep(10);
-			if(!stream.CanRead || (timeoutMs != -1 && watch.ElapsedMilliseconds > timeoutMs))
-			{
-				return null;
-			}
+			_ = builder.AppendLine().Append(card.Name);
 		}
-		Packet? packet;
-		do
-		{
-			// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
-			//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
-			// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
-			// the only difference being the type passed, wondering why one works and the other not...
-			packet = JsonSerializer.Deserialize<Packet>(ReadPacketBytes(stream), GenericConstants.packetSerialization);
-			packet?.EnsureCompatible();
-		}
-		while(packet is not T);
-
-		return (T?)packet;
+		return builder.AppendLine().ToString();
 	}
 
-	public static T ReceivePacket<T>(NetworkStream stream) where T : Packet
+	public static string ArtworkToFiletypeExtension(CardGameUtils.Packets.Server.ArtworkFiletype filetype) => filetype switch
 	{
-		Packet packet;
-		do
-		{
-			packet = ReceiveRawPacket(stream);
-		}
-		while(packet is not T);
-		return (T)packet;
-	}
-	public static void Send(Packet request, string address, int port)
-	{
-		using TcpClient client = new(address, port);
-		using NetworkStream stream = client.GetStream();
-		stream.Write(GeneratePayload(request));
-	}
-	public static R SendAndReceive<R>(Packet request, string address, int port) where R : Packet
-	{
-		using TcpClient client = new(address, port);
-		using NetworkStream stream = client.GetStream();
-		stream.Write(GeneratePayload(request));
-		return ReceivePacket<R>(stream);
-	}
+		CardGameUtils.Packets.Server.ArtworkFiletype.JPG => ".jpg",
+		CardGameUtils.Packets.Server.ArtworkFiletype.PNG => ".png",
+		_ => throw new NotImplementedException(),
+	};
 
-	public static string ArtworkFiletypeToExtension(ServerPackets.ArtworkFiletype filetype)
+	public static bool IsInLocation(Location first, Location second)
 	{
-		return filetype switch
-		{
-			ServerPackets.ArtworkFiletype.JPG => ".jpg",
-			ServerPackets.ArtworkFiletype.PNG => ".png",
-			_ => throw new NotImplementedException(),
-		};
-	}
-
-	public static bool IsInLocation(GameConstants.Location first, GameConstants.Location second)
-	{
-		return first == second || first == GameConstants.Location.Any || second == GameConstants.Location.Any;
+		return first == second || first == Location.Any || second == Location.Any;
 	}
 }
 

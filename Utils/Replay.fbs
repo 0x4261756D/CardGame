@@ -1,0 +1,24 @@
+include "Constants.fbs";
+include "Shared.fbs";
+include "DuelServerPackets.fbs";
+include "DuelClientPackets.fbs";
+
+namespace CardGameUtils.Packets.Duel;
+file_identifier "rply";
+
+union ReplayActionPacket
+{
+	client:ClientPacket,
+	server:ServerPacket,
+}
+table ReplayAction
+{
+	player:int32;
+	packet:ReplayActionPacket;
+}
+table Replay
+{
+	cmdline_args:[string];
+	seed:int32;
+	actions:[ReplayAction];
+}

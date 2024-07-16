@@ -1,6 +1,6 @@
 // Scripted by 0x4261756D
 using CardGameCore;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.Constants;
 
 class AnimatedWorkbench : Creature
 {
@@ -16,7 +16,7 @@ class AnimatedWorkbench : Creature
 
 	public override void Init()
 	{
-		RegisterStateReachedTrigger(new StateReachedTrigger(effect: TriggerEffect, state: State.TurnStart), referrer: this);
+		RegisterStateReachedTrigger(new StateReachedTrigger(effect: TriggerEffect, state: GameConstants.GameState.TurnStart), referrer: this);
 	}
 
 	public void TriggerEffect()

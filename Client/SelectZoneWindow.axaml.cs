@@ -1,7 +1,7 @@
 using System.IO;
 using Avalonia.Controls;
-using static CardGameUtils.Functions;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Packets.Duel;
+using System.Collections.Generic;
 
 namespace CardGameClient;
 
@@ -9,12 +9,12 @@ public partial class SelectZoneWindow : Window
 {
 	private bool shouldReallyClose;
 
-	public SelectZoneWindow(bool[] options, Stream stream)
+	public SelectZoneWindow(List<bool> options, Stream stream)
 	{
 		InitializeComponent();
 		Width = Program.config.width / 2;
 		Height = Program.config.height / 2;
-		for(int i = 0; i < options.Length; i++)
+		for(int i = 0; i < options.Count; i++)
 		{
 			Button b = new()
 			{
@@ -23,7 +23,10 @@ public partial class SelectZoneWindow : Window
 			b.Click += (sender, _) =>
 			{
 				int zone = (int)((Button)sender!).Content!;
-				stream.Write(GeneratePayload(new DuelPackets.SelectZoneResponse(zone: zone)));
+				stream.Write(DuelWindow.ClientPacketTToByteArray(new(){Content=new(){Type=ClientContent.selectzone, Value = new ClientSelectZonePacketT()
+				{
+					Zone = zone
+				}}}));
 				shouldReallyClose = true;
 				Close();
 			};

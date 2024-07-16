@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using CardGameUtils;
-using CardGameUtils.Packets;
+using CardGameUtils.Constants;
+using CardGameUtils.Packets.Duel;
 
 namespace CardGameCore;
 
@@ -13,9 +14,9 @@ class Field
 
 	}
 
-	internal CardInfo?[] ToStruct()
+	internal List<FieldCardInfoUnion> ToStruct()
 	{
-		return Array.ConvertAll(cards, card => card?.ToStruct());
+		return [.. Array.ConvertAll(cards, card => card is null ? new FieldCardInfoUnion() { Type = FieldCardInfo.empty, Value = new() } : new FieldCardInfoUnion() { Type = FieldCardInfo.card, Value = card })];
 	}
 
 	internal Creature?[] GetAll()
@@ -33,7 +34,7 @@ class Field
 		{
 			throw new Exception($"Tried to move {card} to zone {zone} occupied by {cards[zone]}");
 		}
-		card.Location = CardGameUtils.Packets.Location.Field;
+		card.Location = Location.Field;
 		card.Position = zone;
 		cards[zone] = card;
 	}

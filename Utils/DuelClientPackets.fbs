@@ -1,0 +1,73 @@
+include "Constants.fbs";
+include "Shared.fbs";
+
+namespace CardGameUtils.Packets.Duel;
+file_identifier "duel";
+
+
+table ClientSurrenderPacket {}
+
+
+table ClientGetOptionsPacket
+{
+	location:Constants.Location;
+	uid:int32;
+}
+table ClientSelectOptionPacket
+{
+	location:Constants.Location;
+	uid:int32;
+	action:Shared.CardAction;
+}
+
+table ClientYesNoPacket
+{
+	result:bool;
+}
+
+table ClientSelectCardsPacket
+{
+	uids:[int32];
+}
+
+table ClientCustomSelectCardsPacket
+{
+	uids:[int32];
+}
+table ClientCustomSelectIntermediatePacket
+{
+	uids:[int32];
+}
+table ClientSelectZonePacket
+{
+	zone:int32;
+}
+
+table ClientPassPacket {}
+
+table ClientViewGravePacket
+{
+	of_opponent:bool;
+}
+
+
+union ClientContent
+{
+	surrender:ClientSurrenderPacket,
+	getoptions:ClientGetOptionsPacket,
+	selectoption:ClientSelectOptionPacket,
+	yesno:ClientYesNoPacket,
+	selectcards:ClientSelectCardsPacket,
+	customselectcards:ClientCustomSelectCardsPacket,
+	customselectintermediate:ClientCustomSelectIntermediatePacket,
+	selectzone:ClientSelectZonePacket,
+	pass:ClientPassPacket,
+	viewgrave:ClientViewGravePacket,
+}
+
+table ClientPacket
+{
+	content:ClientContent;
+}
+
+root_type ClientPacket;

@@ -1,6 +1,6 @@
 // Scripted by Dotlof
 using CardGameCore;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.Constants;
 
 class FieryIllusion : Spell
 {
@@ -29,6 +29,6 @@ class FieryIllusion : Spell
 
 	public bool CastCondition()
 	{
-		return FIELD_SIZE - GetFieldUsed(Controller).Length > 1;
+		return GameConstants.FIELD_SIZE - GetFieldUsed(Controller).Length > 1;
 	}
 }

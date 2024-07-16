@@ -1,6 +1,7 @@
 // Scripted by Dotlof
 using CardGameCore;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.Constants;
+using CardGameUtils.Shared;
 using static CardGameCore.CardUtils;
 
 class MercenaryRecruiter : Creature
@@ -23,7 +24,7 @@ class MercenaryRecruiter : Creature
 	private void CastEffect()
 	{
 		Card target = Gather(player: Controller, amount: 5);
-		if(target.CardType == CardType.Creature)
+		if(target.CardType == TypeSpecifics.creature)
 		{
 			if(HasEmpty(GetField(Controller)))
 			{

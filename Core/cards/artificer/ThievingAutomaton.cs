@@ -1,6 +1,6 @@
 // Scripted by 0x4261756D
+using CardGameUtils.Constants;
 using CardGameCore;
-using static CardGameUtils.GameConstants;
 
 class ThievingAutomaton : Creature
 {

@@ -9,7 +9,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using CardGameUtils;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Packets.Server;
 
 namespace CardGameClient;
 
@@ -61,34 +61,32 @@ public partial class RoomWindow : Window
 		{
 			if(client.Connected)
 			{
-				Packet? packet = await Task.Run(() => Functions.TryReceiveRawPacket(client.GetStream(), 100)).ConfigureAwait(false);
-				if(packet != null)
-				{
-					await Dispatcher.UIThread.InvokeAsync(() => HandlePacket(packet));
-				}
+				ServerPacket packet = await Task.Run(() => Functions.ReadSizedServerServerPacketFromStream(client.GetStream())).ConfigureAwait(false);
+				await Dispatcher.UIThread.InvokeAsync(() => HandlePacket(packet));
 			}
 		}
 	}
 
-	private void HandlePacket(Packet packet)
+	private void HandlePacket(ServerPacket packet)
 	{
-		switch(packet)
+		switch(packet.ContentType)
 		{
-			case ServerPackets.OpponentChangedResponse response:
+			case ServerContent.opponent_changed:
 			{
-				string? name = response.name;
+				string? name = packet.ContentAsopponent_changed().Name;
 				OpponentNameBlock.Text = name;
 			}
 			break;
-			case ServerPackets.StartResponse response:
+			case ServerContent.start:
 			{
-				if(response.success != ServerPackets.StartResponse.Result.Success)
+				ServerStartPacket response = packet.ContentAsstart();
+				if(response.ResultType == ServerStartResult.ServerStartResultSuccess)
 				{
-					_ = new ErrorPopup(response.reason ?? "Duel creation failed for unknown reason");
+					StartGame(response.ResultAsServerStartResultSuccess().Port, response.ResultAsServerStartResultSuccess().RoomId);
 				}
 				else
 				{
-					StartGame(response.port, response.id!);
+					_ = new ErrorPopup(response.ResultType == ServerStartResult.ServerStartResultFailure ? response.ResultAsServerStartResultFailure().Reason : "Starting failed for an unknown reason");
 				}
 			}
 			break;
@@ -120,7 +118,14 @@ public partial class RoomWindow : Window
 			NetworkStream stream = client.GetStream();
 			if(stream.Socket.Connected)
 			{
-				stream.Write(Functions.GeneratePayload(new ServerPackets.LeaveRequest()));
+				stream.Write(ServerWindow.ClientPacketTToByteArray(new()
+				{
+					Content = new()
+					{
+						Type = ClientContent.leave,
+						Value = new ClientLeavePacketT()
+					}
+				}));
 			}
 			client.Close();
 			closed = true;
@@ -138,37 +143,76 @@ public partial class RoomWindow : Window
 			await new ErrorPopup("You have no opponent").ShowDialog(this).ConfigureAwait(false);
 			return;
 		}
-		DeckPackets.ListResponse? listResponse = UIUtils.TrySendAndReceive<DeckPackets.ListResponse>(new DeckPackets.ListRequest(name: deckname),
-			Program.config.deck_edit_url.address, Program.config.deck_edit_url.port, this);
-		if(listResponse == null)
+		CardGameUtils.Shared.DeckInfo deckInfo;
+		try
 		{
+			using TcpClient deckClient = new(Program.config.deck_edit_url.address, Program.config.deck_edit_url.port);
+			using NetworkStream stream = deckClient.GetStream();
+			await stream.WriteAsync(DeckEditWindow.ClientPacketTToByteArray(new()
+			{
+				Content = new()
+				{
+					Type = CardGameUtils.Packets.Deck.ClientContent.list,
+					Value = new CardGameUtils.Packets.Deck.ClientListPacketT
+					{
+						Name = deckname
+					}
+				}
+			})).ConfigureAwait(false);
+			CardGameUtils.Packets.Deck.ServerPacket packet = Functions.ReadSizedDeckServerPacketFromStream(stream);
+			if(packet.ContentType != CardGameUtils.Packets.Deck.ServerContent.list)
+			{
+				throw new Exception($"Expected packet of type `list` but got {packet.ContentType}");
+			}
+			deckInfo = packet.ContentAslist().Deck!.Value;
+		}
+		catch(Exception e)
+		{
+			await new ErrorPopup(e.Message).ShowDialog(this).ConfigureAwait(false);
 			return;
 		}
-		string[]? decklist = listResponse.deck.ToString()?.Split('\n');
+		string[]? decklist = Functions.DeckInfoTToString(deckInfo.UnPack())?.Split('\n');
 		if(decklist == null)
 		{
 			await new ErrorPopup("Deck list could not be loaded properly").ShowDialog(this).ConfigureAwait(false);
 			return;
 		}
+		foreach(string card in decklist)
+		{
+			Functions.Log($"--{card}--");
+		}
 		try
 		{
-			client.GetStream().Write(Functions.GeneratePayload(new ServerPackets.StartRequest
-			(
-				decklist: decklist,
-				noshuffle: NoShuffleBox.IsChecked ?? false
-			)));
-			ServerPackets.StartResponse response = Functions.ReceivePacket<ServerPackets.StartResponse>(client.GetStream());
-			if(response.success == ServerPackets.StartResponse.Result.Failure)
+			client.GetStream().Write(ServerWindow.ClientPacketTToByteArray(new()
 			{
-				new ErrorPopup(response.reason!).Show();
+				Content = new()
+				{
+					Type = ClientContent.start,
+					Value = new ClientStartPacketT
+					{
+						Decklist = [.. decklist],
+						Noshuffle = NoShuffleBox.IsChecked ?? false
+					}
+				}
+			}));
+			ServerPacket packet = Functions.ReadSizedServerServerPacketFromStream(client.GetStream());
+			Functions.Log("Got start response");
+			if(packet.ContentType != ServerContent.start)
+			{
+				throw new Exception($"Expected packet of type `start` but got {packet.ContentType}");
+			}
+			ServerStartPacket response = packet.ContentAsstart();
+			if(response.ResultType == ServerStartResult.ServerStartResultFailure)
+			{
+				await new ErrorPopup(response.ResultAsServerStartResultFailure().Reason).ShowDialog(this).ConfigureAwait(false);
 				return;
 			}
 			else
 			{
 				((Button)sender!).IsEnabled = false;
-				if(response.success == ServerPackets.StartResponse.Result.Success)
+				if(response.ResultType == ServerStartResult.ServerStartResultSuccess)
 				{
-					StartGame(response.port, response.id!);
+					StartGame(response.ResultAsServerStartResultSuccess().Port, response.ResultAsServerStartResultSuccess().RoomId);
 				}
 			}
 		}
@@ -205,13 +249,30 @@ public class RoomWindowViewModel : INotifyPropertyChanged
 
 	public void LoadDecks()
 	{
-		DeckPackets.NamesResponse? packet = UIUtils.TrySendAndReceive<DeckPackets.NamesResponse>(new DeckPackets.NamesRequest(), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port, null);
-		if(packet == null)
+		try
 		{
-			return;
+			using TcpClient client = new(Program.config.deck_edit_url.address, Program.config.deck_edit_url.port);
+			using NetworkStream stream = client.GetStream();
+			stream.Write(DeckEditWindow.ClientPacketTToByteArray(new()
+			{
+				Content = new()
+				{
+					Type = CardGameUtils.Packets.Deck.ClientContent.names,
+					Value = new CardGameUtils.Packets.Deck.ClientNamesPacketT(),
+				}
+			}));
+			CardGameUtils.Packets.Deck.ServerPacket packet = Functions.ReadSizedDeckServerPacketFromStream(stream);
+			if(packet.ContentType != CardGameUtils.Packets.Deck.ServerContent.names)
+			{
+				throw new Exception($"Expected packet of type `names` but got {packet.ContentType}");
+			}
+			Decknames.Clear();
+			Decknames.AddRange(packet.ContentAsnames().UnPack().Names);
 		}
-		Decknames.Clear();
-		Decknames.AddRange(packet.names);
+		catch(Exception e)
+		{
+			new ErrorPopup(e.Message).Show();
+		}
 	}
 
 	public event PropertyChangedEventHandler? PropertyChanged;

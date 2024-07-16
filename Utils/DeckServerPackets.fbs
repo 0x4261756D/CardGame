@@ -1,0 +1,34 @@
+include "Constants.fbs";
+include "Shared.fbs";
+
+namespace CardGameUtils.Packets.Deck;
+file_identifier "deck";
+
+table ServerNamesPacket
+{
+	names:[string];
+}
+
+table ServerListPacket
+{
+	deck:Shared.DeckInfo;
+}
+
+table ServerSearchPacket
+{
+	cards:[Shared.CardInfo];
+}
+
+union ServerContent
+{
+	names:ServerNamesPacket,
+	list:ServerListPacket,
+	search:ServerSearchPacket,
+}
+
+table ServerPacket
+{
+	content:ServerContent;
+}
+
+root_type ServerPacket;

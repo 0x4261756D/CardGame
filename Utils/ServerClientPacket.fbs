@@ -1,0 +1,51 @@
+include "Constants.fbs";
+include "Shared.fbs";
+
+namespace CardGameUtils.Packets.Server;
+file_identifier "srvr";
+
+table ClientAdditionalCardsPacket {}
+
+table ClientArtworksPacket
+{
+	names:[string];
+}
+
+table ClientCreatePacket
+{
+	name:string;
+}
+
+table ClientJoinPacket
+{
+	own_name:string;
+	opp_name:string;
+}
+
+table ClientLeavePacket {}
+
+table ClientRoomsPacket {}
+
+table ClientStartPacket
+{
+	decklist:[string];
+	noshuffle:bool;
+}
+
+union ClientContent
+{
+	additional_cards:ClientAdditionalCardsPacket,
+	artworks:ClientArtworksPacket,
+	create:ClientCreatePacket,
+	join:ClientJoinPacket,
+	leave:ClientLeavePacket,
+	rooms:ClientRoomsPacket,
+	start:ClientStartPacket,
+}
+
+table ClientPacket
+{
+	content:ClientContent;
+}
+
+root_type ClientPacket;

@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using CardGameUtils;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Packets.Duel;
 
 namespace CardGameClient;
 
@@ -9,7 +9,7 @@ public partial class GameResultWindow : Window
 {
 	readonly Window parent;
 
-	public GameResultWindow(Window parent, DuelPackets.GameResultResponse response)
+	public GameResultWindow(Window parent, ServerGameResultPacket response)
 	{
 		this.parent = parent;
 		InitializeComponent();
@@ -22,8 +22,7 @@ public partial class GameResultWindow : Window
 				this.parent.Close();
 			}
 		};
-		ResultBlock.Text = (response.result == GameConstants.GameResult.Draw) ?
-			"It was a draw" : $"You {response.result}";
+		ResultBlock.Text = (response.Result == GameResult.Draw) ? "It was a draw" : $"You {response.Result}";
 		Topmost = true;
 	}
 	public void BackClick(object? sender, RoutedEventArgs args)

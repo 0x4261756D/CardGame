@@ -1,7 +1,7 @@
 //Scripted by Dotlof
 using CardGameCore;
-using static CardGameUtils.GameConstants;
 using static CardGameCore.CardUtils;
+using CardGameUtils.Constants;
 
 class Warsong : Spell
 {
@@ -33,10 +33,10 @@ class Warsong : Spell
 			if(!creature.Keywords.ContainsKey(Keyword.Mighty))
 			{
 				creature.RegisterKeyword(Keyword.Mighty);
-				RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: () => creature.Keywords.Remove(Keyword.Mighty), oneshot: true, state: State.TurnEnd), referrer: creature);
+				RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: () => creature.Keywords.Remove(Keyword.Mighty), oneshot: true, state: GameConstants.GameState.TurnEnd), referrer: creature);
 			}
-			RegisterStateTemporaryLingeringEffect(LingeringEffectInfo.Create(effect: BigBuff, referrer: creature), State.TurnEnd);
-			RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: () => RegisterLocationTemporaryLingeringEffect(info: LingeringEffectInfo.Create(effect: SmallBuff, referrer: creature)), state: State.TurnEnd, influenceLocation: Location.Field, oneshot: true), referrer: creature);
+			RegisterStateTemporaryLingeringEffect(LingeringEffectInfo.Create(effect: BigBuff, referrer: creature), GameConstants.GameState.TurnEnd);
+			RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: () => RegisterLocationTemporaryLingeringEffect(info: LingeringEffectInfo.Create(effect: SmallBuff, referrer: creature)), state: GameConstants.GameState.TurnEnd, influenceLocation: Location.Field, oneshot: true), referrer: creature);
 		}
 	}
 

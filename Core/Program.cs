@@ -5,17 +5,21 @@ using System.IO.Pipes;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
-using CardGameUtils;
+using CardGameUtils.Constants;
 using CardGameUtils.Structs;
 using static CardGameUtils.Functions;
+using Google.FlatBuffers;
+using CardGameUtils.Shared;
+using CardGameUtils.Packets.Server;
+using CardGameUtils.Packets.Duel;
 namespace CardGameCore;
 
 class Program
 {
 	public static string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-	public static Replay? replay;
+	public static ReplayT? replay;
 	public static int seed;
-	public static DateTime versionTime;
+	public static long versionTime;
 	public static void Main(string[] args)
 	{
 		seed = new Random().Next();
@@ -57,7 +61,7 @@ class Program
 			Log($"Missing a config at {configPath}.", severity: LogSeverity.Error);
 			return;
 		}
-		PlatformCoreConfig? platformConfig = JsonSerializer.Deserialize<PlatformCoreConfig>(File.ReadAllText(Path.GetFullPath(configPath)), GenericConstants.platformCoreConfigSerialization);
+		PlatformCoreConfig? platformConfig = JsonSerializer.Deserialize<PlatformCoreConfig>(File.ReadAllText(Path.GetFullPath(configPath)), InternalConstants.platformCoreConfigSerialization);
 		if(platformConfig == null)
 		{
 			Log("Could not parse a platform config", LogSeverity.Error);
@@ -94,7 +98,7 @@ class Program
 						modeSet = true;
 						break;
 					case "players":
-						CoreConfig.PlayerConfig[] players = JsonSerializer.Deserialize<CoreConfig.PlayerConfig[]>(Encoding.UTF8.GetString(Convert.FromBase64String(parameter)), options: GenericConstants.platformCoreConfigSerialization)!;
+						CoreConfig.PlayerConfig[] players = JsonSerializer.Deserialize<CoreConfig.PlayerConfig[]>(Encoding.UTF8.GetString(Convert.FromBase64String(parameter)), options: InternalConstants.platformCoreConfigSerialization)!;
 						if(config.duel_config == null)
 						{
 							config.duel_config = new CoreConfig.DuelConfig(players: players, noshuffle: false);
@@ -117,7 +121,7 @@ class Program
 						break;
 					case "replay":
 						Log("Recording replay");
-						replay = new Replay(args, seed);
+						replay = new ReplayT{CmdlineArgs = [.. args], Seed = seed};
 						break;
 					case "additional_cards_url":
 						if(config.deck_config != null)
@@ -160,18 +164,20 @@ class Program
 			string replayPath = Path.Combine(baseDir, "replays");
 			_ = Directory.CreateDirectory(replayPath);
 			string filePath = Path.Combine(replayPath, $"{DateTime.UtcNow:yyyyMMdd_HHmmss}_{UsernameToFilename(config.duel_config!.players[0].name)}_vs_{UsernameToFilename(config.duel_config!.players[1].name)}.replay");
-			File.WriteAllText(filePath, JsonSerializer.Serialize(replay, GenericConstants.replaySerialization));
+			FlatBufferBuilder builder = new(1);
+			builder.Finish(Replay.Pack(builder, replay).Value);
+			File.WriteAllBytes(filePath, builder.DataBuffer.ToSizedArray());
 			Log("Wrote replay to " + filePath);
 		}
 	}
 
-	private static DateTime GenerateVersionTime()
+	private static long GenerateVersionTime()
 	{
 		foreach(string file in Directory.EnumerateFiles(baseDir))
 		{
 			if(Path.GetFileName(file) is "CardGameCore.dll" or "CardGameCore" or "CardGameCore.exe")
 			{
-				return File.GetCreationTime(file);
+				return new DateTimeOffset(File.GetCreationTime(file)).ToUnixTimeSeconds();
 			}
 		}
 		throw new Exception($"Could not find executable in {baseDir} to generate version time");
@@ -179,20 +185,18 @@ class Program
 
 	public static void GenerateAdditionalCards(string path)
 	{
-		if(!File.Exists(path) || JsonSerializer.Deserialize<NetworkingStructs.ServerPackets.AdditionalCardsResponse>(File.ReadAllText(path), GenericConstants.packetSerialization)?.time < versionTime)
+		if(!File.Exists(path) || ServerAdditionalCardsPacket.GetRootAsServerAdditionalCardsPacket(new ByteBuffer(File.ReadAllBytes(path))).Timestamp < versionTime)
 		{
 			Log("Generating new additional cards");
-			List<CardStruct> cards = [];
+			List<CardInfoT> cards = [];
 			foreach(Type card in Array.FindAll(Assembly.GetExecutingAssembly().GetTypes(), IsCardSubclass))
 			{
 				Card c = (Card)Activator.CreateInstance(card)!;
 				cards.Add(c.ToStruct(client: true));
 			}
-			File.WriteAllText(path, JsonSerializer.Serialize(new NetworkingStructs.ServerPackets.AdditionalCardsResponse
-			(
-				cards: [.. cards],
-				time: versionTime
-			), GenericConstants.packetSerialization));
+			FlatBufferBuilder builder = new(1);
+			builder.Finish(ServerAdditionalCardsPacket.Pack(builder, new ServerAdditionalCardsPacketT() { Cards = cards, Timestamp = versionTime }).Value);
+			File.WriteAllBytes(path, builder.SizedByteArray());
 		}
 	}
 

@@ -8,7 +8,9 @@ using System.Text.Json;
 using System.Threading;
 using CardGameUtils;
 using CardGameUtils.Structs;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Constants;
+using CardGameUtils.Packets.Server;
+using System.Collections.Generic;
 
 namespace CardGameServer;
 
@@ -17,7 +19,7 @@ partial class Room
 	public class Player(string Name, string id, bool ready, bool noshuffle, NetworkStream stream)
 	{
 		public string Name = Name;
-		public string[]? Decklist;
+		public List<string>? Decklist;
 		public string ID = id;
 		public bool ready = ready;
 		public bool noshuffle = noshuffle;
@@ -50,9 +52,9 @@ partial class Room
 				Functions.Log($"Unable to generate player string, player {i} ({players[i]?.Name}) has no decklist", severity: Functions.LogSeverity.Error, includeFullPath: true);
 				return null;
 			}
-			infos[i] = new CoreConfig.PlayerConfig(name: players[i]!.Name!, id: players[i]!.ID, decklist: players[i]!.Decklist!);
+			infos[i] = new CoreConfig.PlayerConfig(name: players[i]!.Name!, id: players[i]!.ID, decklist: [.. players[i]!.Decklist]);
 		}
-		return JsonSerializer.Serialize(infos, options: GenericConstants.platformCoreConfigSerialization);
+		return JsonSerializer.Serialize(infos, options: InternalConstants.platformCoreConfigSerialization);
 	}
 	public bool StartGame()
 	{
@@ -98,11 +100,24 @@ partial class Room
 		Functions.Log("Done reading", severity: Functions.LogSeverity.Warning);
 		foreach(Player? player in players)
 		{
-			player!.stream.Write(Functions.GeneratePayload(new ServerPackets.StartResponse
+			player!.stream.Write(Program.ServerPacketTToByteArray(new()
 			{
-				success = ServerPackets.StartResponse.Result.Success,
-				id = player.ID,
-				port = port,
+				Content = new()
+				{
+					Type = ServerContent.start,
+					Value = new ServerStartPacketT
+					{
+						Result = new()
+						{
+							Type = ServerStartResult.ServerStartResultSuccess,
+							Value = new ServerStartResultSuccessT
+							{
+								Port = port,
+								RoomId = player.ID
+							}
+						}
+					}
+				}
 			}));
 			player.stream.Close();
 			player.stream.Dispose();

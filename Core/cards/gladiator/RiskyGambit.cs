@@ -1,6 +1,6 @@
 //Scripted by Dotlof
 using CardGameCore;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.Constants;
 
 class RiskyGambit : Spell
 {
@@ -28,7 +28,7 @@ class RiskyGambit : Spell
 	private void CastEffect()
 	{
 		SetDamageMultiplier(GetDamageMultiplier() * 2);
-		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: EndPhaseEffect, state: State.TurnEnd, influenceLocation: Location.Any, oneshot: true), referrer: this);
+		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: EndPhaseEffect, state: GameConstants.GameState.TurnEnd, influenceLocation: Location.Any, oneshot: true), referrer: this);
 	}
 
 	private static void EndPhaseEffect()

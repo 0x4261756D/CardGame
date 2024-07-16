@@ -1,6 +1,6 @@
 // Scripted by 0x4261756D
 using CardGameCore;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.Constants;
 
 class Recycle : Spell
 {
@@ -19,7 +19,7 @@ class Recycle : Spell
 
 	public void CastEffect()
 	{
-		RegisterStateReachedTrigger(new StateReachedTrigger(effect: DrawEffect, state: State.TurnEnd, influenceLocation: Location.Any, oneshot: true), this);
+		RegisterStateReachedTrigger(new StateReachedTrigger(effect: DrawEffect, state: GameConstants.GameState.TurnEnd, influenceLocation: Location.Any, oneshot: true), this);
 	}
 
 	private void DrawEffect()

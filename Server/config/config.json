@@ -10,7 +10,7 @@
 			"WorkingDirectory": "../Core",
 			"Arguments": "--config=../../../config/config.json"
 		},
-		"additional_cards_path": "./additional_cards.json",
+		"additional_cards_path": "./additional_cards.bin",
 		"artwork_path": "./artworks"
 	},
 	"windows":
@@ -23,6 +23,6 @@
 			"FileName": "..\\CardGameCore\\bin\\Debug\\net8.0\\CardGameCore.exe",
 			"Arguments": "--config=..\\..\\..\\config\\config.json"
 		},
-		"additional_cards_path": ".\\additional_cards.json"
+		"additional_cards_path": ".\\additional_cards.bin"
 	}
 }

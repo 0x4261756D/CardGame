@@ -1,0 +1,22 @@
+namespace CardGameUtils.Constants;
+
+enum Location : ubyte
+{
+	UNKNOWN,
+	Any,
+	Deck,
+	Hand,
+	Field,
+	Grave,
+	Quest,
+	Ability,
+}
+enum PlayerClass : byte
+{
+	UNKNOWN,
+	All = 1,
+	Cultist,
+	Pyromancer,
+	Artificer,
+	Gladiator,
+}

@@ -11,4 +11,7 @@
 		<Compile Include="../Utils/**/*.cs"/>
 	</ItemGroup>
 
+	<ItemGroup>
+	  <ProjectReference Include="..\flatbuffers\net\FlatBuffers\Google.FlatBuffers.csproj" />
+	</ItemGroup>
 </Project>

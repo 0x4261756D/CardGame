@@ -1,6 +1,6 @@
 // Scripted by Dotlof
+using CardGameUtils.Constants;
 using CardGameCore;
-using static CardGameUtils.GameConstants;
 
 class DelveintoMadness : Spell
 {

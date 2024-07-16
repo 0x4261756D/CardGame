@@ -6,7 +6,9 @@ using System.Text;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using CardGameUtils;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Packets.Server;
+using Google.FlatBuffers;
+using CardGameUtils.Constants;
 
 namespace CardGameClient;
 
@@ -35,10 +37,16 @@ public partial class ServerWindow : Window
 		}
 		try
 		{
-			using TcpClient updateClient = new(ServerAddressBox.Text, GenericConstants.SERVER_PORT);
+			using TcpClient updateClient = new(ServerAddressBox.Text, InternalConstants.SERVER_PORT);
 			using NetworkStream updateStream = updateClient.GetStream();
-			updateStream.Write(Functions.GeneratePayload(new ServerPackets.RoomsRequest()));
-			((ServerWindowViewModel)DataContext!).ServerRooms = Functions.ReceivePacket<ServerPackets.RoomsResponse>(updateStream).rooms;
+			updateStream.Write(ClientPacketTToByteArray(new(){Content = new(){Type = ClientContent.rooms, Value = new ClientRoomsPacketT()}}));
+			ServerPacket packet = Functions.ReadSizedServerServerPacketFromStream(updateStream);
+			if(packet.ContentType != ServerContent.rooms)
+			{
+				throw new Exception($"Expected packet of type `rooms` but got {packet.ContentType}");
+			}
+
+			((ServerWindowViewModel)DataContext!).ServerRooms = [.. packet.ContentAsrooms().UnPack().Rooms];
 		}
 		catch(Exception ex)
 		{
@@ -59,7 +67,7 @@ public partial class ServerWindow : Window
 		TcpClient client;
 		try
 		{
-			client = new(ServerAddressBox.Text, GenericConstants.SERVER_PORT);
+			client = new(ServerAddressBox.Text, InternalConstants.SERVER_PORT);
 		}
 		catch(Exception ex)
 		{
@@ -69,9 +77,15 @@ public partial class ServerWindow : Window
 			}
 			return;
 		}
-		client.GetStream().Write(Functions.GeneratePayload(new ServerPackets.CreateRequest(name: playerName)));
-		ServerPackets.CreateResponse response = Functions.ReceivePacket<ServerPackets.CreateResponse>(client.GetStream());
-		if(response.success)
+		client.GetStream().Write(ClientPacketTToByteArray(new(){Content = new(){Type = ClientContent.create, Value = new ClientCreatePacketT {Name = playerName}}}));
+		ServerPacket packet = Functions.ReadSizedServerServerPacketFromStream(client.GetStream());
+		client.Close();
+		if(packet.ContentType != ServerContent.create)
+		{
+			throw new Exception($"Expected packet of type `create` but got {packet.ContentType}");
+		}
+		ServerCreatePacket response = packet.ContentAscreate();
+		if(response.ResultType == Result.ResultSuccess)
 		{
 			RoomWindow w = new(address: ServerAddressBox.Text, client: client)
 			{
@@ -85,7 +99,7 @@ public partial class ServerWindow : Window
 		}
 		else
 		{
-			_ = new ErrorPopup(response.reason!).ShowDialog(this);
+			_ = new ErrorPopup(response.ResultAsResultFailure().Reason).ShowDialog(this);
 		}
 	}
 	void RefreshClick(object? sender, RoutedEventArgs args)
@@ -99,14 +113,19 @@ public partial class ServerWindow : Window
 			return;
 		}
 		string targetNameText = (string)((Button)sender).Content!;
-		TcpClient client = new(ServerAddressBox.Text, GenericConstants.SERVER_PORT);
-		client.GetStream().Write(Functions.GeneratePayload(new ServerPackets.JoinRequest
-		(
-			name: PlayerNameBox.Text,
-			targetName: targetNameText
-		)));
-		ServerPackets.JoinResponse response = Functions.ReceivePacket<ServerPackets.JoinResponse>(client.GetStream());
-		if(response.success)
+		TcpClient client = new(ServerAddressBox.Text, InternalConstants.SERVER_PORT);
+		client.GetStream().Write(ClientPacketTToByteArray(new(){Content = new(){Type = ClientContent.join, Value = new ClientJoinPacketT
+		{
+			OppName = targetNameText,
+			OwnName = PlayerNameBox.Text,
+		}}}));
+		ServerPacket packet = Functions.ReadSizedServerServerPacketFromStream(client.GetStream());
+		if(packet.ContentType != ServerContent.join)
+		{
+			throw new Exception($"Expected packet of type `join` but got {packet.ContentType}");
+		}
+		ServerJoinPacket response = packet.ContentAsjoin();
+		if(response.ResultType == Result.ResultSuccess)
 		{
 			new RoomWindow(ServerAddressBox.Text, client, opponentName: targetNameText)
 			{
@@ -116,9 +135,16 @@ public partial class ServerWindow : Window
 		}
 		else
 		{
-			_ = new ErrorPopup(response.reason!).ShowDialog(this);
+			_ = new ErrorPopup(response.ResultAsResultFailure().Reason).ShowDialog(this);
 		}
 	}
+	public static byte[] ClientPacketTToByteArray(ClientPacketT packet)
+	{
+		FlatBufferBuilder builder = new(1);
+		builder.FinishSizePrefixed(ClientPacket.Pack(builder, packet).Value);
+		return builder.DataBuffer.ToSizedArray();
+	}
+
 }
 public class ServerWindowViewModel : INotifyPropertyChanged
 {

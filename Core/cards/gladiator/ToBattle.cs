@@ -1,7 +1,7 @@
 // Scripted by Dotlof
 using CardGameCore;
 using static CardGameCore.CardUtils;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.Constants;
 
 class ToBattle : Spell
 {
@@ -47,7 +47,7 @@ class ToBattle : Spell
 
 	public bool CastCondition()
 	{
-		return FIELD_SIZE - GetFieldUsed(Controller).Length > 2;
+		return GameConstants.FIELD_SIZE - GetFieldUsed(Controller).Length > 2;
 	}
 
 	public bool RevealCondition()

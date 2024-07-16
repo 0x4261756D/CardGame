@@ -1,7 +1,8 @@
 // Scripted by 0x4261756D
 using CardGameCore;
 using static CardGameCore.CardUtils;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.Constants;
+using CardGameUtils.Shared;
 
 class ReturnfromBeyond : Spell
 {
@@ -21,7 +22,7 @@ class ReturnfromBeyond : Spell
 	public void CastEffect()
 	{
 		int maxCost = GetMaxCost();
-		Card[] possibleTargets = FilterValid(cards: GetGrave(Controller), card => card.CardType == CardType.Creature && card.Cost <= maxCost);
+		Card[] possibleTargets = FilterValid(cards: GetGrave(Controller), card => card.CardType == TypeSpecifics.creature && card.Cost <= maxCost);
 		Creature target = (Creature)SelectSingleCard(player: Controller, cards: possibleTargets, description: "Select card to return");
 		ReturnCardsToDeck(SelectCards(player: Controller, cards: GetHand(Controller), amount: (target.Cost + 1) / 2, description: "Select cards to return to deck"));
 		MoveToField(choosingPlayer: Controller, targetPlayer: Controller, card: target, source: this);
@@ -34,6 +35,6 @@ class ReturnfromBeyond : Spell
 
 	public bool CastCondition()
 	{
-		return ContainsValid(GetGrave(Controller), card => card.CardType == CardType.Creature && card.Cost <= GetMaxCost());
+		return ContainsValid(GetGrave(Controller), card => card.CardType == TypeSpecifics.creature && card.Cost <= GetMaxCost());
 	}
 }

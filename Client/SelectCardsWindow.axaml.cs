@@ -9,7 +9,9 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using CardGameUtils.Structs;
 using static CardGameUtils.Functions;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Shared;
+using CardGameUtils.Packets.Duel;
+using System.Collections.Generic;
 
 namespace CardGameClient;
 
@@ -17,29 +19,30 @@ public partial class SelectCardsWindow : Window
 {
 	private readonly Stream stream;
 	private bool shouldReallyClose;
-	private readonly Action<CardStruct> showCardAction;
+	private readonly Action<CardInfoT> showCardAction;
 
-	public SelectCardsWindow(string text, int amount, CardStruct[] cards, Stream stream, int playerIndex, Action<CardStruct> showCardAction)
+	public SelectCardsWindow(ServerSelectCardsPacket packet, Stream stream, int playerIndex, Action<CardInfoT> showCardAction)
 	{
-		if(cards.Length < amount)
+		if(packet.CardsLength < packet.Amount)
 		{
-			throw new Exception($"Tried to create a SelectCardWindow requiring to select more cards than possible: {cards.Length}/{amount}");
+			throw new Exception($"Tried to create a SelectCardWindow requiring to select more cards than possible: {packet.CardsLength}/{packet.Amount}");
 		}
 		this.showCardAction = showCardAction;
 		this.stream = stream;
-		DataContext = new SelectedCardViewModel(amount);
+		DataContext = new SelectedCardViewModel(packet.Amount);
 		InitializeComponent();
 		Width = Program.config.width / 2;
 		Height = Program.config.height / 2;
 		CardSelectionList.MaxHeight = Program.config.height / 3;
+		List<CardInfoT> cards = packet.UnPack().Cards;
 		CardSelectionList.DataContext = cards;
 		CardSelectionList.ItemsSource = cards;
-		CardSelectionList.ItemTemplate = new FuncDataTemplate<CardStruct>((value, namescope) =>
+		CardSelectionList.ItemTemplate = new FuncDataTemplate<CardInfoT>((value, namescope) =>
 		{
 			TextBlock block = new()
 			{
-				Text = value.name,
-				TextAlignment = (playerIndex == value.controller) ? TextAlignment.Left : TextAlignment.Right,
+				Text = value.Name,
+				TextAlignment = (playerIndex == value.Controller) ? TextAlignment.Left : TextAlignment.Right,
 			};
 			Border border = new()
 			{
@@ -49,13 +52,13 @@ public partial class SelectCardsWindow : Window
 			border.PointerEntered += CardPointerEntered;
 			return border;
 		});
-		Message.Text = text;
-		Amount.Text = $"/ {amount}";
+		Message.Text = packet.Description;
+		Amount.Text = $"/ {packet.Amount}";
 		Closing += (sender, args) =>
 		{
 			args.Cancel = !shouldReallyClose;
 		};
-		if(amount == 1)
+		if(packet.Amount == 1)
 		{
 			CardSelectionList.SelectionMode = SelectionMode.Single | SelectionMode.Toggle;
 		}
@@ -71,7 +74,7 @@ public partial class SelectCardsWindow : Window
 		{
 			return;
 		}
-		showCardAction((CardStruct)((Control)sender).DataContext!);
+		showCardAction((CardInfoT)((Control)sender).DataContext!);
 	}
 
 	public void CardSelectionChanged(object? sender, SelectionChangedEventArgs args)
@@ -86,7 +89,17 @@ public partial class SelectCardsWindow : Window
 
 	public void ConfirmClick(object? sender, RoutedEventArgs args)
 	{
-		stream.Write(GeneratePayload(new DuelPackets.SelectCardsResponse(uids: UIUtils.CardListBoxSelectionToUID(CardSelectionList))));
+		stream.Write(DuelWindow.ClientPacketTToByteArray(new()
+		{
+			Content = new()
+			{
+				Type = ClientContent.selectcards,
+				Value = new ClientSelectCardsPacketT
+				{
+					Uids = UIUtils.CardListBoxSelectionToUID(CardSelectionList),
+				},
+			}
+		}));
 		shouldReallyClose = true;
 		Close();
 	}

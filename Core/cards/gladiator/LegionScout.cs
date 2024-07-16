@@ -1,6 +1,6 @@
 // Scripted by Dotlof
 using CardGameCore;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.Constants;
 
 class LegionScout : Creature
 {
@@ -16,7 +16,7 @@ class LegionScout : Creature
 
 	public override void Init()
 	{
-		RegisterStateReachedTrigger(new StateReachedTrigger(EndPhaseEffect, State.TurnEnd), this);
+		RegisterStateReachedTrigger(new StateReachedTrigger(EndPhaseEffect, GameConstants.GameState.TurnEnd), this);
 	}
 
 	private void EndPhaseEffect()

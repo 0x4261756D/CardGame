@@ -1,7 +1,7 @@
 //Scripted by Dotlof
 using CardGameCore;
 using static CardGameCore.CardUtils;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.Constants;
 
 class Persevere : Spell
 {
@@ -24,7 +24,7 @@ class Persevere : Spell
 		Creature target = SelectSingleCard(Controller, GetBothFieldsUsed(), "Select target for Persevere");
 		int oldDamageCap = target.damageCap;
 		target.damageCap = -1;
-		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: () => target.damageCap = oldDamageCap, state: State.TurnEnd, influenceLocation: Location.Any, oneshot: true), referrer: target);
+		RegisterStateReachedTrigger(trigger: new StateReachedTrigger(effect: () => target.damageCap = oldDamageCap, state: GameConstants.GameState.TurnEnd, influenceLocation: Location.Any, oneshot: true), referrer: target);
 	}
 
 }

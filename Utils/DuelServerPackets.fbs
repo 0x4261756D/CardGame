@@ -1,0 +1,112 @@
+include "Constants.fbs";
+include "Shared.fbs";
+
+namespace CardGameUtils.Packets.Duel;
+file_identifier "duel";
+
+enum GameResult : byte
+{
+	UNKNOWN,
+	Lost = 1,
+	Draw,
+	Won,
+}
+
+table ServerGameResultPacket
+{
+	result:GameResult;
+}
+
+table ServerGetOptionsPacket
+{
+	location:Constants.Location;
+	uid:int32;
+	options:[Shared.CardAction];
+}
+
+table ServerYesNoPacket
+{
+	question:string;
+}
+
+table ServerSelectCardsPacket
+{
+	cards:[Shared.CardInfo];
+	description:string;
+	amount:int32;
+}
+
+table ServerCustomSelectCardsPacket
+{
+	cards:[Shared.CardInfo];
+	description:string;
+	initial_state:bool;
+}
+table ServerCustomSelectIntermediatePacket
+{
+	is_valid:bool;
+}
+
+table ServerFieldUpdatePacket
+{
+	own:FieldUpdateField;
+	opp:FieldUpdateField;
+	turn:int32;
+	has_initiative:bool;
+	battle_direction_left_to_right:bool;
+	marked_zone:int32 = -1;
+}
+union FieldCardInfo
+{
+	empty:FieldCardInfoEmpty,
+	card:Shared.CardInfo,
+}
+table FieldCardInfoEmpty {}
+table FieldUpdateField
+{
+	life:int32;
+	deck_size:int32;
+	grave_size:int32;
+	momentum:int32;
+	hand:[Shared.CardInfo];
+	field:[FieldCardInfo];
+	name:string;
+	ability:Shared.CardInfo;
+	quest:Shared.CardInfo;
+	shown_info:ShownInfo;
+}
+table ShownInfo
+{
+	card:Shared.CardInfo;
+	description:string;
+}
+
+table ServerSelectZonePacket
+{
+	options:[bool];
+}
+table ServerShowCardsPacket
+{
+	message:string;
+	cards:[Shared.CardInfo];
+}
+
+union ServerContent
+{
+	gameresult:ServerGameResultPacket,
+	getoptions:ServerGetOptionsPacket,
+	yesno:ServerYesNoPacket,
+	selectcards:ServerSelectCardsPacket,
+	customselectcards:ServerCustomSelectCardsPacket,
+	customselectintermediate:ServerCustomSelectIntermediatePacket,
+	fieldupdate:ServerFieldUpdatePacket,
+	selectzone:ServerSelectZonePacket,
+	showcards:ServerShowCardsPacket,
+}
+
+table ServerPacket
+{
+	content:ServerContent;
+}
+
+root_type ServerPacket;

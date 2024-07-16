@@ -1,0 +1,46 @@
+include "Constants.fbs";
+include "Shared.fbs";
+
+namespace CardGameUtils.Packets.Deck;
+file_identifier "deck";
+
+table ClientNamesPacket {}
+
+table ClientListPacket
+{
+	name:string;
+}
+
+table ClientSearchPacket
+{
+	filter:string;
+	player_class:Constants.PlayerClass;
+	include_generic_cards:bool;
+}
+
+table ClientUpdatePacket
+{
+	deck:Shared.DeckInfo;
+}
+
+table ClientDeletePacket
+{
+	name:string;
+}
+
+
+union ClientContent
+{
+	names:ClientNamesPacket,
+	list:ClientListPacket,
+	search:ClientSearchPacket,
+	update:ClientUpdatePacket,
+	delete:ClientDeletePacket,
+}
+
+table ClientPacket
+{
+	content:ClientContent;
+}
+
+root_type ClientPacket;

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
-using CardGameUtils;
+using CardGameUtils.Shared;
+using CardGameUtils.Constants;
 
 namespace CardGameCore;
 
@@ -18,11 +19,11 @@ class Grave
 
 	internal void Add(Card card)
 	{
-		if(card.CardType == GameConstants.CardType.Creature && ((Creature)card).Keywords.ContainsKey(Keyword.Token))
+		if(card.CardType == TypeSpecifics.creature && ((Creature)card).Keywords.ContainsKey(Keyword.Token))
 		{
 			return;
 		}
-		card.Location = GameConstants.Location.Grave;
+		card.Location = Location.Grave;
 		card.ResetToBaseState();
 		cards.Add(card);
 	}

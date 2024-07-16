@@ -1,6 +1,7 @@
 // Scripted by 0x4261756D
 using CardGameCore;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.Constants;
+using CardGameUtils.Shared;
 
 class CourageousKnight : Creature
 {
@@ -21,7 +22,7 @@ class CourageousKnight : Creature
 
 	public void BuffEffect(Card castCard)
 	{
-		if(castCard.CardType == CardType.Creature)
+		if(castCard.CardType == TypeSpecifics.creature)
 		{
 			CreatureChangePower(target: this, amount: 1, source: this);
 		}
