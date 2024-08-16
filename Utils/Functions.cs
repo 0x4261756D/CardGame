@@ -169,6 +169,18 @@ partial class Functions
 		stream.Write(GeneratePayload(request));
 		return ReceivePacket<R>(stream);
 	}
+	public static R? TrySendAndReceive<R>(Packet request, string address, int port) where R : Packet
+	{
+		try
+		{
+			return SendAndReceive<R>(request, address, port);
+		}
+		catch(Exception e)
+		{
+			Log($"Could not send and receive to/from {address}:{port}. {e}", LogSeverity.Warning);
+			return null;
+		}
+	}
 
 	public static string ArtworkFiletypeToExtension(ServerPackets.ArtworkFiletype filetype)
 	{

@@ -117,9 +117,9 @@ public class UIUtils
 		{
 			return;
 		}
-		ServerPackets.ArtworksResponse response = Functions.SendAndReceive<ServerPackets.ArtworksResponse>(new ServerPackets.ArtworksRequest([.. filenames]),
+		ServerPackets.ArtworksResponse? response = Functions.TrySendAndReceive<ServerPackets.ArtworksResponse>(new ServerPackets.ArtworksRequest([.. filenames]),
 			Program.config.server_address, GenericConstants.SERVER_PORT);
-		if(!response.supports_artworks)
+		if(response is null || !response.supports_artworks)
 		{
 			_ = ServersNotSupportingArtworks.Add(Program.config.server_address);
 			return;
