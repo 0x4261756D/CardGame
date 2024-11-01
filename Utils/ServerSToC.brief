@@ -1,0 +1,76 @@
+import "./Base.brief";
+version 1;
+namespace CardGameUtils.Structs.Server;
+
+root SToC_Packet;
+
+table SToC_Packet
+{
+	content: SToC_Content;
+}
+
+union SToC_Content
+{
+	additional_cards: SToC_Response_AdditionalCards;
+	artworks: SToC_Response_Artworks;
+	create: SToC_Response_Create;
+	join: SToC_Response_Join;
+	opponent_changed: SToC_Broadcast_OpponentChanged;
+	rooms: SToC_Response_Rooms;
+	start: SToC_Response_Start;
+}
+
+table SToC_Response_AdditionalCards
+{
+	timestamp: n64;
+	cards: [#CardGameUtils.Base.CardStruct];
+}
+
+table SToC_Response_Artworks
+{
+	artworks: [Artwork];
+}
+table Artwork
+{
+	name: str;
+	filetype: ArtworkFiletype;
+	data: [n8];
+}
+enum ArtworkFiletype
+{
+	JPG;
+	PNG;
+}
+
+table SToC_Response_Create
+{
+	success: #CardGameUtils.Base.ErrorOr;
+}
+
+table SToC_Response_Join
+{
+	success: #CardGameUtils.Base.ErrorOr;
+}
+
+table SToC_Broadcast_OpponentChanged
+{
+	name: str?;
+}
+
+table SToC_Response_Rooms
+{
+	rooms: [str];
+}
+
+union SToC_Response_Start
+{
+	failure: str;
+	success: void;
+	success_but_waiting: SuccessButWaiting;
+}
+
+table SuccessButWaiting
+{
+	id: str;
+	port: i32;
+}

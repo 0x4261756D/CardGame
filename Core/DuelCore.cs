@@ -29,7 +29,7 @@ class DuelCore : Core
 
 	public int multiplicativeDamageModifier = 1;
 
-	public static int UIDCount, CardActionUIDCount;
+	public static uint UIDCount, CardActionUIDCount;
 	public Player[] players;
 	public static NetworkStream?[] playerStreams = [];
 	public static Random rnd = new(Program.seed);

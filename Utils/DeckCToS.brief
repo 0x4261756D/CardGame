@@ -1,0 +1,41 @@
+import "./Base.brief";
+version 1;
+namespace CardGameUtils.Structs.Deck;
+
+root CToS_Packet;
+
+table CToS_Packet
+{
+	content: CToS_Content;
+}
+
+union CToS_Content
+{
+	decklists: void;
+	decklist: CToS_Request_Decklist;
+	decklist_update: CToS_Request_DecklistUpdate;
+	decklist_delete: CToS_Request_DecklistDelete;
+	search: CToS_Request_Search;
+}
+
+table CToS_Request_Decklist
+{
+	name: str;
+}
+
+table CToS_Request_DecklistUpdate
+{
+	deck: #CardGameUtils.Base.Deck;
+}
+
+table CToS_Request_DecklistDelete
+{
+	name: str;
+}
+
+table CToS_Request_Search
+{
+	filter: str;
+	player_class: #CardGameUtils.GameConstants.PlayerClass;
+	include_generic_cards: bool;
+}

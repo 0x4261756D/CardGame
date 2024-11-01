@@ -3,120 +3,120 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.Json.Serialization;
 
-namespace CardGameUtils.Structs;
+namespace CardGameUtils;
 
-public class CardStruct
-{
-	public string name, text;
-	public GameConstants.CardType card_type;
-	public GameConstants.PlayerClass card_class;
-	public GameConstants.Location location;
-	public int uid, life, power, cost, base_life, base_power, base_cost, position, controller, base_controller;
-	public bool is_class_ability;
-	public bool can_be_class_ability;
-	public CardStruct(string name,
-		string text,
-		GameConstants.CardType card_type,
-		GameConstants.PlayerClass card_class,
-		int uid, int life, int power, int cost,
-		int base_life, int base_power, int base_cost,
-		GameConstants.Location location, int position,
-		bool is_class_ability,
-		bool can_be_class_ability,
-		int controller,
-		int base_controller)
-	{
-		this.name = name;
-		this.text = text;
-		this.card_type = card_type;
-		this.card_class = card_class;
-		this.uid = uid;
-		this.life = life;
-		this.power = power;
-		this.cost = cost;
-		this.base_life = base_life;
-		this.base_power = base_power;
-		this.base_cost = base_cost;
-		this.location = location;
-		this.position = position;
-		this.is_class_ability = is_class_ability;
-		this.can_be_class_ability = can_be_class_ability;
-		this.controller = controller;
-		this.base_controller = base_controller;
-	}
-	public CardStruct()
-	{
-		name = "UNKNOWN";
-		text = "UNKNOWN";
-	}
-
-	public override string ToString()
-	{
-		return Format(separator: '|');
-	}
-
-	public override bool Equals(object? other)
-	{
-		if(other == null)
-		{
-			return false;
-		}
-		return uid == ((CardStruct)other).uid;
-	}
-
-	public override int GetHashCode()
-	{
-		return System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this);
-	}
-
-	public string Format(bool inDeckEdit = false, char separator = '\n')
-	{
-		StringBuilder builder = new();
-		if(!inDeckEdit)
-		{
-			_ = builder.Append($"UID: {uid}{separator}");
-		}
-		_ = builder.Append($"name: {name}{separator}");
-		if(card_type == GameConstants.CardType.Quest)
-		{
-			_ = builder.Append($"{separator}quest progress: {position}/{cost}");
-		}
-		else if(location == GameConstants.Location.Ability)
-		{
-			_ = builder.Append($"{separator}cost: 1");
-		}
-		else
-		{
-			_ = builder.Append($"{separator}cost: {cost}");
-			if(!inDeckEdit)
-			{
-				_ = builder.Append($"/{base_cost}");
-			}
-		}
-		if(!inDeckEdit)
-		{
-			_ = builder.Append($"{separator}controller: {controller}/{base_controller}");
-		}
-		_ = builder.Append($"{separator}card_type: {card_type}").Append($"{separator}class: {card_class}");
-		if(!inDeckEdit)
-		{
-			_ = builder.Append($"{separator}location: {location}");
-		}
-		if(card_type == GameConstants.CardType.Creature)
-		{
-			_ = builder.AppendJoin(separator, $"{separator}power: {power}{(inDeckEdit ? "" : "/" + base_power)}", $"life: {life}{(inDeckEdit ? "" : "/" + base_life)}");
-			if(location == GameConstants.Location.Field)
-			{
-				_ = builder.Append($"{separator}position: {position}");
-			}
-		}
-		else if(card_type == GameConstants.CardType.Spell && inDeckEdit)
-		{
-			_ = builder.Append($"{separator}can_be_class_ability: {can_be_class_ability}");
-		}
-		return builder.Append($"{separator}----------{separator}{text}").ToString();
-	}
-}
+// public class CardStruct
+// {
+// 	public string name, text;
+// 	public GameConstants.CardType card_type;
+// 	public GameConstants.PlayerClass card_class;
+// 	public GameConstants.Location location;
+// 	public int uid, life, power, cost, base_life, base_power, base_cost, position, controller, base_controller;
+// 	public bool is_class_ability;
+// 	public bool can_be_class_ability;
+// 	public CardStruct(string name,
+// 		string text,
+// 		GameConstants.CardType card_type,
+// 		GameConstants.PlayerClass card_class,
+// 		int uid, int life, int power, int cost,
+// 		int base_life, int base_power, int base_cost,
+// 		GameConstants.Location location, int position,
+// 		bool is_class_ability,
+// 		bool can_be_class_ability,
+// 		int controller,
+// 		int base_controller)
+// 	{
+// 		this.name = name;
+// 		this.text = text;
+// 		this.card_type = card_type;
+// 		this.card_class = card_class;
+// 		this.uid = uid;
+// 		this.life = life;
+// 		this.power = power;
+// 		this.cost = cost;
+// 		this.base_life = base_life;
+// 		this.base_power = base_power;
+// 		this.base_cost = base_cost;
+// 		this.location = location;
+// 		this.position = position;
+// 		this.is_class_ability = is_class_ability;
+// 		this.can_be_class_ability = can_be_class_ability;
+// 		this.controller = controller;
+// 		this.base_controller = base_controller;
+// 	}
+// 	public CardStruct()
+// 	{
+// 		name = "UNKNOWN";
+// 		text = "UNKNOWN";
+// 	}
+//
+// 	public override string ToString()
+// 	{
+// 		return Format(separator: '|');
+// 	}
+//
+// 	public override bool Equals(object? other)
+// 	{
+// 		if(other == null)
+// 		{
+// 			return false;
+// 		}
+// 		return uid == ((CardStruct)other).uid;
+// 	}
+//
+// 	public override int GetHashCode()
+// 	{
+// 		return System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this);
+// 	}
+//
+// 	public string Format(bool inDeckEdit = false, char separator = '\n')
+// 	{
+// 		StringBuilder builder = new();
+// 		if(!inDeckEdit)
+// 		{
+// 			_ = builder.Append($"UID: {uid}{separator}");
+// 		}
+// 		_ = builder.Append($"name: {name}{separator}");
+// 		if(card_type == GameConstants.CardType.Quest)
+// 		{
+// 			_ = builder.Append($"{separator}quest progress: {position}/{cost}");
+// 		}
+// 		else if(location == GameConstants.Location.Ability)
+// 		{
+// 			_ = builder.Append($"{separator}cost: 1");
+// 		}
+// 		else
+// 		{
+// 			_ = builder.Append($"{separator}cost: {cost}");
+// 			if(!inDeckEdit)
+// 			{
+// 				_ = builder.Append($"/{base_cost}");
+// 			}
+// 		}
+// 		if(!inDeckEdit)
+// 		{
+// 			_ = builder.Append($"{separator}controller: {controller}/{base_controller}");
+// 		}
+// 		_ = builder.Append($"{separator}card_type: {card_type}").Append($"{separator}class: {card_class}");
+// 		if(!inDeckEdit)
+// 		{
+// 			_ = builder.Append($"{separator}location: {location}");
+// 		}
+// 		if(card_type == GameConstants.CardType.Creature)
+// 		{
+// 			_ = builder.AppendJoin(separator, $"{separator}power: {power}{(inDeckEdit ? "" : "/" + base_power)}", $"life: {life}{(inDeckEdit ? "" : "/" + base_life)}");
+// 			if(location == GameConstants.Location.Field)
+// 			{
+// 				_ = builder.Append($"{separator}position: {position}");
+// 			}
+// 		}
+// 		else if(card_type == GameConstants.CardType.Spell && inDeckEdit)
+// 		{
+// 			_ = builder.Append($"{separator}can_be_class_ability: {can_be_class_ability}");
+// 		}
+// 		return builder.Append($"{separator}----------{separator}{text}").ToString();
+// 	}
+// }
 
 
 public class URL(string address, int port)
@@ -166,12 +166,6 @@ public class PlatformClientConfig
 	public ClientConfig? windows, linux;
 }
 
-public class CardAction(int uid, string description)
-{
-	public int uid = uid;
-	public string description = description;
-}
-
 public class ClientConfig(
 	URL deck_edit_url, int width, int height, CoreInfo core_info, bool should_save_player_name, bool should_spawn_core, string server_address, int animation_delay_in_ms, ClientConfig.ThemeVariant? theme, string? artwork_path)
 {
@@ -216,6 +210,12 @@ public class ServerConfig(string additional_cards_path, string? artwork_path, in
 	public int room_min_port = room_min_port, room_max_port = room_max_port;
 	public string additional_cards_path = additional_cards_path;
 	public string? artwork_path = artwork_path;
+}
+/*
+public class CardAction(int uid, string description)
+{
+	public int uid = uid;
+	public string description = description;
 }
 
 public class NetworkingStructs
@@ -576,4 +576,4 @@ public class NetworkingStructs
 			public string? reason;
 		}
 	}
-}
+}*/

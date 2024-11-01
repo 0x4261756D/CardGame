@@ -2,7 +2,7 @@
 using System;
 using CardGameCore;
 using static CardGameCore.CardUtils;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.GameConstants;
 
 class BrilliantMedic : Creature
 {

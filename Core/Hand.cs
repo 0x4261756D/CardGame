@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using CardGameUtils;
-using CardGameUtils.Structs;
+using CardGameUtils.GameConstants;
+using CardGameUtils.Base;
 
 namespace CardGameCore;
 
@@ -18,7 +18,7 @@ class Hand
 
 	public void Add(Card c)
 	{
-		c.Location = GameConstants.Location.Hand;
+		c.Location = Location.Hand;
 		cards.Add(c);
 	}
 
@@ -44,7 +44,7 @@ class Hand
 
 	internal CardStruct[] ToHiddenStruct()
 	{
-		return [.. cards.ConvertAll(x => new CardStruct())];
+		return [.. cards.ConvertAll(x => new CardStruct(name: "UNKNOWN", text: "UNKNOWN", card_class: PlayerClass.UNKNOWN, location: Location.Hand, uid: x.uid, controller: x.Controller, base_controller: x.BaseController, type_specifics: new TypeSpecifics.unknown()))];
 	}
 
 	internal Card GetByUID(int uid)

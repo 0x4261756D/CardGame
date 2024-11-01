@@ -1,7 +1,7 @@
 // Scripted by 0x4261756D
 using CardGameCore;
 using static CardGameCore.CardUtils;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.GameConstants;
 
 class Masterpiece : Spell
 {
@@ -26,7 +26,7 @@ class Masterpiece : Spell
 	}
 	private void CastEffect()
 	{
-		Creature target = (Creature)SelectSingleCard(Controller, FilterValid(cards: GetGrave(Controller), isValid: (card) => card.CardType == CardType.Creature), "Select masterpiece");
+		Creature target = (Creature)SelectSingleCard(Controller, FilterValid(cards: GetGrave(Controller), isValid: (card) => card is Creature), "Select masterpiece");
 		if(HasEmpty(GetField(Controller)) && AskYesNo(player: Controller, question: "Create a masterpiece?"))
 		{
 			CreateMasterpiece(target);
@@ -39,6 +39,6 @@ class Masterpiece : Spell
 
 	private bool CastCondition()
 	{
-		return ContainsValid(cards: GetGrave(Controller), isValid: (card) => card.CardType == CardType.Creature) && HasEmpty(GetField(Controller));
+		return ContainsValid(cards: GetGrave(Controller), isValid: (card) => card is Creature) && HasEmpty(GetField(Controller));
 	}
 }

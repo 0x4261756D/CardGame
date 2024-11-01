@@ -1,0 +1,67 @@
+import "./Base.brief";
+version 1;
+namespace CardGameUtils.Structs.Duel;
+
+root CToS_Packet;
+
+table CToS_Packet
+{
+	content: CToS_Content;
+}
+
+union CToS_Content
+{
+	surrender: void;
+	get_actions: CToS_Request_GetActions;
+	select_option: CToS_Request_SelectOption;
+	yes_no: CToS_Response_YesNo;
+	select_cards: CToS_Response_SelectCards;
+	select_cards_custom_intermediate: CToS_Request_SelectCardsCustomIntermediate;
+	select_cards_custom: CToS_Response_SelectCardsCustom;
+	select_zone: CToS_Response_SelectZone;
+	pass: void;
+	view_grave: CToS_Request_ViewGrave;
+}
+
+table CToS_Request_GetActions
+{
+	location: #CardGameUtils.GameConstants.Location;
+	uid: n32;
+}
+
+table CToS_Request_SelectOption
+{
+	location: #CardGameUtils.GameConstants.Location;
+	uid: n32;
+	action: #CardGameUtils.Base.CardAction;
+}
+
+table CToS_Response_YesNo
+{
+	yes: bool;
+}
+
+table CToS_Response_SelectCards
+{
+	uids: [i32];
+}
+
+table CToS_Request_SelectCardsCustomIntermediate
+{
+	uids: [i32];
+}
+
+table CToS_Response_SelectCardsCustom
+{
+	uids: [i32];
+}
+
+table CToS_Response_SelectZone
+{
+	zone: i32;
+}
+
+table CToS_Request_ViewGrave
+{
+	for_opponent: bool;
+}

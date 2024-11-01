@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
-using CardGameUtils;
-using CardGameUtils.Structs;
+using CardGameUtils.GameConstants;
+using CardGameUtils.Base;
 
 namespace CardGameCore;
 
@@ -11,10 +11,10 @@ public abstract class Card
 {
 	public bool isInitialized;
 	public string Name, Text;
-	public GameConstants.CardType CardType;
-	public GameConstants.PlayerClass CardClass;
-	public int uid;
-	private int _cost, _baseController = -1;
+	public PlayerClass CardClass;
+	public uint uid;
+	private int _cost = -1;
+	private byte _baseController = byte.MaxValue;
 	public int Cost
 	{
 		get => _cost;
@@ -28,14 +28,14 @@ public abstract class Card
 		}
 	}
 	public readonly int BaseCost;
-	public GameConstants.Location Location;
-	public int Controller { get; set; }
-	public int BaseController
+	public Location Location;
+	public byte Controller { get; set; }
+	public byte BaseController
 	{
 		get => _baseController;
 		set
 		{
-			if(_baseController == -1)
+			if(_baseController == byte.MaxValue)
 			{
 				_baseController = value;
 			}
@@ -43,14 +43,12 @@ public abstract class Card
 	}
 	public abstract void Init();
 
-	public Card(GameConstants.CardType CardType,
-		GameConstants.PlayerClass CardClass,
+	public Card(PlayerClass CardClass,
 		string Name,
 		string Text,
 		int OriginalCost = 0,
-		GameConstants.Location OriginalLocation = GameConstants.Location.UNKNOWN)
+		Location OriginalLocation = Location.UNKNOWN)
 	{
-		this.CardType = CardType;
 		this.CardClass = CardClass;
 		this.Name = Name;
 		this.Text = Text;
@@ -181,7 +179,7 @@ public abstract class Card
 }
 public class ClientCoreDummyCard : Card
 {
-	public ClientCoreDummyCard() : base(GameConstants.CardType.UNKNOWN, GameConstants.PlayerClass.UNKNOWN, "UNINITIALIZED", "UNINITIALIZED")
+	public ClientCoreDummyCard() : base(PlayerClass.UNKNOWN, "UNINITIALIZED", "UNINITIALIZED")
 	{ }
 	public override void Init()
 	{
@@ -189,12 +187,12 @@ public class ClientCoreDummyCard : Card
 
 	public override CardStruct ToStruct(bool client = false)
 	{
-		return new CardStruct("DUMMY", "DUMMY", GameConstants.CardType.UNKNOWN, GameConstants.PlayerClass.UNKNOWN, -1, -1, -1, -1, -1, -1, -1, GameConstants.Location.UNKNOWN, -1, false, false, -1, -1);
+		return new CardStruct("DUMMY", "DUMMY", PlayerClass.UNKNOWN, Location.UNKNOWN, uint.MaxValue, byte.MaxValue, byte.MaxValue, new TypeSpecifics.unknown());
 	}
 }
 public class ClientCoreDummyToken : Token
 {
-	public ClientCoreDummyToken() : base("UNINITIALIZED", "UNINITIALIZED", -1, -1, -1, -1)
+	public ClientCoreDummyToken() : base("UNINITIALIZED", "UNINITIALIZED", -1, -1, -1, byte.MaxValue)
 	{ }
 	public override void Init()
 	{
@@ -240,14 +238,13 @@ public abstract partial class Creature : Card
 		}
 	}
 	public Dictionary<Keyword, int> Keywords = [];
-	public Creature(GameConstants.PlayerClass CardClass,
+	public Creature(PlayerClass CardClass,
 		string Name,
 		string Text,
 		int OriginalCost,
 		int OriginalLife,
 		int OriginalPower)
-	: base(CardType: GameConstants.CardType.Creature,
-		CardClass: CardClass,
+	: base(CardClass: CardClass,
 		Name: Name,
 		Text: Text,
 		OriginalCost: OriginalCost)
@@ -302,29 +299,26 @@ public abstract partial class Creature : Card
 		}
 		return new CardStruct(name: Name,
 			text: text.ToString(),
-			card_type: CardType,
 			card_class: CardClass,
-			uid: uid, life: Life, power: Power, cost: Cost,
-			base_cost: BaseCost, base_life: BaseLife, base_power: BasePower,
-			location: Location, position: Position,
-			is_class_ability: false,
-			can_be_class_ability: false,
+			uid: uid, location: Location,
 			controller: Controller,
-			base_controller: BaseController);
+			base_controller: BaseController,
+			type_specifics: new TypeSpecifics.creature(new(
+				base_cost: BaseCost, cost: Cost, base_life: BaseLife, life: Life,
+				base_power: BasePower, power: Power, position: Position, damage_cap: damageCap)));
 	}
 
 	[GeneratedRegex(@"(?m:^\[.+\](?: \+?\d+)?$)\n?")]
 	private static partial Regex KeywordRegex();
 }
 
-public abstract class Spell(GameConstants.PlayerClass CardClass,
+public abstract class Spell(PlayerClass CardClass,
 	string Name,
 	string Text,
 	int OriginalCost = 0,
-	GameConstants.Location OriginalLocation = GameConstants.Location.UNKNOWN,
+	Location OriginalLocation = Location.UNKNOWN,
 	bool IsClassAbility = false,
-	bool CanBeClassAbility = false) : Card(CardType: GameConstants.CardType.Spell,
-		CardClass: CardClass,
+	bool CanBeClassAbility = false) : Card(CardClass: CardClass,
 		Name: Name,
 		Text: Text,
 		OriginalCost: OriginalCost,
@@ -336,20 +330,17 @@ public abstract class Spell(GameConstants.PlayerClass CardClass,
 	{
 		return new CardStruct(name: Name,
 			text: Text,
-			card_type: CardType,
 			card_class: CardClass,
-			uid: uid, life: 0, power: 0, cost: Cost,
-			base_cost: BaseCost, base_life: 0, base_power: 0,
-			location: Location, position: 0,
-			is_class_ability: IsClassAbility,
-			can_be_class_ability: CanBeClassAbility,
+			uid: uid, location: Location,
 			controller: Controller,
-			base_controller: BaseController);
+			base_controller: BaseController,
+			type_specifics: new TypeSpecifics.spell(new(
+				base_cost: BaseCost, cost: Cost, is_class_ability: IsClassAbility,
+				can_be_class_ability: CanBeClassAbility)));
 	}
 }
 
-public abstract class Quest(string Name, string Text, int ProgressGoal, GameConstants.PlayerClass CardClass) : Card(
-	CardType: GameConstants.CardType.Quest,
+public abstract class Quest(string Name, string Text, int ProgressGoal, PlayerClass CardClass) : Card(
 	CardClass: CardClass,
 	Name: Name,
 	Text: Text)
@@ -368,15 +359,11 @@ public abstract class Quest(string Name, string Text, int ProgressGoal, GameCons
 	{
 		return new CardStruct(name: Name,
 			text: Text,
-			card_type: CardType,
 			card_class: CardClass,
-			uid: uid, life: 0, power: 0, cost: Goal,
-			base_cost: BaseCost, base_life: 0, base_power: 0,
-			location: Location, position: Progress,
-			is_class_ability: false,
-			can_be_class_ability: false,
+			uid: uid, location: Location,
 			controller: Controller,
-			base_controller: BaseController);
+			base_controller: BaseController,
+			type_specifics: new TypeSpecifics.quest(new(progress: Progress, goal: Goal)));
 	}
 }
 
@@ -387,13 +374,13 @@ public class Token : Creature
 		int OriginalCost,
 		int OriginalLife,
 		int OriginalPower,
-		int OriginalController) : base(
+		byte OriginalController) : base(
 			Name: Name,
 			Text: Text,
 			OriginalCost: OriginalCost,
 			OriginalLife: OriginalLife,
 			OriginalPower: OriginalPower,
-			CardClass: GameConstants.PlayerClass.All
+			CardClass: PlayerClass.All
 		)
 	{
 		BaseController = OriginalController;

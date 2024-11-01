@@ -1,7 +1,8 @@
 //Scripted by Dotlof
 using CardGameCore;
 using static CardGameCore.CardUtils;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.GameConstants;
+using static CardGameUtils.GameConstantsElectricBoogaloo;
 
 class Persevere : Spell
 {

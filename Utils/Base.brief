@@ -1,0 +1,71 @@
+import "./GameConstants.brief";
+version 1;
+namespace CardGameUtils.Base;
+root CardStruct;
+
+table CardStruct
+{
+	name: str;
+	text: str;
+	card_class: #CardGameUtils.GameConstants.PlayerClass;
+	location: #CardGameUtils.GameConstants.Location;
+	uid: n32;
+	controller: n8;
+	base_controller: n8;
+	type_specifics: TypeSpecifics;
+}
+
+union TypeSpecifics
+{
+	creature: CreatureSpecifics;
+	spell: SpellSpecifics;
+	quest: QuestSpecifics;
+	unknown: void;
+}
+
+table CreatureSpecifics
+{
+	base_cost: i32;
+	cost: i32;
+	base_life: i32;
+	life: i32;
+	base_power: i32;
+	power: i32;
+	position: i32;
+	damage_cap: i32;
+}
+
+table SpellSpecifics
+{
+	base_cost: i32;
+	cost: i32;
+	is_class_ability: bool;
+	can_be_class_ability: bool;
+}
+
+table QuestSpecifics
+{
+	progress: i32;
+	goal: i32;
+}
+
+table CardAction
+{
+	uid: n32;
+	description: str;
+}
+
+table Deck
+{
+	name: str;
+	cards: [CardStruct];
+	player_class: #CardGameUtils.GameConstants.PlayerClass;
+	ability: CardStruct?;
+	quest: CardStruct?;
+}
+
+union ErrorOr
+{
+	success: void;
+	error: str;
+}

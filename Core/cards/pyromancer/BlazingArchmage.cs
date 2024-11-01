@@ -1,6 +1,6 @@
 // Scripted by 0x4261756D
 using CardGameCore;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.GameConstants;
 
 class BlazingArchmage : Creature
 {
@@ -26,6 +26,6 @@ class BlazingArchmage : Creature
 
 	public bool CastIgniteCondition(Card target)
 	{
-		return target.Controller == Controller && target.CardType == CardType.Spell && target.Name != "Ignite";
+		return target.Controller == Controller && target is Spell && target.Name != "Ignite";
 	}
 }

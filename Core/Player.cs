@@ -1,6 +1,6 @@
 using System.Collections.Generic;
+using CardGameUtils.GameConstants;
 using CardGameUtils;
-using CardGameUtils.Structs;
 
 namespace CardGameCore;
 
@@ -15,14 +15,14 @@ class Player
 	public string name;
 	public bool passed;
 	public bool abilityUsable = true;
-	public GameConstants.PlayerClass playerClass;
+	public PlayerClass playerClass;
 	public Spell ability;
 	public Quest quest;
 	public int life, momentum;
 	public List<int> discardCounts = [], dealtDamages = [], dealtSpellDamages = [], brittleDeathCounts = [], deathCounts = [];
 	public int baseIgniteDamage = 1, igniteDamage;
 	public Dictionary<string, int> castCounts = [];
-	public Player(CoreConfig.PlayerConfig config, int number, Deck deck, GameConstants.PlayerClass playerClass, Spell ability, Quest quest)
+	public Player(CoreConfig.PlayerConfig config, int number, Deck deck, PlayerClass playerClass, Spell ability, Quest quest)
 	{
 		this.deck = deck;
 		this.id = config.id;
@@ -30,9 +30,9 @@ class Player
 		this.passed = false;
 		this.playerClass = playerClass;
 		this.ability = ability;
-		this.ability.Location = GameConstants.Location.Ability;
+		this.ability.Location = Location.Ability;
 		this.quest = quest;
-		this.quest.Location = GameConstants.Location.Quest;
+		this.quest.Location = Location.Quest;
 		this.number = number;
 		ClearCardModifications();
 	}

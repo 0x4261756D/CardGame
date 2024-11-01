@@ -1,0 +1,32 @@
+import "./Base.brief";
+version 1;
+namespace CardGameUtils.Structs.Deck;
+
+root SToC_Packet;
+
+table SToC_Packet
+{
+	content: SToC_Content;
+}
+
+union SToC_Content
+{
+	decklists: SToC_Response_Decklists;
+	decklist: SToC_Response_Decklist;
+	search: SToC_Response_Search;
+}
+
+table SToC_Response_Decklists
+{
+	names: [str];
+}
+
+table SToC_Response_Decklist
+{
+	deck: #CardGameUtils.Base.Deck?;
+}
+
+table SToC_Response_Search
+{
+	cards: [#CardGameUtils.Base.CardStruct];
+}

@@ -1,7 +1,7 @@
 // Scripted by Dotlof and 0x4261756D
 using CardGameCore;
 using static CardGameCore.CardUtils;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.GameConstants;
 
 class CurseofSugoma : Spell
 {

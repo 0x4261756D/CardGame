@@ -1,0 +1,37 @@
+version 1;
+namespace CardGameUtils.GameConstants;
+root foo;
+
+table foo
+{
+	dummy: n8;
+}
+
+enum Location
+{
+	UNKNOWN;
+	Any;
+	Deck;
+	Hand;
+	Field;
+	Grave;
+	Quest;
+	Ability;
+}
+
+enum PlayerClass
+{
+	UNKNOWN;
+	All;
+	Cultist;
+	Pyromancer;
+	Artificer;
+	Gladiator;
+}
+
+enum GameResult
+{
+	Won;
+	Lost;
+	Draw;
+}
