@@ -78,6 +78,7 @@ table SToC_Broadcast_FieldUpdate
 table SToC_Response_ShowCards
 {
 	cards: [#CardGameUtils.Base.CardStruct];
+	description: str;
 }
 
 table FieldStruct

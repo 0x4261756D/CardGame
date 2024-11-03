@@ -14,7 +14,7 @@ public abstract class Card
 	public PlayerClass CardClass;
 	public uint uid;
 	private int _cost = -1;
-	private byte _baseController = byte.MaxValue;
+	private int _baseController = -1;
 	public int Cost
 	{
 		get => _cost;
@@ -29,13 +29,13 @@ public abstract class Card
 	}
 	public readonly int BaseCost;
 	public Location Location;
-	public byte Controller { get; set; }
-	public byte BaseController
+	public int Controller { get; set; }
+	public int BaseController
 	{
 		get => _baseController;
 		set
 		{
-			if(_baseController == byte.MaxValue)
+			if(_baseController == -1)
 			{
 				_baseController = value;
 			}
@@ -172,9 +172,9 @@ public abstract class Card
 		return base.GetHashCode();
 	}
 
-	internal static CardStruct[] ToStruct(Card[] cards)
+	internal static List<CardStruct> ToStruct(Card[] cards)
 	{
-		return Array.ConvertAll(cards, x => x.ToStruct());
+		return [.. Array.ConvertAll(cards, x => x.ToStruct())];
 	}
 }
 public class ClientCoreDummyCard : Card
@@ -187,12 +187,12 @@ public class ClientCoreDummyCard : Card
 
 	public override CardStruct ToStruct(bool client = false)
 	{
-		return new CardStruct("DUMMY", "DUMMY", PlayerClass.UNKNOWN, Location.UNKNOWN, uint.MaxValue, byte.MaxValue, byte.MaxValue, new TypeSpecifics.unknown());
+		return new CardStruct("DUMMY", "DUMMY", PlayerClass.UNKNOWN, Location.UNKNOWN, uint.MaxValue, -1, -1, new TypeSpecifics.unknown());
 	}
 }
 public class ClientCoreDummyToken : Token
 {
-	public ClientCoreDummyToken() : base("UNINITIALIZED", "UNINITIALIZED", -1, -1, -1, byte.MaxValue)
+	public ClientCoreDummyToken() : base("UNINITIALIZED", "UNINITIALIZED", -1, -1, -1, -1)
 	{ }
 	public override void Init()
 	{
@@ -374,7 +374,7 @@ public class Token : Creature
 		int OriginalCost,
 		int OriginalLife,
 		int OriginalPower,
-		byte OriginalController) : base(
+		int OriginalController) : base(
 			Name: Name,
 			Text: Text,
 			OriginalCost: OriginalCost,

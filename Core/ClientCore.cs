@@ -48,9 +48,9 @@ partial class ClientCore : Core
 				continue;
 			}
 			decklist.RemoveAt(0);
-			List<CardGameUtils.Base.CardStruct> deckCards = [];
-			CardGameUtils.Base.CardStruct? ability = null;
-			CardGameUtils.Base.CardStruct? quest = null;
+			List<CardStruct> deckCards = [];
+			CardStruct? ability = null;
+			CardStruct? quest = null;
 			if(decklist.Count > 0)
 			{
 				if(decklist[0].StartsWith('#'))
@@ -89,21 +89,17 @@ partial class ClientCore : Core
 		}
 		return c;
 	}
-	public CardGameUtils.Structs.Server.SToC_Packet? TryReceiveServerPacket(NetworkStream stream, int timeoutInMs)
+	public static CardGameUtils.Structs.Server.SToC_Packet? TryReceiveServerPacket(NetworkStream stream, int timeoutInMs)
 	{
 		try
 		{
 			Task<CardGameUtils.Structs.Server.SToC_Packet> task = Task.Run(() => CardGameUtils.Structs.Server.SToC_Packet.Serialize(stream));
 			int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
-			if(i == 0)
-			{
-				return task.Result;
-			}
-			return null;
+			return i == 0 ? task.Result : null;
 		}
 		catch(Exception e)
 		{
-			Functions.Log(e.Message, severity: LogSeverity.Warning);
+			Log(e.Message, severity: LogSeverity.Warning);
 			return null;
 		}
 	}
@@ -215,7 +211,7 @@ partial class ClientCore : Core
 		return false;
 	}
 
-	private string GetDeckString(CardGameUtils.Base.Deck deck)
+	private static string GetDeckString(CardGameUtils.Base.Deck deck)
 	{
 		StringBuilder builder = new();
 		_ = builder.Append(deck.player_class);

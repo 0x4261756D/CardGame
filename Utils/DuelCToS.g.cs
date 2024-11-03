@@ -508,7 +508,7 @@ public record CToS_Response_YesNo(bool yes) : Common.PacketTable
 		return bytes;
 	}
 }
-public record CToS_Response_SelectCards(List<int> uids) : Common.PacketTable
+public record CToS_Response_SelectCards(List<uint> uids) : Common.PacketTable
 {
 	public static CToS_Response_SelectCards SerializeInternal(ref Span<byte> bytes)
 	{
@@ -519,9 +519,9 @@ public record CToS_Response_SelectCards(List<int> uids) : Common.PacketTable
 				throw new Exception("Field Header CToS_Response_SelectCards.uids hash mismatch");
 			}
 			byte type = Common.Common.SerializeN8(ref bytes);
-			if(type != (byte)(Common.TypeBytes.I32 | Common.TypeBytes.ListFlag))
+			if(type != (byte)(Common.TypeBytes.N32 | Common.TypeBytes.ListFlag))
 			{
-				throw new Exception($"Wrong field type for CToS_Response_SelectCards.uids, expected {(byte)(Common.TypeBytes.I32 | Common.TypeBytes.ListFlag)}, got {type}");
+				throw new Exception($"Wrong field type for CToS_Response_SelectCards.uids, expected {(byte)(Common.TypeBytes.N32 | Common.TypeBytes.ListFlag)}, got {type}");
 			}
 		}
 		byte uidsNestingLevel = Common.Common.SerializeN8(ref bytes);
@@ -530,10 +530,10 @@ public record CToS_Response_SelectCards(List<int> uids) : Common.PacketTable
 			throw new Exception("Wrong nesting level for uids, expected 0, got {uidsNestingLevel}");
 		}
 		uint uidsCount = Common.Common.SerializeN32(ref bytes);
-		List<int> uids = new((int)uidsCount);
+		List<uint> uids = new((int)uidsCount);
 		for(int uids_ = 0; uids_ < uids.Capacity; uids_++)
 		{
-			uids.Add(Common.Common.SerializeI32(ref bytes));
+			uids.Add(Common.Common.SerializeN32(ref bytes));
 		}
 		return new(uids);
 	}
@@ -543,19 +543,19 @@ public record CToS_Response_SelectCards(List<int> uids) : Common.PacketTable
 		List<byte> bytes = [];
 		/* Field Header uids */
 		bytes.AddRange(Common.Common.DeserializeName("uids")); /* Name */
-		bytes.Add((byte)(Common.TypeBytes.I32 | Common.TypeBytes.ListFlag)); /* Type */
+		bytes.Add((byte)(Common.TypeBytes.N32 | Common.TypeBytes.ListFlag)); /* Type */
 		/* Data uids */
 		bytes.Add(0); /* Nesting level */
 		bytes.AddRange(Common.Common.DeserializeN32((uint)uids.Count)); /* Count */
 		/* Nesting Counts */
 		foreach(var uids_ in uids)
 		{
-			bytes.AddRange(Common.Common.DeserializeI32(uids_));
+			bytes.AddRange(Common.Common.DeserializeN32(uids_));
 		}
 		return bytes;
 	}
 }
-public record CToS_Request_SelectCardsCustomIntermediate(List<int> uids) : Common.PacketTable
+public record CToS_Request_SelectCardsCustomIntermediate(List<uint> uids) : Common.PacketTable
 {
 	public static CToS_Request_SelectCardsCustomIntermediate SerializeInternal(ref Span<byte> bytes)
 	{
@@ -566,9 +566,9 @@ public record CToS_Request_SelectCardsCustomIntermediate(List<int> uids) : Commo
 				throw new Exception("Field Header CToS_Request_SelectCardsCustomIntermediate.uids hash mismatch");
 			}
 			byte type = Common.Common.SerializeN8(ref bytes);
-			if(type != (byte)(Common.TypeBytes.I32 | Common.TypeBytes.ListFlag))
+			if(type != (byte)(Common.TypeBytes.N32 | Common.TypeBytes.ListFlag))
 			{
-				throw new Exception($"Wrong field type for CToS_Request_SelectCardsCustomIntermediate.uids, expected {(byte)(Common.TypeBytes.I32 | Common.TypeBytes.ListFlag)}, got {type}");
+				throw new Exception($"Wrong field type for CToS_Request_SelectCardsCustomIntermediate.uids, expected {(byte)(Common.TypeBytes.N32 | Common.TypeBytes.ListFlag)}, got {type}");
 			}
 		}
 		byte uidsNestingLevel = Common.Common.SerializeN8(ref bytes);
@@ -577,10 +577,10 @@ public record CToS_Request_SelectCardsCustomIntermediate(List<int> uids) : Commo
 			throw new Exception("Wrong nesting level for uids, expected 0, got {uidsNestingLevel}");
 		}
 		uint uidsCount = Common.Common.SerializeN32(ref bytes);
-		List<int> uids = new((int)uidsCount);
+		List<uint> uids = new((int)uidsCount);
 		for(int uids_ = 0; uids_ < uids.Capacity; uids_++)
 		{
-			uids.Add(Common.Common.SerializeI32(ref bytes));
+			uids.Add(Common.Common.SerializeN32(ref bytes));
 		}
 		return new(uids);
 	}
@@ -590,19 +590,19 @@ public record CToS_Request_SelectCardsCustomIntermediate(List<int> uids) : Commo
 		List<byte> bytes = [];
 		/* Field Header uids */
 		bytes.AddRange(Common.Common.DeserializeName("uids")); /* Name */
-		bytes.Add((byte)(Common.TypeBytes.I32 | Common.TypeBytes.ListFlag)); /* Type */
+		bytes.Add((byte)(Common.TypeBytes.N32 | Common.TypeBytes.ListFlag)); /* Type */
 		/* Data uids */
 		bytes.Add(0); /* Nesting level */
 		bytes.AddRange(Common.Common.DeserializeN32((uint)uids.Count)); /* Count */
 		/* Nesting Counts */
 		foreach(var uids_ in uids)
 		{
-			bytes.AddRange(Common.Common.DeserializeI32(uids_));
+			bytes.AddRange(Common.Common.DeserializeN32(uids_));
 		}
 		return bytes;
 	}
 }
-public record CToS_Response_SelectCardsCustom(List<int> uids) : Common.PacketTable
+public record CToS_Response_SelectCardsCustom(List<uint> uids) : Common.PacketTable
 {
 	public static CToS_Response_SelectCardsCustom SerializeInternal(ref Span<byte> bytes)
 	{
@@ -613,9 +613,9 @@ public record CToS_Response_SelectCardsCustom(List<int> uids) : Common.PacketTab
 				throw new Exception("Field Header CToS_Response_SelectCardsCustom.uids hash mismatch");
 			}
 			byte type = Common.Common.SerializeN8(ref bytes);
-			if(type != (byte)(Common.TypeBytes.I32 | Common.TypeBytes.ListFlag))
+			if(type != (byte)(Common.TypeBytes.N32 | Common.TypeBytes.ListFlag))
 			{
-				throw new Exception($"Wrong field type for CToS_Response_SelectCardsCustom.uids, expected {(byte)(Common.TypeBytes.I32 | Common.TypeBytes.ListFlag)}, got {type}");
+				throw new Exception($"Wrong field type for CToS_Response_SelectCardsCustom.uids, expected {(byte)(Common.TypeBytes.N32 | Common.TypeBytes.ListFlag)}, got {type}");
 			}
 		}
 		byte uidsNestingLevel = Common.Common.SerializeN8(ref bytes);
@@ -624,10 +624,10 @@ public record CToS_Response_SelectCardsCustom(List<int> uids) : Common.PacketTab
 			throw new Exception("Wrong nesting level for uids, expected 0, got {uidsNestingLevel}");
 		}
 		uint uidsCount = Common.Common.SerializeN32(ref bytes);
-		List<int> uids = new((int)uidsCount);
+		List<uint> uids = new((int)uidsCount);
 		for(int uids_ = 0; uids_ < uids.Capacity; uids_++)
 		{
-			uids.Add(Common.Common.SerializeI32(ref bytes));
+			uids.Add(Common.Common.SerializeN32(ref bytes));
 		}
 		return new(uids);
 	}
@@ -637,14 +637,14 @@ public record CToS_Response_SelectCardsCustom(List<int> uids) : Common.PacketTab
 		List<byte> bytes = [];
 		/* Field Header uids */
 		bytes.AddRange(Common.Common.DeserializeName("uids")); /* Name */
-		bytes.Add((byte)(Common.TypeBytes.I32 | Common.TypeBytes.ListFlag)); /* Type */
+		bytes.Add((byte)(Common.TypeBytes.N32 | Common.TypeBytes.ListFlag)); /* Type */
 		/* Data uids */
 		bytes.Add(0); /* Nesting level */
 		bytes.AddRange(Common.Common.DeserializeN32((uint)uids.Count)); /* Count */
 		/* Nesting Counts */
 		foreach(var uids_ in uids)
 		{
-			bytes.AddRange(Common.Common.DeserializeI32(uids_));
+			bytes.AddRange(Common.Common.DeserializeN32(uids_));
 		}
 		return bytes;
 	}

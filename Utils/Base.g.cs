@@ -6,7 +6,7 @@ namespace CardGameUtils.Base;
 
 #nullable enable
 
-public record CardStruct(string name, string text, CardGameUtils.GameConstants.PlayerClass card_class, CardGameUtils.GameConstants.Location location, uint uid, byte controller, byte base_controller, TypeSpecifics type_specifics) : Common.PacketTable
+public record CardStruct(string name, string text, CardGameUtils.GameConstants.PlayerClass card_class, CardGameUtils.GameConstants.Location location, uint uid, int controller, int base_controller, TypeSpecifics type_specifics) : Common.PacketTable
 {
 	public byte[] Deserialize()
 	{
@@ -130,9 +130,9 @@ public record CardStruct(string name, string text, CardGameUtils.GameConstants.P
 				throw new Exception("Field Header CardStruct.controller hash mismatch");
 			}
 			byte type = Common.Common.SerializeN8(ref bytes);
-			if(type != (byte)(Common.TypeBytes.N8))
+			if(type != (byte)(Common.TypeBytes.I32))
 			{
-				throw new Exception($"Wrong field type for CardStruct.controller, expected {(byte)(Common.TypeBytes.N8)}, got {type}");
+				throw new Exception($"Wrong field type for CardStruct.controller, expected {(byte)(Common.TypeBytes.I32)}, got {type}");
 			}
 		}
 		/* Field Header base_controller */
@@ -142,9 +142,9 @@ public record CardStruct(string name, string text, CardGameUtils.GameConstants.P
 				throw new Exception("Field Header CardStruct.base_controller hash mismatch");
 			}
 			byte type = Common.Common.SerializeN8(ref bytes);
-			if(type != (byte)(Common.TypeBytes.N8))
+			if(type != (byte)(Common.TypeBytes.I32))
 			{
-				throw new Exception($"Wrong field type for CardStruct.base_controller, expected {(byte)(Common.TypeBytes.N8)}, got {type}");
+				throw new Exception($"Wrong field type for CardStruct.base_controller, expected {(byte)(Common.TypeBytes.I32)}, got {type}");
 			}
 		}
 		/* Field Header type_specifics */
@@ -172,8 +172,8 @@ public record CardStruct(string name, string text, CardGameUtils.GameConstants.P
 			throw new Exception($"Wrong enum name hash, got [{string.Join(',', Common.Common.DeserializeName(Enum.GetName(location)!))}]");
 		}
 		uint uid = Common.Common.SerializeN32(ref bytes);
-		byte controller = Common.Common.SerializeN8(ref bytes);
-		byte base_controller = Common.Common.SerializeN8(ref bytes);
+		int controller = Common.Common.SerializeI32(ref bytes);
+		int base_controller = Common.Common.SerializeI32(ref bytes);
 		TypeSpecifics type_specifics = TypeSpecifics.SerializeInternal(ref bytes);
 		return new(name, text, card_class, location, uid, controller, base_controller, type_specifics);
 	}
@@ -198,10 +198,10 @@ public record CardStruct(string name, string text, CardGameUtils.GameConstants.P
 		bytes.Add((byte)(Common.TypeBytes.N32)); /* Type */
 		/* Field Header controller */
 		bytes.AddRange(Common.Common.DeserializeName("controller")); /* Name */
-		bytes.Add((byte)(Common.TypeBytes.N8)); /* Type */
+		bytes.Add((byte)(Common.TypeBytes.I32)); /* Type */
 		/* Field Header base_controller */
 		bytes.AddRange(Common.Common.DeserializeName("base_controller")); /* Name */
-		bytes.Add((byte)(Common.TypeBytes.N8)); /* Type */
+		bytes.Add((byte)(Common.TypeBytes.I32)); /* Type */
 		/* Field Header type_specifics */
 		bytes.AddRange(Common.Common.DeserializeName("type_specifics")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Union)); /* Type */
@@ -218,9 +218,9 @@ public record CardStruct(string name, string text, CardGameUtils.GameConstants.P
 		/* Data uid */
 		bytes.AddRange(Common.Common.DeserializeN32(uid));
 		/* Data controller */
-		bytes.AddRange(Common.Common.DeserializeN8(controller));
+		bytes.AddRange(Common.Common.DeserializeI32(controller));
 		/* Data base_controller */
-		bytes.AddRange(Common.Common.DeserializeN8(base_controller));
+		bytes.AddRange(Common.Common.DeserializeI32(base_controller));
 		/* Data type_specifics */
 		bytes.AddRange(type_specifics.DeserializeInternal());
 		return bytes;

@@ -10,8 +10,8 @@ table CardStruct
 	card_class: #CardGameUtils.GameConstants.PlayerClass;
 	location: #CardGameUtils.GameConstants.Location;
 	uid: n32;
-	controller: n8;
-	base_controller: n8;
+	controller: i32;
+	base_controller: i32;
 	type_specifics: TypeSpecifics;
 }
 

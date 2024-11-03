@@ -60,12 +60,12 @@ public class LocationBasedTrigger
 public class StateReachedTrigger
 {
 	public Location influenceLocation;
-	public CardGameUtils.GameConstantsElectricBoogaloo.State state;
+	public GameConstantsElectricBoogaloo.State state;
 	public TriggerCondition condition;
 	public Effect effect;
 	public bool oneshot, wasTriggered;
 
-	public StateReachedTrigger(Effect effect, TriggerCondition condition, CardGameUtils.GameConstantsElectricBoogaloo.State state, Location influenceLocation = Location.Field, bool oneshot = false)
+	public StateReachedTrigger(Effect effect, TriggerCondition condition, GameConstantsElectricBoogaloo.State state, Location influenceLocation = Location.Field, bool oneshot = false)
 	{
 		this.influenceLocation = influenceLocation;
 		this.state = state;
@@ -73,7 +73,7 @@ public class StateReachedTrigger
 		this.effect = effect;
 		this.condition = condition;
 	}
-	public StateReachedTrigger(Effect effect, CardGameUtils.GameConstantsElectricBoogaloo.State state, Location influenceLocation = Location.Field, bool oneshot = false)
+	public StateReachedTrigger(Effect effect, GameConstantsElectricBoogaloo.State state, Location influenceLocation = Location.Field, bool oneshot = false)
 	{
 		this.influenceLocation = influenceLocation;
 		this.state = state;
@@ -202,7 +202,7 @@ public delegate void RegisterLocationBasedTriggerDelegate(LocationBasedTrigger t
 public delegate void RegisterStateReachedTriggerDelegate(StateReachedTrigger trigger, Card referrer);
 public delegate void RegisterCreatureTargetingTriggerDelegate(CreatureTargetingTrigger trigger, Card referrer);
 public delegate void RegisterLingeringEffectDelegate(LingeringEffectInfo info);
-public delegate void RegisterStateTemporaryLingeringEffectDelegate(LingeringEffectInfo info, CardGameUtils.GameConstantsElectricBoogaloo.State state);
+public delegate void RegisterStateTemporaryLingeringEffectDelegate(LingeringEffectInfo info, GameConstantsElectricBoogaloo.State state);
 public delegate void RegisterActivatedEffectDelegate(ActivatedEffectInfo info);
 public delegate void CastDelegate(int player, Card card);
 public delegate void DrawDelegate(int player, int amount);
@@ -211,9 +211,9 @@ public delegate int GetDamageMultiplierDelegate();
 public delegate Card[] GetCardsInLocationDelegate(int player);
 public delegate Creature[] GetFieldUsedDelegate(int player);
 public delegate Creature?[] GetWholeFieldDelegate(int player);
-public delegate Card[] SelectCardsDelegate(int player, Card[] cards, int amount, string description);
+public delegate Card[] SelectCardsDelegate(int player, Card[] cards, uint amount, string description);
 public delegate void DiscardDelegate(Card card);
-public delegate void DiscardAmountDelegate(int player, int amount);
+public delegate void DiscardAmountDelegate(int player, uint amount);
 public delegate void CreateTokenOnFieldDelegate(int player, int power, int life, string name, Card source);
 public delegate Token CreateTokenDelegate(int player, int power, int life, string name);
 public delegate Creature CreateTokenCopyDelegate(int player, Creature card);

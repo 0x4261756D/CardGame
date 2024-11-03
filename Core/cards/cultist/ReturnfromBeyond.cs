@@ -23,7 +23,7 @@ class ReturnfromBeyond : Spell
 		int maxCost = GetMaxCost();
 		Card[] possibleTargets = FilterValid(cards: GetGrave(Controller), card => card is Creature && card.Cost <= maxCost);
 		Creature target = (Creature)SelectSingleCard(player: Controller, cards: possibleTargets, description: "Select card to return");
-		ReturnCardsToDeck(SelectCards(player: Controller, cards: GetHand(Controller), amount: (target.Cost + 1) / 2, description: "Select cards to return to deck"));
+		ReturnCardsToDeck(SelectCards(player: Controller, cards: GetHand(Controller), amount: (uint)(target.Cost + 1) / 2, description: "Select cards to return to deck"));
 		MoveToField(choosingPlayer: Controller, targetPlayer: Controller, card: target, source: this);
 	}
 

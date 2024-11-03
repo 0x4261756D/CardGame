@@ -929,7 +929,7 @@ public record SToC_Broadcast_FieldUpdate(FieldStruct own_field, FieldStruct opp_
 		return bytes;
 	}
 }
-public record SToC_Response_ShowCards(List<CardGameUtils.Base.CardStruct> cards) : Common.PacketTable
+public record SToC_Response_ShowCards(List<CardGameUtils.Base.CardStruct> cards, string description) : Common.PacketTable
 {
 	public static SToC_Response_ShowCards SerializeInternal(ref Span<byte> bytes)
 	{
@@ -945,6 +945,18 @@ public record SToC_Response_ShowCards(List<CardGameUtils.Base.CardStruct> cards)
 				throw new Exception($"Wrong field type for SToC_Response_ShowCards.cards, expected {(byte)(Common.TypeBytes.Table | Common.TypeBytes.ListFlag)}, got {type}");
 			}
 		}
+		/* Field Header description */
+		{
+			if(!Common.Common.SerializeName(ref bytes, "description")) /* Name */
+			{
+				throw new Exception("Field Header SToC_Response_ShowCards.description hash mismatch");
+			}
+			byte type = Common.Common.SerializeN8(ref bytes);
+			if(type != (byte)(Common.TypeBytes.Str))
+			{
+				throw new Exception($"Wrong field type for SToC_Response_ShowCards.description, expected {(byte)(Common.TypeBytes.Str)}, got {type}");
+			}
+		}
 		byte cardsNestingLevel = Common.Common.SerializeN8(ref bytes);
 		if(cardsNestingLevel != 0)
 		{
@@ -956,7 +968,8 @@ public record SToC_Response_ShowCards(List<CardGameUtils.Base.CardStruct> cards)
 		{
 			cards.Add(CardGameUtils.Base.CardStruct.SerializeInternal(ref bytes));
 		}
-		return new(cards);
+		string description = Common.Common.SerializeStr(ref bytes);
+		return new(cards, description);
 	}
 
 	public List<byte> DeserializeInternal()
@@ -965,6 +978,9 @@ public record SToC_Response_ShowCards(List<CardGameUtils.Base.CardStruct> cards)
 		/* Field Header cards */
 		bytes.AddRange(Common.Common.DeserializeName("cards")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Table | Common.TypeBytes.ListFlag)); /* Type */
+		/* Field Header description */
+		bytes.AddRange(Common.Common.DeserializeName("description")); /* Name */
+		bytes.Add((byte)(Common.TypeBytes.Str)); /* Type */
 		/* Data cards */
 		bytes.Add(0); /* Nesting level */
 		bytes.AddRange(Common.Common.DeserializeN32((uint)cards.Count)); /* Count */
@@ -973,6 +989,8 @@ public record SToC_Response_ShowCards(List<CardGameUtils.Base.CardStruct> cards)
 		{
 			bytes.AddRange(cards_.DeserializeInternal());
 		}
+		/* Data description */
+		bytes.AddRange(Common.Common.DeserializeStr(description));
 		return bytes;
 	}
 }

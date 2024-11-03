@@ -84,7 +84,7 @@ class Field
 		return Array.Exists(cards, card => card == null);
 	}
 
-	internal Creature GetByUID(int uid)
+	internal Creature GetByUID(uint uid)
 	{
 		foreach(Creature? card in cards)
 		{
