@@ -9,6 +9,7 @@ using System.Threading;
 using CardGameUtils;
 using CardGameUtils.Base;
 using CardGameUtils.GameConstants;
+using CardGameUtils.Replay;
 using CardGameUtils.Structs.Duel;
 using static CardGameUtils.Functions;
 
@@ -991,12 +992,13 @@ class DuelCore : Core
 		for(int i = 0; i < Math.Min(damage, players[player].deck.Size); i++)
 		{
 			Card c = players[player].deck.GetAt(i);
-			SendFieldUpdates(); // TODO: shownInfos: new() { { player, new() { card = c.ToStruct(), description = "Revealed" } } });
+			SendShownInfos(player, new(c.ToStruct(), "Revealed"));
 			players[player].deck.PushToRevealed();
 			ProcessTriggers(revelationTriggers, c.uid);
 			SendFieldUpdates();
 		}
 		players[player].deck.PopRevealedAndShuffle();
+		SendShownInfos(player, null);
 	}
 	private void MarkNextZoneOrContinue()
 	{
@@ -1044,9 +1046,9 @@ class DuelCore : Core
 		{
 			if(playerStreams[i]!.DataAvailable)
 			{
-				CToS_Packet packet = CToS_Packet.Serialize(playerStreams[i]!);
-				// TODO: Replay handling
-				if(HandlePacket(packet.content, i))
+				CToS_Content content = CToS_Packet.Serialize(playerStreams[i]!).content;
+				Program.replay?.packets.Add(new(i, new ReplayContent.ctos(content)));
+				if(HandlePacket(content, i))
 				{
 					Log($"{players[i].name} is giving up, closing.");
 					return true;
@@ -1208,7 +1210,7 @@ class DuelCore : Core
 			{
 				if(players[player].abilityUsable && players[player].momentum > 0 && castTriggers.ContainsKey(players[player].ability.uid))
 				{
-					SendFieldUpdates(); // TODO: shownInfos: new() { { player, new() { card = players[player].ability.ToStruct(), description = "Ability" } } });
+					SendShownInfos(player, new(players[player].ability.ToStruct(), "Ability"));
 					players[player].momentum--;
 					players[player].abilityUsable = false;
 					ProcessTriggers(castTriggers, players[player].ability.uid);
@@ -1220,6 +1222,7 @@ class DuelCore : Core
 							ProcessLocationBasedTargetingTriggers(triggers: genericCastTriggers, target: players[player].ability, uid: possiblyTriggeringCard.uid);
 						}
 					}
+					SendShownInfos(player, null);
 				}
 			}
 			break;
@@ -1368,7 +1371,6 @@ class DuelCore : Core
 			has_initiative: State != GameConstantsElectricBoogaloo.State.UNINITIALIZED && initPlayer == player,
 			is_battle_direction_left_to_right: player == turnPlayer,
 			marked_zone: player == 0 ? markedZone : (GameConstantsElectricBoogaloo.FIELD_SIZE - 1 - markedZone),
-			own_shown_info: null,
 			own_field: new
 			(
 				ability: players[player].ability.ToStruct(),
@@ -1381,7 +1383,6 @@ class DuelCore : Core
 				field: [.. players[player].field.ToStruct()],
 				hand: [.. players[player].hand.ToStruct()]
 			),
-			opp_shown_info: null,
 			opp_field: new
 			(
 				ability: players[1 - player].ability.ToStruct(),
@@ -1411,7 +1412,7 @@ class DuelCore : Core
 		{
 			CToS_Content packet = CToS_Packet.Serialize(playerStreams[player]!).content;
 			Log("request received");
-			// TODO: Replay handling Program.replay?.actions.Add(new Replay.GameAction(player: player, packet: packet, clientToServer: true));
+			Program.replay?.packets.Add(new(player, new ReplayContent.ctos(packet)));
 			if(packet is CToS_Content.select_cards_custom response)
 			{
 				Log("final response");
@@ -1531,7 +1532,7 @@ class DuelCore : Core
 			card.isInitialized = true;
 		}
 		_ = RemoveCardFromItsLocation(card);
-		SendFieldUpdates(); // TODO: shownInfos: new() { { player, new() { card = card.ToStruct(), description = CastActionDescription.description } } });
+		SendShownInfos(player, new ShownInfo(card.ToStruct(), CastActionDescription.description));
 		if(!isNew)
 		{
 			switch(card)
@@ -1566,6 +1567,15 @@ class DuelCore : Core
 			}
 		}
 		SendFieldUpdates();
+		SendShownInfos(player, null);
+	}
+
+	public void SendShownInfos(int forPlayer, ShownInfo? info)
+	{
+		for(int i = 0; i < players.Length; i++)
+		{
+			SendPacketToPlayer(new SToC_Content.show_info(new(player: forPlayer, info)), i);
+		}
 	}
 
 	public void ResetAbilityImpl(int player)
@@ -1913,7 +1923,6 @@ class DuelCore : Core
 		{
 			throw new Exception($"Selected the wrong amount of cards ({uids.Count} != {amount})");
 		}
-		// TODO: Make this nicer?
 		return UidsToCards(cards, uids);
 	}
 	public void DiscardAmountImpl(int player, uint amount)
@@ -2106,14 +2115,14 @@ class DuelCore : Core
 
 	public static T ReceivePacketFromPlayer<T>(int player) where T : CToS_Content
 	{
-		CToS_Packet packet = CToS_Packet.Serialize(playerStreams[player]!);
-		// TODO: Replay handling
-		return (T)packet.content;
+		CToS_Content packet = CToS_Packet.Serialize(playerStreams[player]!).content;
+		Program.replay?.packets.Add(new(player, new ReplayContent.ctos(packet)));
+		return (T)packet;
 	}
 	public static void SendPacketToPlayer(SToC_Content content, int player)
 	{
 		byte[] payload = new SToC_Packet(content).Deserialize();
-		// TODO: Replay handling
+		Program.replay?.packets.Add(new(player, new ReplayContent.stoc(content)));
 		playerStreams[player]!.Write(payload);
 	}
 }

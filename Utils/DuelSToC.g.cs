@@ -132,6 +132,10 @@ public interface SToC_Content : Common.PacketUnion
 		{
 			return show_cards.SerializeInternal(ref bytes);
 		}
+		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("show_info")))
+		{
+			return show_info.SerializeInternal(ref bytes);
+		}
 		else 
 		{
 			throw new Exception("Unknown union variant in SToC_Content");
@@ -335,6 +339,89 @@ public interface SToC_Content : Common.PacketUnion
 			SToC_Response_ShowCards value = SToC_Response_ShowCards.SerializeInternal(ref bytes);
 			return new(value);
 		}
+	}
+	public record show_info(SToC_Broadcast_ShowInfo value) : SToC_Content
+	{
+		public List<byte> DeserializeInternal()
+		{
+			List<byte> bytes = [];
+			bytes.AddRange(Common.Common.DeserializeName("show_info")); /* Name */
+			bytes.Add((byte)(Common.TypeBytes.Table)); /* Type */
+			bytes.AddRange(value.DeserializeInternal());
+			return bytes;
+		}
+
+		public static show_info SerializeInternal(ref Span<byte> bytes)
+		{
+			byte type = Common.Common.SerializeN8(ref bytes);
+			if(type != (byte)(Common.TypeBytes.Table))
+			{
+				throw new Exception($"Wrong field type for SToC_Content/show_info, expected `{(byte)(Common.TypeBytes.Table)}`, got `{type}`");
+			}
+			SToC_Broadcast_ShowInfo value = SToC_Broadcast_ShowInfo.SerializeInternal(ref bytes);
+			return new(value);
+		}
+	}
+}
+public record SToC_Broadcast_ShowInfo(int player, ShownInfo? info) : Common.PacketTable
+{
+	public static SToC_Broadcast_ShowInfo SerializeInternal(ref Span<byte> bytes)
+	{
+		/* Field Header player */
+		{
+			if(!Common.Common.SerializeName(ref bytes, "player")) /* Name */
+			{
+				throw new Exception("Field Header SToC_Broadcast_ShowInfo.player hash mismatch");
+			}
+			byte type = Common.Common.SerializeN8(ref bytes);
+			if(type != (byte)(Common.TypeBytes.I32))
+			{
+				throw new Exception($"Wrong field type for SToC_Broadcast_ShowInfo.player, expected {(byte)(Common.TypeBytes.I32)}, got {type}");
+			}
+		}
+		/* Field Header info */
+		{
+			if(!Common.Common.SerializeName(ref bytes, "info")) /* Name */
+			{
+				throw new Exception("Field Header SToC_Broadcast_ShowInfo.info hash mismatch");
+			}
+			byte type = Common.Common.SerializeN8(ref bytes);
+			if(type != (byte)(Common.TypeBytes.Table | Common.TypeBytes.OptionalFlag))
+			{
+				throw new Exception($"Wrong field type for SToC_Broadcast_ShowInfo.info, expected {(byte)(Common.TypeBytes.Table | Common.TypeBytes.OptionalFlag)}, got {type}");
+			}
+		}
+		int player = Common.Common.SerializeI32(ref bytes);
+		ShownInfo? info = null;
+		if(Common.Common.SerializeBool(ref bytes))
+		{
+			info = ShownInfo.SerializeInternal(ref bytes);
+		}
+		return new(player, info);
+	}
+
+	public List<byte> DeserializeInternal()
+	{
+		List<byte> bytes = [];
+		/* Field Header player */
+		bytes.AddRange(Common.Common.DeserializeName("player")); /* Name */
+		bytes.Add((byte)(Common.TypeBytes.I32)); /* Type */
+		/* Field Header info */
+		bytes.AddRange(Common.Common.DeserializeName("info")); /* Name */
+		bytes.Add((byte)(Common.TypeBytes.Table | Common.TypeBytes.OptionalFlag)); /* Type */
+		/* Data player */
+		bytes.AddRange(Common.Common.DeserializeI32(player));
+		/* Data info */
+		if(info is null)
+		{
+			bytes.Add(0); /* IsSet */
+		}
+		else
+		{
+			bytes.Add(1); /* IsSet */
+			bytes.AddRange(info.DeserializeInternal());
+		}
+		return bytes;
 	}
 }
 public record SToC_Broadcast_GameResult(CardGameUtils.GameConstants.GameResult result) : Common.PacketTable
@@ -736,7 +823,7 @@ public record SToC_Request_SelectZone(List<bool> options) : Common.PacketTable
 		return bytes;
 	}
 }
-public record SToC_Broadcast_FieldUpdate(FieldStruct own_field, FieldStruct opp_field, ShownInfo? own_shown_info, ShownInfo? opp_shown_info, uint turn, bool has_initiative, bool is_battle_direction_left_to_right, int? marked_zone) : Common.PacketTable
+public record SToC_Broadcast_FieldUpdate(FieldStruct own_field, FieldStruct opp_field, uint turn, bool has_initiative, bool is_battle_direction_left_to_right, int? marked_zone) : Common.PacketTable
 {
 	public static SToC_Broadcast_FieldUpdate SerializeInternal(ref Span<byte> bytes)
 	{
@@ -762,30 +849,6 @@ public record SToC_Broadcast_FieldUpdate(FieldStruct own_field, FieldStruct opp_
 			if(type != (byte)(Common.TypeBytes.Table))
 			{
 				throw new Exception($"Wrong field type for SToC_Broadcast_FieldUpdate.opp_field, expected {(byte)(Common.TypeBytes.Table)}, got {type}");
-			}
-		}
-		/* Field Header own_shown_info */
-		{
-			if(!Common.Common.SerializeName(ref bytes, "own_shown_info")) /* Name */
-			{
-				throw new Exception("Field Header SToC_Broadcast_FieldUpdate.own_shown_info hash mismatch");
-			}
-			byte type = Common.Common.SerializeN8(ref bytes);
-			if(type != (byte)(Common.TypeBytes.Table | Common.TypeBytes.OptionalFlag))
-			{
-				throw new Exception($"Wrong field type for SToC_Broadcast_FieldUpdate.own_shown_info, expected {(byte)(Common.TypeBytes.Table | Common.TypeBytes.OptionalFlag)}, got {type}");
-			}
-		}
-		/* Field Header opp_shown_info */
-		{
-			if(!Common.Common.SerializeName(ref bytes, "opp_shown_info")) /* Name */
-			{
-				throw new Exception("Field Header SToC_Broadcast_FieldUpdate.opp_shown_info hash mismatch");
-			}
-			byte type = Common.Common.SerializeN8(ref bytes);
-			if(type != (byte)(Common.TypeBytes.Table | Common.TypeBytes.OptionalFlag))
-			{
-				throw new Exception($"Wrong field type for SToC_Broadcast_FieldUpdate.opp_shown_info, expected {(byte)(Common.TypeBytes.Table | Common.TypeBytes.OptionalFlag)}, got {type}");
 			}
 		}
 		/* Field Header turn */
@@ -838,16 +901,6 @@ public record SToC_Broadcast_FieldUpdate(FieldStruct own_field, FieldStruct opp_
 		}
 		FieldStruct own_field = FieldStruct.SerializeInternal(ref bytes);
 		FieldStruct opp_field = FieldStruct.SerializeInternal(ref bytes);
-		ShownInfo? own_shown_info = null;
-		if(Common.Common.SerializeBool(ref bytes))
-		{
-			own_shown_info = ShownInfo.SerializeInternal(ref bytes);
-		}
-		ShownInfo? opp_shown_info = null;
-		if(Common.Common.SerializeBool(ref bytes))
-		{
-			opp_shown_info = ShownInfo.SerializeInternal(ref bytes);
-		}
 		uint turn = Common.Common.SerializeN32(ref bytes);
 		bool has_initiative = Common.Common.SerializeBool(ref bytes);
 		bool is_battle_direction_left_to_right = Common.Common.SerializeBool(ref bytes);
@@ -856,7 +909,7 @@ public record SToC_Broadcast_FieldUpdate(FieldStruct own_field, FieldStruct opp_
 		{
 			marked_zone = Common.Common.SerializeI32(ref bytes);
 		}
-		return new(own_field, opp_field, own_shown_info, opp_shown_info, turn, has_initiative, is_battle_direction_left_to_right, marked_zone);
+		return new(own_field, opp_field, turn, has_initiative, is_battle_direction_left_to_right, marked_zone);
 	}
 
 	public List<byte> DeserializeInternal()
@@ -868,12 +921,6 @@ public record SToC_Broadcast_FieldUpdate(FieldStruct own_field, FieldStruct opp_
 		/* Field Header opp_field */
 		bytes.AddRange(Common.Common.DeserializeName("opp_field")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Table)); /* Type */
-		/* Field Header own_shown_info */
-		bytes.AddRange(Common.Common.DeserializeName("own_shown_info")); /* Name */
-		bytes.Add((byte)(Common.TypeBytes.Table | Common.TypeBytes.OptionalFlag)); /* Type */
-		/* Field Header opp_shown_info */
-		bytes.AddRange(Common.Common.DeserializeName("opp_shown_info")); /* Name */
-		bytes.Add((byte)(Common.TypeBytes.Table | Common.TypeBytes.OptionalFlag)); /* Type */
 		/* Field Header turn */
 		bytes.AddRange(Common.Common.DeserializeName("turn")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.N32)); /* Type */
@@ -890,26 +937,6 @@ public record SToC_Broadcast_FieldUpdate(FieldStruct own_field, FieldStruct opp_
 		bytes.AddRange(own_field.DeserializeInternal());
 		/* Data opp_field */
 		bytes.AddRange(opp_field.DeserializeInternal());
-		/* Data own_shown_info */
-		if(own_shown_info is null)
-		{
-			bytes.Add(0); /* IsSet */
-		}
-		else
-		{
-			bytes.Add(1); /* IsSet */
-			bytes.AddRange(own_shown_info.DeserializeInternal());
-		}
-		/* Data opp_shown_info */
-		if(opp_shown_info is null)
-		{
-			bytes.Add(0); /* IsSet */
-		}
-		else
-		{
-			bytes.Add(1); /* IsSet */
-			bytes.AddRange(opp_shown_info.DeserializeInternal());
-		}
 		/* Data turn */
 		bytes.AddRange(Common.Common.DeserializeN32(turn));
 		/* Data has_initiative */

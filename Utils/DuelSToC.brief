@@ -20,6 +20,13 @@ union SToC_Content
 	select_zone: SToC_Request_SelectZone;
 	field_update: SToC_Broadcast_FieldUpdate;
 	show_cards: SToC_Response_ShowCards;
+	show_info: SToC_Broadcast_ShowInfo;
+}
+
+table SToC_Broadcast_ShowInfo
+{
+	player: i32;
+	info: ShownInfo?;
 }
 
 table SToC_Broadcast_GameResult
@@ -67,8 +74,6 @@ table SToC_Broadcast_FieldUpdate
 {
 	own_field: FieldStruct;
 	opp_field: FieldStruct;
-	own_shown_info: ShownInfo?;
-	opp_shown_info: ShownInfo?;
 	turn: n32;
 	has_initiative: bool;
 	is_battle_direction_left_to_right: bool;

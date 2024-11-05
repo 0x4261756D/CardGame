@@ -1,0 +1,25 @@
+import "./GameConstants.brief";
+import "./DuelCToS.brief";
+import "./DuelSToC.brief";
+version 1;
+namespace CardGameUtils.Replay;
+root Replay;
+
+table Replay
+{
+	seed: i32;
+	cmdline_args: [str];
+	packets: [ReplayPacket];
+}
+
+table ReplayPacket
+{
+	player: i32;
+	content: ReplayContent;
+}
+
+union ReplayContent
+{
+	ctos: #CardGameUtils.Structs.Duel.CToS_Content;
+	stoc: #CardGameUtils.Structs.Duel.SToC_Content;
+}
