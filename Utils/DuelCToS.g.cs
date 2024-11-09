@@ -98,7 +98,7 @@ public interface CToS_Content : Common.PacketUnion
 		bytes = bytes[4..];
 		if(nameSpan.SequenceEqual(Common.Common.DeserializeName("surrender")))
 		{
-			return new surrender();
+			return surrender.SerializeInternal(ref bytes);
 		}
 		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("get_actions")))
 		{
@@ -130,7 +130,7 @@ public interface CToS_Content : Common.PacketUnion
 		}
 		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("pass")))
 		{
-			return new pass();
+			return pass.SerializeInternal(ref bytes);
 		}
 		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("view_grave")))
 		{
@@ -155,7 +155,7 @@ public interface CToS_Content : Common.PacketUnion
 		}
 		public List<byte> DeserializeInternal()
 		{
-			return [];
+			return [.. Common.Common.DeserializeName("surrender"), (byte)Common.TypeBytes.Void];
 		}
 	}
 	public record get_actions(CToS_Request_GetActions value) : CToS_Content
@@ -325,7 +325,7 @@ public interface CToS_Content : Common.PacketUnion
 		}
 		public List<byte> DeserializeInternal()
 		{
-			return [];
+			return [.. Common.Common.DeserializeName("pass"), (byte)Common.TypeBytes.Void];
 		}
 	}
 	public record view_grave(CToS_Request_ViewGrave value) : CToS_Content

@@ -98,7 +98,7 @@ public interface CToS_Content : Common.PacketUnion
 		bytes = bytes[4..];
 		if(nameSpan.SequenceEqual(Common.Common.DeserializeName("decklists")))
 		{
-			return new decklists();
+			return decklists.SerializeInternal(ref bytes);
 		}
 		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("decklist")))
 		{
@@ -135,7 +135,7 @@ public interface CToS_Content : Common.PacketUnion
 		}
 		public List<byte> DeserializeInternal()
 		{
-			return [];
+			return [.. Common.Common.DeserializeName("decklists"), (byte)Common.TypeBytes.Void];
 		}
 	}
 	public record decklist(CToS_Request_Decklist value) : CToS_Content

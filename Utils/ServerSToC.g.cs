@@ -654,7 +654,7 @@ public interface SToC_Response_Start : Common.PacketUnion
 		}
 		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("success")))
 		{
-			return new success();
+			return success.SerializeInternal(ref bytes);
 		}
 		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("success_but_waiting")))
 		{
@@ -701,7 +701,7 @@ public interface SToC_Response_Start : Common.PacketUnion
 		}
 		public List<byte> DeserializeInternal()
 		{
-			return [];
+			return [.. Common.Common.DeserializeName("success"), (byte)Common.TypeBytes.Void];
 		}
 	}
 	public record success_but_waiting(SuccessButWaiting value) : SToC_Response_Start

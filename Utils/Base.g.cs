@@ -246,7 +246,7 @@ public interface TypeSpecifics : Common.PacketUnion
 		}
 		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("unknown")))
 		{
-			return new unknown();
+			return unknown.SerializeInternal(ref bytes);
 		}
 		else 
 		{
@@ -333,7 +333,7 @@ public interface TypeSpecifics : Common.PacketUnion
 		}
 		public List<byte> DeserializeInternal()
 		{
-			return [];
+			return [.. Common.Common.DeserializeName("unknown"), (byte)Common.TypeBytes.Void];
 		}
 	}
 }
@@ -833,7 +833,7 @@ public interface ErrorOr : Common.PacketUnion
 		bytes = bytes[4..];
 		if(nameSpan.SequenceEqual(Common.Common.DeserializeName("success")))
 		{
-			return new success();
+			return success.SerializeInternal(ref bytes);
 		}
 		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("error")))
 		{
@@ -858,7 +858,7 @@ public interface ErrorOr : Common.PacketUnion
 		}
 		public List<byte> DeserializeInternal()
 		{
-			return [];
+			return [.. Common.Common.DeserializeName("success"), (byte)Common.TypeBytes.Void];
 		}
 	}
 	public record error(string value) : ErrorOr

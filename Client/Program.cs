@@ -4,7 +4,6 @@ using System.IO;
 using System.Text.Json;
 using Avalonia;
 using CardGameUtils;
-using CardGameUtils.Structs;
 
 namespace CardGameClient;
 

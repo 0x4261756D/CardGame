@@ -281,16 +281,16 @@ public abstract partial class Creature : Card
 		{
 			if(Keywords.Count > 0)
 			{
-				foreach(var keyword in Keywords)
+				foreach(KeyValuePair<Keyword, int> keyword in Keywords)
 				{
-					_ = text.Append($"[{keyword.Key}] ");
+					_ = text.Append('[').Append(keyword.Key).Append("] ");
 					if(keyword.Value != 0)
 					{
 						if(keyword.Key == Keyword.Colossal)
 						{
 							_ = text.Append('+');
 						}
-						_ = text.Append($"{keyword.Value}");
+						_ = text.Append(keyword.Value);
 					}
 					_ = text.Append('\n');
 				}

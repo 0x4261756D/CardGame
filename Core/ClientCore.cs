@@ -47,7 +47,7 @@ partial class ClientCore : Core
 			{
 				continue;
 			}
-			decklist.RemoveAt(0);
+			// decklist.RemoveAt(0);
 			List<CardStruct> deckCards = [];
 			CardStruct? ability = null;
 			CardStruct? quest = null;
@@ -244,7 +244,7 @@ partial class ClientCore : Core
 	{
 		return cards.FindAll(card =>
 			(playerClass == PlayerClass.All || (includeGenericCards && card.card_class == PlayerClass.All) || card.card_class == playerClass)
-			&& card.ToString().Contains(filter, StringComparison.CurrentCultureIgnoreCase));
+			&& FormatCardStruct(card).Contains(filter, StringComparison.CurrentCultureIgnoreCase));
 	}
 
 	private CardGameUtils.Base.Deck? FindDeckByName(string name)

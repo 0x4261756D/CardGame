@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Net.Sockets;
@@ -9,9 +10,8 @@ using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using CardGameUtils.Structs;
-using static CardGameUtils.Functions;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Base;
+using CardGameUtils.Structs.Duel;
 
 namespace CardGameClient;
 
@@ -21,7 +21,7 @@ public partial class CustomSelectCardsWindow : Window
 	private bool shouldReallyClose;
 	private readonly Action<CardStruct> showCardAction;
 
-	public CustomSelectCardsWindow(string text, CardStruct[] cards, bool initialState, Stream stream, int playerIndex, Action<CardStruct> showCardAction)
+	public CustomSelectCardsWindow(string text, List<CardStruct> cards, bool initialState, Stream stream, int playerIndex, Action<CardStruct> showCardAction)
 	{
 		this.stream = stream;
 		this.showCardAction = showCardAction;
@@ -69,15 +69,20 @@ public partial class CustomSelectCardsWindow : Window
 
 	public void ConfirmClick(object? sender, RoutedEventArgs args)
 	{
-		stream.Write(GeneratePayload(new DuelPackets.CustomSelectCardsResponse(uids: UIUtils.CardListBoxSelectionToUID(CardSelectionList))));
+		stream.Write(new CToS_Packet(new CToS_Content.select_cards_custom(new(uids: UIUtils.CardListBoxSelectionToUID(CardSelectionList)))).Deserialize());
 		shouldReallyClose = true;
 		Close();
 	}
 
 	public void CardSelectionChanged(object sender, SelectionChangedEventArgs args)
 	{
-		stream.Write(GeneratePayload(new DuelPackets.CustomSelectCardsIntermediateRequest(uids: UIUtils.CardListBoxSelectionToUID((ListBox)sender))));
-		((CustomSelectCardViewModel)DataContext!).CanConfirm = ReceivePacket<DuelPackets.CustomSelectCardsIntermediateResponse>((NetworkStream)stream)!.isValid;
+		stream.Write(new CToS_Packet(new CToS_Content.select_cards_custom_intermediate(new(uids: UIUtils.CardListBoxSelectionToUID((ListBox)sender)))).Deserialize());
+		((CustomSelectCardViewModel)DataContext!).CanConfirm = ReceivePacket<SToC_Content.select_cards_custom_intermediate>((NetworkStream)stream)!.value.is_valid;
+	}
+
+	public static T ReceivePacket<T>(NetworkStream stream) where T : SToC_Content
+	{
+		return (T)CToS_Packet.Serialize(stream).content;
 	}
 }
 public class CustomSelectCardViewModel : INotifyPropertyChanged

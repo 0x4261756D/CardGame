@@ -98,7 +98,7 @@ public interface CToS_Content : Common.PacketUnion
 		bytes = bytes[4..];
 		if(nameSpan.SequenceEqual(Common.Common.DeserializeName("additional_cards")))
 		{
-			return new additional_cards();
+			return additional_cards.SerializeInternal(ref bytes);
 		}
 		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("artworks")))
 		{
@@ -114,11 +114,11 @@ public interface CToS_Content : Common.PacketUnion
 		}
 		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("leave")))
 		{
-			return new leave();
+			return leave.SerializeInternal(ref bytes);
 		}
 		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("rooms")))
 		{
-			return new rooms();
+			return rooms.SerializeInternal(ref bytes);
 		}
 		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("start")))
 		{
@@ -143,7 +143,7 @@ public interface CToS_Content : Common.PacketUnion
 		}
 		public List<byte> DeserializeInternal()
 		{
-			return [];
+			return [.. Common.Common.DeserializeName("additional_cards"), (byte)Common.TypeBytes.Void];
 		}
 	}
 	public record artworks(CToS_Request_Artworks value) : CToS_Content
@@ -225,7 +225,7 @@ public interface CToS_Content : Common.PacketUnion
 		}
 		public List<byte> DeserializeInternal()
 		{
-			return [];
+			return [.. Common.Common.DeserializeName("leave"), (byte)Common.TypeBytes.Void];
 		}
 	}
 	public record rooms() : CToS_Content
@@ -241,7 +241,7 @@ public interface CToS_Content : Common.PacketUnion
 		}
 		public List<byte> DeserializeInternal()
 		{
-			return [];
+			return [.. Common.Common.DeserializeName("rooms"), (byte)Common.TypeBytes.Void];
 		}
 	}
 	public record start(CToS_Request_Start value) : CToS_Content
