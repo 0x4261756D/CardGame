@@ -65,11 +65,11 @@ table SToC_Response_Rooms
 union SToC_Response_Start
 {
 	failure: str;
-	success: void;
-	success_but_waiting: SuccessButWaiting;
+	success: Success;
+	success_but_waiting: void;
 }
 
-table SuccessButWaiting
+table Success
 {
 	id: str;
 	port: i32;

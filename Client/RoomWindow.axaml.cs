@@ -114,14 +114,14 @@ public partial class RoomWindow : Window
 			{
 				switch(response.value)
 				{
-					case SToC_Response_Start.success:
+					case SToC_Response_Start.success_but_waiting:
 					{
-						new ErrorPopup("Unexpected success (weird, right?)").Show();
+						
 					}
 					break;
-					case SToC_Response_Start.success_but_waiting sbw:
+					case SToC_Response_Start.success success:
 					{
-						StartGame(sbw.value.port, sbw.value.id);
+						StartGame(success.value.port, success.value.id);
 					}
 					break;
 					case SToC_Response_Start.failure failure:
@@ -129,6 +129,8 @@ public partial class RoomWindow : Window
 						new ErrorPopup(failure.value).Show();
 					}
 					break;
+					default:
+						throw new NotImplementedException();
 				}
 			}
 			break;
@@ -195,17 +197,18 @@ public partial class RoomWindow : Window
 				decklist: deck,
 				no_shuffle: NoShuffleBox.IsChecked ?? false
 			))).Deserialize());
-			SToC_Content content = SToC_Packet.Serialize(client.GetStream()).content;
+			SToC_Response_Start content = ((SToC_Content.start)SToC_Packet.Serialize(client.GetStream()).content).value;
 			switch(content)
 			{
-				case SToC_Response_Start.success:
+				case SToC_Response_Start.success success:
 				{
-					((Button)sender).IsEnabled = false;
+					StartGame(success.value.port, success.value.id);
 				}
 				break;
-				case SToC_Response_Start.success_but_waiting sbw:
+				case SToC_Response_Start.success_but_waiting:
 				{
-					StartGame(sbw.value.port, sbw.value.id);
+					((Button)sender).IsEnabled = false;
+					((Button)sender).Content = "Waiting";
 				}
 				break;
 				case SToC_Response_Start.failure failure:
@@ -213,6 +216,8 @@ public partial class RoomWindow : Window
 					new ErrorPopup(failure.value).Show();
 				}
 				break;
+				default:
+					throw new NotImplementedException();
 			}
 		}
 		catch(Exception ex)

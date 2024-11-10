@@ -688,71 +688,71 @@ public interface SToC_Response_Start : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record success() : SToC_Response_Start
-	{
-		public static success SerializeInternal(ref Span<byte> bytes)
-		{
-			byte type = Common.Common.SerializeN8(ref bytes);
-			if(type != (byte)Common.TypeBytes.Void)
-			{
-				throw new Exception("Wrong field type for SToC_Response_Start/success, expected `{(byte)Common.TypeBytes.Void}`, got `type`");
-			}
-			return new();
-		}
-		public List<byte> DeserializeInternal()
-		{
-			return [.. Common.Common.DeserializeName("success"), (byte)Common.TypeBytes.Void];
-		}
-	}
-	public record success_but_waiting(SuccessButWaiting value) : SToC_Response_Start
+	public record success(Success value) : SToC_Response_Start
 	{
 		public List<byte> DeserializeInternal()
 		{
 			List<byte> bytes = [];
-			bytes.AddRange(Common.Common.DeserializeName("success_but_waiting")); /* Name */
+			bytes.AddRange(Common.Common.DeserializeName("success")); /* Name */
 			bytes.Add((byte)(Common.TypeBytes.Table)); /* Type */
 			bytes.AddRange(value.DeserializeInternal());
 			return bytes;
 		}
 
-		public static success_but_waiting SerializeInternal(ref Span<byte> bytes)
+		public static success SerializeInternal(ref Span<byte> bytes)
 		{
 			byte type = Common.Common.SerializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Table))
 			{
-				throw new Exception($"Wrong field type for SToC_Response_Start/success_but_waiting, expected `{(byte)(Common.TypeBytes.Table)}`, got `{type}`");
+				throw new Exception($"Wrong field type for SToC_Response_Start/success, expected `{(byte)(Common.TypeBytes.Table)}`, got `{type}`");
 			}
-			SuccessButWaiting value = SuccessButWaiting.SerializeInternal(ref bytes);
+			Success value = Success.SerializeInternal(ref bytes);
 			return new(value);
 		}
 	}
+	public record success_but_waiting() : SToC_Response_Start
+	{
+		public static success_but_waiting SerializeInternal(ref Span<byte> bytes)
+		{
+			byte type = Common.Common.SerializeN8(ref bytes);
+			if(type != (byte)Common.TypeBytes.Void)
+			{
+				throw new Exception("Wrong field type for SToC_Response_Start/success_but_waiting, expected `{(byte)Common.TypeBytes.Void}`, got `type`");
+			}
+			return new();
+		}
+		public List<byte> DeserializeInternal()
+		{
+			return [.. Common.Common.DeserializeName("success_but_waiting"), (byte)Common.TypeBytes.Void];
+		}
+	}
 }
-public record SuccessButWaiting(string id, int port) : Common.PacketTable
+public record Success(string id, int port) : Common.PacketTable
 {
-	public static SuccessButWaiting SerializeInternal(ref Span<byte> bytes)
+	public static Success SerializeInternal(ref Span<byte> bytes)
 	{
 		/* Field Header id */
 		{
 			if(!Common.Common.SerializeName(ref bytes, "id")) /* Name */
 			{
-				throw new Exception("Field Header SuccessButWaiting.id hash mismatch");
+				throw new Exception("Field Header Success.id hash mismatch");
 			}
 			byte type = Common.Common.SerializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Str))
 			{
-				throw new Exception($"Wrong field type for SuccessButWaiting.id, expected {(byte)(Common.TypeBytes.Str)}, got {type}");
+				throw new Exception($"Wrong field type for Success.id, expected {(byte)(Common.TypeBytes.Str)}, got {type}");
 			}
 		}
 		/* Field Header port */
 		{
 			if(!Common.Common.SerializeName(ref bytes, "port")) /* Name */
 			{
-				throw new Exception("Field Header SuccessButWaiting.port hash mismatch");
+				throw new Exception("Field Header Success.port hash mismatch");
 			}
 			byte type = Common.Common.SerializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.I32))
 			{
-				throw new Exception($"Wrong field type for SuccessButWaiting.port, expected {(byte)(Common.TypeBytes.I32)}, got {type}");
+				throw new Exception($"Wrong field type for Success.port, expected {(byte)(Common.TypeBytes.I32)}, got {type}");
 			}
 		}
 		string id = Common.Common.SerializeStr(ref bytes);

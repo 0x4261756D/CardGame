@@ -82,7 +82,7 @@ public partial class CustomSelectCardsWindow : Window
 
 	public static T ReceivePacket<T>(NetworkStream stream) where T : SToC_Content
 	{
-		return (T)CToS_Packet.Serialize(stream).content;
+		return (T)SToC_Packet.Serialize(stream).content;
 	}
 }
 public class CustomSelectCardViewModel : INotifyPropertyChanged

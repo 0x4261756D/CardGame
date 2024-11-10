@@ -154,7 +154,7 @@ public partial class ServerWindow : Window
 	}
 	public static T ReceivePacket<T>(NetworkStream stream) where T : SToC_Content
 	{
-		return (T)CToS_Packet.Serialize(stream).content;
+		return (T)SToC_Packet.Serialize(stream).content;
 	}
 	public static SToC_Content? TryReceivePacket(NetworkStream stream, int timeoutInMs)
 	{

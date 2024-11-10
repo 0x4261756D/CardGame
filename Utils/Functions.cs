@@ -10,6 +10,25 @@ namespace CardGameUtils;
 
 partial class Functions
 {
+	public static string GetDeckString(Deck deck)
+	{
+		StringBuilder builder = new();
+		_ = builder.Append(deck.player_class);
+		if(deck.ability is not null)
+		{
+			_ = builder.AppendLine().Append('#').Append(deck.ability.name);
+		}
+		if(deck.quest is not null)
+		{
+			_ = builder.AppendLine().Append('|').Append(deck.quest.name);
+		}
+		foreach(CardStruct card in deck.cards)
+		{
+			_ = builder.AppendLine().Append(card.name);
+		}
+		return builder.AppendLine().ToString();
+	}
+
 	public static string FormatCardStruct(CardStruct card, char separator = '\n', bool includeInfoIrrelevantForDeckEdit = true)
 	{
 		StringBuilder builder = new();
