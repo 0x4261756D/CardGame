@@ -23,6 +23,7 @@ public partial class DuelWindow : Window
 	private readonly int playerIndex;
 	private readonly TcpClient client;
 	private readonly Stream stream;
+	private readonly Mutex streamMutex;
 	private readonly Task networkingTask;
 	private readonly Flyout optionsFlyout = new();
 	private interface IFieldUpdateOrInfo
@@ -43,6 +44,7 @@ public partial class DuelWindow : Window
 		InitializeComponent();
 		client = new TcpClient();
 		stream = new MemoryStream();
+		streamMutex = new Mutex();
 		networkingTask = new Task(() => { });
 		OppField.LayoutUpdated += FieldInitialized;
 		OwnField.LayoutUpdated += FieldInitialized;
@@ -53,6 +55,7 @@ public partial class DuelWindow : Window
 		InitializeComponent();
 		this.client = client;
 		stream = client.GetStream();
+		streamMutex = new Mutex();
 		networkingTask = new Task(HandleNetwork, TaskCreationOptions.LongRunning);
 		networkingTask.Start();
 		Closed += (sender, args) =>
@@ -91,20 +94,28 @@ public partial class DuelWindow : Window
 	{
 		if(client.Connected)
 		{
+			_ = streamMutex.WaitOne();
 			stream.Write(new CToS_Packet(content).Deserialize());
+			streamMutex.ReleaseMutex();
 		}
 		else
 		{
 			new ErrorPopup("Stream was closed").Show(this);
 		}
 	}
-	public static SToC_Content? TryReceivePacket(NetworkStream stream, int timeoutInMs)
+	public SToC_Content? TryReceivePacket(NetworkStream stream, int timeoutInMs)
 	{
 		try
 		{
-			Task task = Task.Run(() => { while(!stream.DataAvailable) { } return; });
-			int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
-			return i == 0 ? SToC_Packet.Serialize(stream).content : null;
+			if(streamMutex.WaitOne(timeoutInMs))
+			{
+				Task task = Task.Run(() => { while(!stream.DataAvailable) { } });
+				int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
+				SToC_Content? ret = i == 0 ? SToC_Packet.Serialize(stream).content : null;
+				streamMutex.ReleaseMutex();
+				return ret;
+			}
+			return null;
 		}
 		catch(Exception e)
 		{
@@ -172,6 +183,7 @@ public partial class DuelWindow : Window
 					}
 				}
 			}
+			Thread.Sleep(10);
 		}
 	}
 
@@ -192,13 +204,13 @@ public partial class DuelWindow : Window
 			case SToC_Content.yes_no request:
 			{
 				Log("Received a yesno requets", severity: LogSeverity.Error);
-				windowToShowAfterUpdate = new YesNoWindow(request.value.question, stream);
+				windowToShowAfterUpdate = new YesNoWindow(request.value.question, stream, streamMutex);
 			}
 			break;
 			case SToC_Content.select_cards_custom r:
 			{
 				SToC_Request_SelectCardsCustom request = r.value;
-				windowToShowAfterUpdate = new CustomSelectCardsWindow(request.description!, request.cards, request.initial_state, stream, playerIndex, ShowCard);
+				windowToShowAfterUpdate = new CustomSelectCardsWindow(request.description!, request.cards, request.initial_state, stream, streamMutex, playerIndex, ShowCard);
 			}
 			break;
 			case SToC_Content.get_actions request:
@@ -208,7 +220,7 @@ public partial class DuelWindow : Window
 			break;
 			case SToC_Content.select_zone request:
 			{
-				windowToShowAfterUpdate = new SelectZoneWindow(request.value.options, stream);
+				windowToShowAfterUpdate = new SelectZoneWindow(request.value.options, stream, streamMutex);
 			}
 			break;
 			case SToC_Content.game_result request:
@@ -219,7 +231,7 @@ public partial class DuelWindow : Window
 			case SToC_Content.select_cards r:
 			{
 				SToC_Request_SelectCards request = r.value;
-				windowToShowAfterUpdate = new SelectCardsWindow(request.description, request.amount, request.cards, stream, playerIndex, ShowCard);
+				windowToShowAfterUpdate = new SelectCardsWindow(request.description, request.amount, request.cards, stream, streamMutex, playerIndex, ShowCard);
 			}
 			break;
 			case SToC_Content.show_cards r:
@@ -500,6 +512,7 @@ public partial class DuelWindow : Window
 						if(request.info.card is not null)
 						{
 							_ = text.Append(": ").Append(request.info.card.name);
+							OwnShowPanel.Children.Add(CreateCardButton(request.info.card));
 							block.PointerEntered += (sender, args) =>
 							{
 								if(sender == null)
@@ -511,7 +524,15 @@ public partial class DuelWindow : Window
 									return;
 								}
 								UIUtils.CardHover(CardImagePanel, CardTextBlock, request.info.card, true);
-								OppShowPanel.Children.Add(CreateCardButton(request.info.card));
+								OwnShowPanel.Children.Add(CreateCardButton(request.info.card));
+							};
+							block.PointerExited += (sender, args) =>
+							{
+								if(sender is null)
+								{
+									return;
+								}
+								OwnShowPanel.Children.Clear();
 							};
 						}
 						if(request.info.description is not null)
@@ -532,6 +553,7 @@ public partial class DuelWindow : Window
 						if(request.info.card is not null)
 						{
 							_ = text.Append(": ").Append(request.info.card.name);
+							OppShowPanel.Children.Add(CreateCardButton(request.info.card));
 							block.PointerEntered += (sender, args) =>
 							{
 								if(sender == null)
@@ -543,7 +565,15 @@ public partial class DuelWindow : Window
 									return;
 								}
 								UIUtils.CardHover(CardImagePanel, CardTextBlock, request.info.card, true);
-								OwnShowPanel.Children.Add(CreateCardButton(request.info.card));
+								OppShowPanel.Children.Add(CreateCardButton(request.info.card));
+							};
+							block.PointerExited += (sender, args) =>
+							{
+								if(sender is null)
+								{
+									return;
+								}
+								OppShowPanel.Children.Clear();
 							};
 						}
 						if(request.info.description is not null)
@@ -619,19 +649,19 @@ public partial class DuelWindow : Window
 			return;
 		}
 		closing = true;
-		Monitor.Enter(stream);
 		if(client.Connected)
 		{
 			try
 			{
+				_ = streamMutex.WaitOne();
 				stream.Write(new CToS_Packet(new CToS_Content.surrender()).Deserialize());
+				streamMutex.ReleaseMutex();
 			}
 			catch(Exception e)
 			{
 				Log($"Exception while sending cleanup message: {e}", severity: LogSeverity.Warning);
 			}
 		}
-		Monitor.Exit(stream);
 		networkingTask.Dispose();
 		client.Close();
 	}

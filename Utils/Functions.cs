@@ -54,7 +54,7 @@ partial class Functions
 				_ = builder.Append(creature.value.cost);
 				if(includeInfoIrrelevantForDeckEdit)
 				{
-					_ = builder.Append(creature.value.base_cost);
+					_ = builder.Append('/').Append(creature.value.base_cost);
 				}
 			}
 			else if(card.type_specifics is TypeSpecifics.spell spell)
@@ -62,7 +62,7 @@ partial class Functions
 				_ = builder.Append(spell.value.cost);
 				if(includeInfoIrrelevantForDeckEdit)
 				{
-					_ = builder.Append(spell.value.base_cost);
+					_ = builder.Append('/').Append(spell.value.base_cost);
 				}
 			}
 		}

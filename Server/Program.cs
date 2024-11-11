@@ -435,7 +435,7 @@ class Program
 				throw new Exception($"ERROR: Unable to process this packet: Packet type: {content.GetType()}");
 			}
 		}
-		
+
 		SToC_Packet p = new(reply);
 		Functions.Log(string.Join(',', p.Deserialize()), Functions.LogSeverity.Warning);
 		stream.Write(p.Deserialize());

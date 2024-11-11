@@ -12,6 +12,7 @@ using Avalonia.Threading;
 using CardGameUtils;
 using CardGameUtils.Base;
 using CardGameUtils.Structs.Server;
+using System.Diagnostics;
 
 namespace CardGameClient;
 
@@ -19,12 +20,14 @@ public partial class RoomWindow : Window
 {
 	private readonly Task networkTask;
 	private readonly TcpClient client;
+	private readonly Mutex clientMutex;
 	private readonly string address;
 	public bool closed;
 	public RoomWindow(string address, TcpClient client, string? opponentName = null)
 	{
 		this.client = client;
 		this.address = address;
+		clientMutex = new();
 		networkTask = new Task(HandleNetwork, TaskCreationOptions.LongRunning);
 		networkTask.Start();
 		DataContext = new RoomWindowViewModel();
@@ -56,22 +59,26 @@ public partial class RoomWindow : Window
 			}
 		}
 	}
-	public static SToC_Content? TryReceivePacket(NetworkStream stream, int timeoutInMs)
+	public SToC_Content? TryReceivePacket(NetworkStream stream, int timeoutInMs)
 	{
-		Monitor.Enter(stream);
-		try
+		if(clientMutex.WaitOne(timeoutInMs))
 		{
-			Task task = Task.Run(() => { while(!stream.DataAvailable) { } return; });
-			int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
-			Monitor.Exit(stream);
-			return i == 0 ? SToC_Packet.Serialize(stream).content : null;
+			try
+			{
+				Task task = Task.Run(() => { while(!stream.DataAvailable) { } return; });
+				int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
+				SToC_Content? ret = i == 0 ? SToC_Packet.Serialize(stream).content : null;
+				clientMutex.ReleaseMutex();
+				return ret;
+			}
+			catch(Exception e)
+			{
+				clientMutex.ReleaseMutex();
+				Functions.Log(e.Message, severity: Functions.LogSeverity.Warning);
+				return null;
+			}
 		}
-		catch(Exception e)
-		{
-			Functions.Log(e.Message, severity: Functions.LogSeverity.Warning);
-			Monitor.Exit(stream);
-			return null;
-		}
+		return null;
 	}
 
 	public static T? TrySendAndReceive<T>(CToS_Content content, string address, int port) where T : SToC_Content
@@ -101,6 +108,7 @@ public partial class RoomWindow : Window
 				{
 					await Dispatcher.UIThread.InvokeAsync(() => HandlePacket(content));
 				}
+				Thread.Sleep(100);
 			}
 		}
 	}
@@ -163,10 +171,14 @@ public partial class RoomWindow : Window
 		if(!closed)
 		{
 			networkTask.Dispose();
-			NetworkStream stream = client.GetStream();
-			if(stream.Socket.Connected)
+			if(clientMutex.WaitOne(1000))
 			{
-				stream.Write(new CToS_Packet(new CToS_Content.leave()).Deserialize());
+				NetworkStream stream = client.GetStream();
+				if(stream.Socket.Connected)
+				{
+					stream.Write(new CToS_Packet(new CToS_Content.leave()).Deserialize());
+				}
+				clientMutex.ReleaseMutex();
 			}
 			client.Close();
 			closed = true;
@@ -174,6 +186,7 @@ public partial class RoomWindow : Window
 	}
 	private async void TryStartClick(object? sender, RoutedEventArgs args)
 	{
+		Stopwatch watch = Stopwatch.StartNew();
 		if(sender is null)
 		{
 			return;
@@ -185,21 +198,27 @@ public partial class RoomWindow : Window
 		}
 		Deck? deck = DeckEditWindow.TrySendAndReceive<CardGameUtils.Structs.Deck.SToC_Content.decklist>(new CardGameUtils.Structs.Deck.CToS_Content.decklist(new(name: deckname)),
 			Program.config.deck_edit_url.address, Program.config.deck_edit_url.port)?.value.deck;
+		Functions.Log($"Received deck after {watch.ElapsedMilliseconds} ms.");
 		if(deck is null)
 		{
 			return;
 		}
 		try
 		{
+			Functions.Log($"Before entering mutex after {watch.ElapsedMilliseconds} ms.");
+			_ = clientMutex.WaitOne();
+			Functions.Log($"Entered mutex after {watch.ElapsedMilliseconds} ms.");
 			NetworkStream s = client.GetStream();
-			Monitor.Enter(s);
 			s.Write(new CToS_Packet(new CToS_Content.start(new
 			(
 				decklist: deck,
 				no_shuffle: NoShuffleBox.IsChecked ?? false
 			))).Deserialize());
+			Functions.Log($"Written start packet after {watch.ElapsedMilliseconds} ms.");
 			SToC_Response_Start content = ((SToC_Content.start)SToC_Packet.Serialize(s).content).value;
-			Monitor.Exit(s);
+			Functions.Log($"Received start response after {watch.ElapsedMilliseconds} ms.");
+			clientMutex.ReleaseMutex();
+			Functions.Log($"Exited mutex after {watch.ElapsedMilliseconds} ms.");
 			switch(content)
 			{
 				case SToC_Response_Start.success success:
@@ -226,6 +245,7 @@ public partial class RoomWindow : Window
 		{
 			new ErrorPopup(ex.Message).Show();
 		}
+		Functions.Log($"Done after {watch.ElapsedMilliseconds} ms.");
 	}
 
 	public async void StartGame(int port, string id)

@@ -117,6 +117,13 @@ public class UIUtils
 				ArtworkCache[filename] = TryLoadArtworkFromDisk(filename);
 			}
 		}
+		foreach(string filename in filenames)
+		{
+			if(!ArtworkCache.ContainsKey(filename))
+			{
+				ArtworkCache[filename] = null;
+			}
+		}
 	}
 	public static Bitmap? TryLoadArtworkFromDisk(string filename)
 	{

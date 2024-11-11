@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using Avalonia.Controls;
 using CardGameUtils.Structs.Duel;
+using System.Threading;
 
 namespace CardGameClient;
 
@@ -9,8 +10,9 @@ public partial class SelectZoneWindow : Window
 {
 	private bool shouldReallyClose;
 
-	public SelectZoneWindow(List<bool> options, Stream stream)
+	public SelectZoneWindow(List<bool> options, Stream stream, Mutex streamMutex)
 	{
+		_ = streamMutex.WaitOne();
 		InitializeComponent();
 		Width = Program.config.width / 2;
 		Height = Program.config.height / 2;
@@ -34,5 +36,6 @@ public partial class SelectZoneWindow : Window
 		{
 			args.Cancel = !shouldReallyClose;
 		};
+		Closed += (_, _) => streamMutex.ReleaseMutex();
 	}
 }

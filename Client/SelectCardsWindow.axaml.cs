@@ -10,6 +10,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using CardGameUtils.Base;
 using CardGameUtils.Structs.Duel;
+using System.Threading;
 
 namespace CardGameClient;
 
@@ -19,7 +20,7 @@ public partial class SelectCardsWindow : Window
 	private bool shouldReallyClose;
 	private readonly Action<CardStruct> showCardAction;
 
-	public SelectCardsWindow(string text, uint amount, List<CardStruct> cards, Stream stream, int playerIndex, Action<CardStruct> showCardAction)
+	public SelectCardsWindow(string text, uint amount, List<CardStruct> cards, Stream stream, Mutex streamMutex, int playerIndex, Action<CardStruct> showCardAction)
 	{
 		if(cards.Count < amount)
 		{
@@ -27,6 +28,7 @@ public partial class SelectCardsWindow : Window
 		}
 		this.showCardAction = showCardAction;
 		this.stream = stream;
+		_ = streamMutex.WaitOne();
 		DataContext = new SelectedCardViewModel(amount);
 		InitializeComponent();
 		Width = Program.config.width / 2;
@@ -55,6 +57,7 @@ public partial class SelectCardsWindow : Window
 		{
 			args.Cancel = !shouldReallyClose;
 		};
+		Closed += (_, _) => streamMutex.ReleaseMutex();
 		if(amount == 1)
 		{
 			CardSelectionList.SelectionMode = SelectionMode.Single | SelectionMode.Toggle;

@@ -45,7 +45,7 @@
 		"should_save_player_name": false,
 		"server_address": "127.0.0.1",
 		"last_deck_name": "Titan_Control",
-		"animation_delay_in_ms": 250,
+		"animation_delay_in_ms": 500,
 		"theme": 0,
 		"artwork_path": "./artworks"
 	}

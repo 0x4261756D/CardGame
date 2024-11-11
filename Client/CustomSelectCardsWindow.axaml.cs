@@ -21,14 +21,14 @@ public partial class CustomSelectCardsWindow : Window
 	private bool shouldReallyClose;
 	private readonly Action<CardStruct> showCardAction;
 
-	public CustomSelectCardsWindow(string text, List<CardStruct> cards, bool initialState, Stream stream, int playerIndex, Action<CardStruct> showCardAction)
+	public CustomSelectCardsWindow(string text, List<CardStruct> cards, bool initialState, Stream stream, Mutex streamMutex, int playerIndex, Action<CardStruct> showCardAction)
 	{
 		this.stream = stream;
+		_ = streamMutex.WaitOne();
 		this.showCardAction = showCardAction;
-		Monitor.Enter(stream);
 		DataContext = new CustomSelectCardViewModel(text, initialState);
 		InitializeComponent();
-		Closed += (_, _) => Monitor.Exit(stream);
+		Closed += (_, _) => streamMutex.ReleaseMutex();
 		Width = Program.config.width / 2;
 		Height = Program.config.height / 2;
 		CardSelectionList.MaxHeight = Program.config.height / 3;
