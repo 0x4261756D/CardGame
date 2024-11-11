@@ -102,9 +102,9 @@ public partial class DuelWindow : Window
 	{
 		try
 		{
-			Task<SToC_Packet> task = Task.Run(() => SToC_Packet.Serialize(stream));
+			Task task = Task.Run(() => { while(!stream.DataAvailable) { } return; });
 			int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
-			return i == 0 ? task.Result.content : null;
+			return i == 0 ? SToC_Packet.Serialize(stream).content : null;
 		}
 		catch(Exception e)
 		{

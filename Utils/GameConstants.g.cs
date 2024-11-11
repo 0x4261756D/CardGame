@@ -5,6 +5,7 @@ using System.Collections.Generic;
 namespace CardGameUtils.GameConstants;
 
 #nullable enable
+#pragma warning disable CS8981
 
 public record foo(byte dummy) : Common.PacketTable
 {

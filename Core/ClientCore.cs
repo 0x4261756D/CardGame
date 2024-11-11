@@ -11,7 +11,6 @@ using CardGameUtils.Base;
 using CardGameUtils.GameConstants;
 using System.Threading.Tasks;
 using CardGameUtils.Structs.Deck;
-using System.Text;
 
 namespace CardGameCore;
 
@@ -47,7 +46,8 @@ partial class ClientCore : Core
 			{
 				continue;
 			}
-			// decklist.RemoveAt(0);
+			PlayerClass playerClass = Enum.Parse<PlayerClass>(decklist[0]);
+			decklist.RemoveAt(0);
 			List<CardStruct> deckCards = [];
 			CardStruct? ability = null;
 			CardStruct? quest = null;
@@ -65,7 +65,7 @@ partial class ClientCore : Core
 				}
 				deckCards = DecklistToCards(decklist);
 			}
-			decks.Add(new(player_class: Enum.Parse<PlayerClass>(decklist[0]), name: Path.GetFileNameWithoutExtension(deckfile), ability: ability, quest: quest, cards: deckCards));
+			decks.Add(new(player_class: playerClass, name: Path.GetFileNameWithoutExtension(deckfile), ability: ability, quest: quest, cards: deckCards));
 		}
 	}
 
@@ -81,6 +81,10 @@ partial class ClientCore : Core
 		List<CardStruct> c = [];
 		foreach(string line in decklist)
 		{
+			if(string.IsNullOrWhiteSpace(line))
+			{
+				continue;
+			}
 			int index = cards.FindIndex(x => x.name == line);
 			if(index >= 0)
 			{
@@ -89,13 +93,13 @@ partial class ClientCore : Core
 		}
 		return c;
 	}
-	public static CardGameUtils.Structs.Server.SToC_Packet? TryReceiveServerPacket(NetworkStream stream, int timeoutInMs)
+	public static CardGameUtils.Structs.Server.SToC_Content? TryReceiveServerPacket(NetworkStream stream, int timeoutInMs)
 	{
 		try
 		{
-			Task<CardGameUtils.Structs.Server.SToC_Packet> task = Task.Run(() => CardGameUtils.Structs.Server.SToC_Packet.Serialize(stream));
+			Task task = Task.Run(() => { while(!stream.DataAvailable) { } return; });
 			int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
-			return i == 0 ? task.Result : null;
+			return i == 0 ? CardGameUtils.Structs.Server.SToC_Packet.Serialize(stream).content : null;
 		}
 		catch(Exception e)
 		{
@@ -110,12 +114,12 @@ partial class ClientCore : Core
 			using TcpClient client = new(config.additional_cards_url.address, config.additional_cards_url.port);
 			using NetworkStream stream = client.GetStream();
 			stream.Write(new CardGameUtils.Structs.Server.CToS_Packet(new CardGameUtils.Structs.Server.CToS_Content.additional_cards()).Deserialize());
-			CardGameUtils.Structs.Server.SToC_Packet? data = TryReceiveServerPacket(stream, 1000);
-			if(data == null)
+			CardGameUtils.Structs.Server.SToC_Content? data = TryReceiveServerPacket(stream, 1000);
+			if(data is null)
 			{
 				return;
 			}
-			if(data.content is CardGameUtils.Structs.Server.SToC_Response_AdditionalCards additionalCards)
+			if(data is CardGameUtils.Structs.Server.SToC_Response_AdditionalCards additionalCards)
 			{
 				if(additionalCards.timestamp < Program.versionTime)
 				{
@@ -213,7 +217,7 @@ partial class ClientCore : Core
 
 	private void SaveDeck(string sanitizedName, CardGameUtils.Base.Deck deck)
 	{
-		string? deckString = Functions.GetDeckString(deck);
+		string? deckString = GetDeckString(deck);
 		if(deckString == null)
 		{
 			return;

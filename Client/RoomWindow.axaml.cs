@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -57,15 +58,18 @@ public partial class RoomWindow : Window
 	}
 	public static SToC_Content? TryReceivePacket(NetworkStream stream, int timeoutInMs)
 	{
+		Monitor.Enter(stream);
 		try
 		{
-			Task<SToC_Packet> task = Task.Run(() => SToC_Packet.Serialize(stream));
+			Task task = Task.Run(() => { while(!stream.DataAvailable) { } return; });
 			int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
-			return i == 0 ? task.Result.content : null;
+			Monitor.Exit(stream);
+			return i == 0 ? SToC_Packet.Serialize(stream).content : null;
 		}
 		catch(Exception e)
 		{
 			Functions.Log(e.Message, severity: Functions.LogSeverity.Warning);
+			Monitor.Exit(stream);
 			return null;
 		}
 	}
@@ -74,8 +78,8 @@ public partial class RoomWindow : Window
 	{
 		try
 		{
-			using TcpClient client = new(address, port);
-			using NetworkStream stream = client.GetStream();
+			using TcpClient c = new(address, port);
+			using NetworkStream stream = c.GetStream();
 			stream.Write(new CToS_Packet(content).Deserialize());
 			return (T)SToC_Packet.Serialize(stream).content;
 		}
@@ -93,7 +97,7 @@ public partial class RoomWindow : Window
 			if(client.Connected)
 			{
 				SToC_Content? content = await Task.Run(() => TryReceivePacket(client.GetStream(), 100)).ConfigureAwait(false);
-				if(content != null)
+				if(content is not null)
 				{
 					await Dispatcher.UIThread.InvokeAsync(() => HandlePacket(content));
 				}
@@ -116,7 +120,7 @@ public partial class RoomWindow : Window
 				{
 					case SToC_Response_Start.success_but_waiting:
 					{
-						
+						Functions.Log("Unexpected success_but_waiting received");
 					}
 					break;
 					case SToC_Response_Start.success success:
@@ -179,11 +183,6 @@ public partial class RoomWindow : Window
 			await new ErrorPopup("No deck selected").ShowDialog(this).ConfigureAwait(false);
 			return;
 		}
-		if(OpponentNameBlock.Text is null or "")
-		{
-			await new ErrorPopup("You have no opponent").ShowDialog(this).ConfigureAwait(false);
-			return;
-		}
 		Deck? deck = DeckEditWindow.TrySendAndReceive<CardGameUtils.Structs.Deck.SToC_Content.decklist>(new CardGameUtils.Structs.Deck.CToS_Content.decklist(new(name: deckname)),
 			Program.config.deck_edit_url.address, Program.config.deck_edit_url.port)?.value.deck;
 		if(deck is null)
@@ -192,12 +191,15 @@ public partial class RoomWindow : Window
 		}
 		try
 		{
-			client.GetStream().Write(new CToS_Packet(new CToS_Content.start(new
+			NetworkStream s = client.GetStream();
+			Monitor.Enter(s);
+			s.Write(new CToS_Packet(new CToS_Content.start(new
 			(
 				decklist: deck,
 				no_shuffle: NoShuffleBox.IsChecked ?? false
 			))).Deserialize());
-			SToC_Response_Start content = ((SToC_Content.start)SToC_Packet.Serialize(client.GetStream()).content).value;
+			SToC_Response_Start content = ((SToC_Content.start)SToC_Packet.Serialize(s).content).value;
+			Monitor.Exit(s);
 			switch(content)
 			{
 				case SToC_Response_Start.success success:

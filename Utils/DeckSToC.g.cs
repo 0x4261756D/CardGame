@@ -5,6 +5,7 @@ using System.Collections.Generic;
 namespace CardGameUtils.Structs.Deck;
 
 #nullable enable
+#pragma warning disable CS8981
 
 public record SToC_Packet(SToC_Content content) : Common.PacketTable
 {

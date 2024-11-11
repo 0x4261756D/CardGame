@@ -1,10 +1,12 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Net.Sockets;
 
 namespace CardGameUtils.Structs.Server;
 
 #nullable enable
+#pragma warning disable CS8981
 
 public record SToC_Packet(SToC_Content content) : Common.PacketTable
 {
@@ -34,6 +36,7 @@ public record SToC_Packet(SToC_Content content) : Common.PacketTable
 		stream.ReadExactly(sizeSpan);
 		uint size = Common.Common.SerializeN32(ref sizeSpan);
 		Span<byte> bytes = new byte[size];
+		Console.WriteLine($"Size: {size}, available: {((NetworkStream)stream).DataAvailable}, {bytes.Length}");
 		stream.ReadExactly(bytes);
 		return SerializeImpl(ref bytes);
 	}

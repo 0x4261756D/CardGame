@@ -5,6 +5,7 @@ using System.Collections.Generic;
 namespace CardGameUtils.Base;
 
 #nullable enable
+#pragma warning disable CS8981
 
 public record CardStruct(string name, string text, CardGameUtils.GameConstants.PlayerClass card_class, CardGameUtils.GameConstants.Location location, uint uid, int controller, int base_controller, TypeSpecifics type_specifics) : Common.PacketTable
 {

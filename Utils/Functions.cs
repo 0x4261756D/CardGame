@@ -26,6 +26,7 @@ partial class Functions
 		{
 			_ = builder.AppendLine().Append(card.name);
 		}
+		Log(builder.ToString(), LogSeverity.Warning);
 		return builder.AppendLine().ToString();
 	}
 

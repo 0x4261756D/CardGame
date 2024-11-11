@@ -143,6 +143,10 @@ class DuelCore : Core
 			Quest quest = (Quest)CreateBasicCard(Type.GetType(CardnameToFilename(questString[1..]))!, i);
 			foreach(string cardString in config.players[i].decklist[3..])
 			{
+				if(string.IsNullOrWhiteSpace(cardString))
+				{
+					continue;
+				}
 				Log($"Creating {cardString}");
 				deck.Add(CreateBasicCard(Type.GetType(CardnameToFilename(cardString))!, i));
 			}

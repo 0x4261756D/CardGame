@@ -213,6 +213,7 @@ public class Common
 	}
 }
 
+#pragma warning disable IDE1006
 public interface PacketType
 {
 	public List<byte> DeserializeInternal();

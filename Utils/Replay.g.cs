@@ -5,6 +5,7 @@ using System.Collections.Generic;
 namespace CardGameUtils.Replay;
 
 #nullable enable
+#pragma warning disable CS8981
 
 public record Replay(int seed, List<string> cmdline_args, List<ReplayPacket> packets) : Common.PacketTable
 {

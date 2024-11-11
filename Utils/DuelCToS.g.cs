@@ -5,6 +5,7 @@ using System.Collections.Generic;
 namespace CardGameUtils.Structs.Duel;
 
 #nullable enable
+#pragma warning disable CS8981
 
 public record CToS_Packet(CToS_Content content) : Common.PacketTable
 {

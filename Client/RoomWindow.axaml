@@ -20,7 +20,6 @@
 				</DataTemplate>
 			</ComboBox.ItemTemplate>
 		</ComboBox>
-		<TextBlock Text="{Binding PlayerName}"/>
 		<CheckBox x:Name="NoShuffleBox">
 			No Shuffle
 		</CheckBox>
