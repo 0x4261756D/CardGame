@@ -3,10 +3,12 @@ using System.ComponentModel;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using CardGameUtils;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Base;
+using CardGameUtils.Structs.Server;
 
 namespace CardGameClient;
 
@@ -37,8 +39,8 @@ public partial class ServerWindow : Window
 		{
 			using TcpClient updateClient = new(ServerAddressBox.Text, GenericConstants.SERVER_PORT);
 			using NetworkStream updateStream = updateClient.GetStream();
-			updateStream.Write(Functions.GeneratePayload(new ServerPackets.RoomsRequest()));
-			((ServerWindowViewModel)DataContext!).ServerRooms = Functions.ReceivePacket<ServerPackets.RoomsResponse>(updateStream).rooms;
+			updateStream.Write(new CToS_Packet(new CToS_Content.rooms()).Deserialize());
+			((ServerWindowViewModel)DataContext!).ServerRooms = [.. ReceivePacket<SToC_Content.rooms>(updateStream).value.rooms];
 		}
 		catch(Exception ex)
 		{
@@ -69,23 +71,30 @@ public partial class ServerWindow : Window
 			}
 			return;
 		}
-		client.GetStream().Write(Functions.GeneratePayload(new ServerPackets.CreateRequest(name: playerName)));
-		ServerPackets.CreateResponse response = Functions.ReceivePacket<ServerPackets.CreateResponse>(client.GetStream());
-		if(response.success)
+		client.GetStream().Write(new CToS_Packet(new CToS_Content.create(new(name: playerName))).Deserialize());
+		ErrorOr response = ReceivePacket<SToC_Content.create>(client.GetStream()).value.success;
+		switch(response)
 		{
-			RoomWindow w = new(address: ServerAddressBox.Text, client: client)
+			case ErrorOr.success:
 			{
-				WindowState = WindowState,
-			};
-			if(!w.closed)
-			{
-				w.Show();
-				Close();
+				RoomWindow w = new(address: ServerAddressBox.Text, client: client)
+				{
+					WindowState = WindowState,
+				};
+				if(!w.closed)
+				{
+					w.Show();
+					Close();
+				}
 			}
-		}
-		else
-		{
-			_ = new ErrorPopup(response.reason!).ShowDialog(this);
+			break;
+			case ErrorOr.error error:
+			{
+				_ = new ErrorPopup(error.value).ShowDialog(this);
+			}
+			break;
+			default:
+				throw new NotImplementedException();
 		}
 	}
 	void RefreshClick(object? sender, RoutedEventArgs args)
@@ -100,23 +109,65 @@ public partial class ServerWindow : Window
 		}
 		string targetNameText = (string)((Button)sender).Content!;
 		TcpClient client = new(ServerAddressBox.Text, GenericConstants.SERVER_PORT);
-		client.GetStream().Write(Functions.GeneratePayload(new ServerPackets.JoinRequest
+		client.GetStream().Write(new CToS_Packet(new CToS_Content.join(new
 		(
-			name: PlayerNameBox.Text,
-			targetName: targetNameText
-		)));
-		ServerPackets.JoinResponse response = Functions.ReceivePacket<ServerPackets.JoinResponse>(client.GetStream());
-		if(response.success)
+			own_name: PlayerNameBox.Text,
+			opp_name: targetNameText
+		))).Deserialize());
+		ErrorOr response = ReceivePacket<SToC_Content.join>(client.GetStream()).value.success;
+		switch(response)
 		{
-			new RoomWindow(ServerAddressBox.Text, client, opponentName: targetNameText)
+			case ErrorOr.success:
 			{
-				WindowState = WindowState,
-			}.Show();
-			Close();
+				new RoomWindow(ServerAddressBox.Text, client, opponentName: targetNameText)
+				{
+					WindowState = WindowState,
+				}.Show();
+				Close();
+			}
+			break;
+			case ErrorOr.error error:
+			{
+				_ = new ErrorPopup(error.value).ShowDialog(this);
+			}
+			break;
 		}
-		else
+	}
+	public static T? TrySendAndReceive<T>(CToS_Content content, string address, int port) where T : SToC_Content
+	{
+		try
 		{
-			_ = new ErrorPopup(response.reason!).ShowDialog(this);
+			return SendAndReceive<T>(content, address, port);
+		}
+		catch(Exception ex)
+		{
+			new ErrorPopup(ex.Message).Show();
+			return default;
+		}
+	}
+	public static T SendAndReceive<T>(CToS_Content content, string address, int port) where T : SToC_Content
+	{
+		using TcpClient client = new(address, port);
+		using NetworkStream stream = client.GetStream();
+		stream.Write(new CToS_Packet(content).Deserialize());
+		return (T)SToC_Packet.Serialize(stream).content;
+	}
+	public static T ReceivePacket<T>(NetworkStream stream) where T : SToC_Content
+	{
+		return (T)SToC_Packet.Serialize(stream).content;
+	}
+	public static SToC_Content? TryReceivePacket(NetworkStream stream, int timeoutInMs)
+	{
+		try
+		{
+			Task task = Task.Run(() => { while(!stream.DataAvailable) { } return; });
+			int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
+			return i == 0 ? SToC_Packet.Serialize(stream).content : null;
+		}
+		catch(Exception e)
+		{
+			Functions.Log(e.Message, severity: Functions.LogSeverity.Warning);
+			return null;
 		}
 	}
 }

@@ -4,19 +4,20 @@ using System.IO;
 using System.IO.Pipes;
 using System.Net.Sockets;
 using System.Reflection;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using CardGameUtils;
-using CardGameUtils.Structs;
 using static CardGameUtils.Functions;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Base;
+using CardGameUtils.GameConstants;
+using System.Threading.Tasks;
+using CardGameUtils.Structs.Deck;
 
 namespace CardGameCore;
 
 partial class ClientCore : Core
 {
 	private readonly List<CardStruct> cards = [];
-	private readonly List<DeckPackets.Deck> decks = [];
+	private readonly List<CardGameUtils.Base.Deck> decks = [];
 	private readonly CoreConfig.DeckConfig config;
 	public ClientCore(CoreConfig.DeckConfig config, int port) : base(port)
 	{
@@ -45,31 +46,26 @@ partial class ClientCore : Core
 			{
 				continue;
 			}
-			DeckPackets.Deck deck = new()
-			{
-				player_class = Enum.Parse<GameConstants.PlayerClass>(decklist[0]),
-				name = Path.GetFileNameWithoutExtension(deckfile)
-			};
+			PlayerClass playerClass = Enum.Parse<PlayerClass>(decklist[0]);
 			decklist.RemoveAt(0);
+			List<CardStruct> deckCards = [];
+			CardStruct? ability = null;
+			CardStruct? quest = null;
 			if(decklist.Count > 0)
 			{
 				if(decklist[0].StartsWith('#'))
 				{
-					deck.ability = cards[cards.FindIndex(x => x.name == decklist[0][1..])];
+					ability = cards[cards.FindIndex(x => x.name == decklist[0][1..])];
 					decklist.RemoveAt(0);
 				}
 				if(decklist[0].StartsWith('|'))
 				{
-					deck.quest = cards[cards.FindIndex(x => x.name == decklist[0][1..])];
+					quest = cards[cards.FindIndex(x => x.name == decklist[0][1..])];
 					decklist.RemoveAt(0);
 				}
-				deck.cards = DecklistToCards(decklist);
+				deckCards = DecklistToCards(decklist);
 			}
-			else
-			{
-				deck.cards = [];
-			}
-			decks.Add(deck);
+			decks.Add(new(player_class: playerClass, name: Path.GetFileNameWithoutExtension(deckfile), ability: ability, quest: quest, cards: deckCards));
 		}
 	}
 
@@ -80,18 +76,36 @@ partial class ClientCore : Core
 	}
 
 	//TODO: This could be more elegant
-	public CardStruct[] DecklistToCards(List<string> decklist)
+	public List<CardStruct> DecklistToCards(List<string> decklist)
 	{
 		List<CardStruct> c = [];
 		foreach(string line in decklist)
 		{
+			if(string.IsNullOrWhiteSpace(line))
+			{
+				continue;
+			}
 			int index = cards.FindIndex(x => x.name == line);
 			if(index >= 0)
 			{
 				c.Add(cards[index]);
 			}
 		}
-		return [.. c];
+		return c;
+	}
+	public static CardGameUtils.Structs.Server.SToC_Content? TryReceiveServerPacket(NetworkStream stream, int timeoutInMs)
+	{
+		try
+		{
+			Task task = Task.Run(() => { while(!stream.DataAvailable) { } return; });
+			int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
+			return i == 0 ? CardGameUtils.Structs.Server.SToC_Packet.Serialize(stream).content : null;
+		}
+		catch(Exception e)
+		{
+			Log(e.Message, severity: LogSeverity.Warning);
+			return null;
+		}
 	}
 	public void TryFetchAdditionalCards()
 	{
@@ -99,21 +113,24 @@ partial class ClientCore : Core
 		{
 			using TcpClient client = new(config.additional_cards_url.address, config.additional_cards_url.port);
 			using NetworkStream stream = client.GetStream();
-			stream.Write(GeneratePayload(new ServerPackets.AdditionalCardsRequest()));
-			ServerPackets.AdditionalCardsResponse? data = TryReceivePacket<ServerPackets.AdditionalCardsResponse>(stream, 1000);
-			if(data == null)
+			stream.Write(new CardGameUtils.Structs.Server.CToS_Packet(new CardGameUtils.Structs.Server.CToS_Content.additional_cards()).Deserialize());
+			CardGameUtils.Structs.Server.SToC_Content? data = TryReceiveServerPacket(stream, 1000);
+			if(data is null)
 			{
 				return;
 			}
-			if(data.time < Program.versionTime)
+			if(data is CardGameUtils.Structs.Server.SToC_Response_AdditionalCards additionalCards)
 			{
-				Log($"Did not apply additional cards as they were older (client: {Program.versionTime}, server: {data.time})");
-				return;
-			}
-			foreach(CardStruct card in data.cards)
-			{
-				_ = cards.Remove(card);
-				cards.Add(card);
+				if(additionalCards.timestamp < Program.versionTime)
+				{
+					Log($"Did not apply additional cards as they were older (client: {Program.versionTime}, server: {additionalCards.timestamp})");
+					return;
+				}
+				foreach(CardStruct card in additionalCards.cards)
+				{
+					_ = cards.Remove(card);
+					cards.Add(card);
+				}
 			}
 		}
 		catch(Exception e)
@@ -129,7 +146,7 @@ partial class ClientCore : Core
 			Log("Waiting for a connection");
 			using TcpClient client = listener.AcceptTcpClient();
 			using NetworkStream stream = client.GetStream();
-			Packet packet = ReceiveRawPacket(stream);
+			CToS_Content packet = CToS_Packet.Serialize(stream).content;
 			Log("Received a request");
 			if(HandlePacket(packet, stream))
 			{
@@ -141,93 +158,85 @@ partial class ClientCore : Core
 		listener.Stop();
 	}
 
-	public bool HandlePacket(Packet packet, NetworkStream stream)
+	public bool HandlePacket(CToS_Content packet, NetworkStream stream)
 	{
 		// THIS MIGHT CHANGE AS SENDING RAW JSON MIGHT BE TOO EXPENSIVE/SLOW
 		// possible improvements: Huffman or Burrows-Wheeler+RLE
 		byte[] payload;
 		switch(packet)
 		{
-			case DeckPackets.NamesRequest:
+			case CToS_Content.decklists:
 			{
-				payload = GeneratePayload(new DeckPackets.NamesResponse
-				(
-					names: [.. decks.ConvertAll(x => x.name)]
-				));
+				payload = new SToC_Packet(new SToC_Content.decklists(new(decks.ConvertAll(x => x.name)))).Deserialize();
 			}
 			break;
-			case DeckPackets.ListRequest request:
+			case CToS_Content.decklist request:
 			{
-				payload = GeneratePayload(new DeckPackets.ListResponse
-				(
-					deck: FindDeckByName(request.name!)
-				));
+				payload = new SToC_Packet(new SToC_Content.decklist(new(FindDeckByName(request.value.name)))).Deserialize();
 			}
 			break;
-			case DeckPackets.SearchRequest request:
+			case CToS_Content.search request:
 			{
-				payload = GeneratePayload(new DeckPackets.SearchResponse
-				(
-					cards: FilterCards(cards, request.filter!, request.playerClass, request.includeGenericCards)
-				));
+				payload = new SToC_Packet(new SToC_Content.search(new(FilterCards(cards, request.value.filter, request.value.player_class, request.value.include_generic_cards)))).Deserialize();
 			}
 			break;
-			case DeckPackets.ListUpdateRequest request:
+			case CToS_Content.decklist_update request:
 			{
-				DeckPackets.Deck deck = request.deck;
-				deck.name = DeckNameRegex().Replace(deck.name, "");
-				int index = decks.FindIndex(x => x.name == deck.name);
-				if(deck.cards != null)
+				CardGameUtils.Base.Deck deck = request.value.deck;
+				string sanitizedName = DeckNameRegex().Replace(deck.name, "");
+				int index = decks.FindIndex(x => x.name == sanitizedName);
+				if(index == -1)
 				{
-					if(index == -1)
-					{
-						decks.Add(deck);
-					}
-					else
-					{
-						decks[index] = deck;
-					}
-					SaveDeck(deck);
+					decks.Add(deck);
 				}
 				else
 				{
-					if(index != -1)
-					{
-						decks.RemoveAt(index);
-						File.Delete(Path.Combine(config.deck_location, deck.name + ".dek"));
-					}
+					decks[index] = deck;
 				}
-				payload = GeneratePayload(new DeckPackets.ListUpdateResponse(shouldUpdate: index == -1));
+				SaveDeck(sanitizedName, deck);
+				return false;
 			}
-			break;
+			case CToS_Content.decklist_delete request:
+			{
+				int index = decks.FindIndex(x => x.name == request.value.name);
+				if(index == -1)
+				{
+					return false;
+				}
+				string name = DeckNameRegex().Replace(decks[index].name, "");
+				decks.RemoveAt(index);
+				File.Delete(Path.Combine(config.deck_location, name + ".dek"));
+				return false;
+			}
 			default:
-				throw new Exception($"ERROR: Unable to process this packet: ({packet.GetType()}) | {JsonSerializer.Serialize(packet, options: GenericConstants.packetSerialization)}");
+				throw new Exception($"ERROR: Unable to process this packet: ({packet.GetType()})");
 		}
 		stream.Write(payload);
 		return false;
 	}
 
-	private void SaveDeck(DeckPackets.Deck deck)
+	private void SaveDeck(string sanitizedName, CardGameUtils.Base.Deck deck)
 	{
-		string? deckString = deck.ToString();
+		string? deckString = GetDeckString(deck);
 		if(deckString == null)
 		{
 			return;
 		}
-		File.WriteAllText(Path.Combine(config.deck_location, deck.name + ".dek"), deckString);
+		File.WriteAllText(Path.Combine(config.deck_location, sanitizedName + ".dek"), deckString);
 	}
 
-	private static CardStruct[] FilterCards(List<CardStruct> cards, string filter, GameConstants.PlayerClass playerClass, bool includeGenericCards)
+	private static List<CardStruct> FilterCards(List<CardStruct> cards, string filter, PlayerClass playerClass, bool includeGenericCards)
 	{
-		return Array.FindAll(cards.ToArray(), card =>
-			(playerClass == GameConstants.PlayerClass.All || (includeGenericCards && card.card_class == GameConstants.PlayerClass.All) || card.card_class == playerClass)
-			&& card.ToString().Contains(filter, StringComparison.CurrentCultureIgnoreCase));
+		return cards.FindAll(card =>
+			(playerClass == PlayerClass.All || (includeGenericCards && card.card_class == PlayerClass.All) || card.card_class == playerClass)
+			&& FormatCardStruct(card).Contains(filter, StringComparison.CurrentCultureIgnoreCase));
 	}
 
-	private DeckPackets.Deck FindDeckByName(string name)
+	private CardGameUtils.Base.Deck? FindDeckByName(string name)
 	{
 		name = DeckNameRegex().Replace(name, "");
-		return decks[decks.FindIndex(x => x.name == name)];
+		int index = decks.FindIndex(x => x.name == name);
+		return index == -1 ? null : decks[index];
 	}
 
 	[GeneratedRegex(@"[\./\\]")]

@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using CardGameUtils.Structs;
 
 namespace CardGameUtils;
 
@@ -19,17 +18,9 @@ internal partial class PlatformClientConfigSerializationContext : JsonSerializer
 [JsonSerializable(typeof(PlatformServerConfig))]
 internal partial class PlatformServerConfigSerializationContext : JsonSerializerContext { }
 
-[JsonSourceGenerationOptions(IncludeFields = true)]
-[JsonSerializable(typeof(NetworkingStructs.Packet))]
-internal partial class PacketSerializationContext : JsonSerializerContext { }
-
-[JsonSourceGenerationOptions(IncludeFields = true)]
-[JsonSerializable(typeof(Replay))]
-internal partial class ReplaySerializationContext : JsonSerializerContext { }
-
 public class GenericConstants
 {
-	public const uint PACKET_VERSION = 6;
+	// public const uint PACKET_VERSION = 6;
 
 	public const int SERVER_PORT = 7043;
 
@@ -49,19 +40,9 @@ public class GenericConstants
 		TypeInfoResolver = PlatformServerConfigSerializationContext.Default,
 		IncludeFields = true,
 	};
-	public static readonly JsonSerializerOptions packetSerialization = new()
-	{
-		TypeInfoResolver = PacketSerializationContext.Default,
-		IncludeFields = true,
-	};
-	public static readonly JsonSerializerOptions replaySerialization = new()
-	{
-		TypeInfoResolver = ReplaySerializationContext.Default,
-		IncludeFields = true,
-	};
 }
 
-public class GameConstants
+public class GameConstantsElectricBoogaloo
 {
 	public const int MAX_CARD_MULTIPLICITY = 2;
 	public const int DECK_SIZE = 40;
@@ -86,42 +67,6 @@ public class GameConstants
 		MainActionTaken = MainStart + ActionTaken,
 		ActionTaken = 0x1000,
 		InitGained = 0x10000,
-	}
-	public enum CardType
-	{
-		UNKNOWN,
-		Creature,
-		Spell,
-		Quest,
-	}
-
-	public enum GameResult
-	{
-		Draw,
-		Won,
-		Lost,
-	}
-
-	public enum PlayerClass
-	{
-		UNKNOWN,
-		All,
-		Cultist,
-		Pyromancer,
-		Artificer,
-		Gladiator
-	}
-
-	public enum Location
-	{
-		UNKNOWN,
-		Any,
-		Deck,
-		Hand,
-		Field,
-		Grave,
-		Quest,
-		Ability,
 	}
 }
 

@@ -4,12 +4,15 @@ using System.ComponentModel;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using CardGameUtils;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Base;
+using CardGameUtils.Structs.Server;
+using System.Diagnostics;
 
 namespace CardGameClient;
 
@@ -17,12 +20,14 @@ public partial class RoomWindow : Window
 {
 	private readonly Task networkTask;
 	private readonly TcpClient client;
+	private readonly Mutex clientMutex;
 	private readonly string address;
 	public bool closed;
 	public RoomWindow(string address, TcpClient client, string? opponentName = null)
 	{
 		this.client = client;
 		this.address = address;
+		clientMutex = new();
 		networkTask = new Task(HandleNetwork, TaskCreationOptions.LongRunning);
 		networkTask.Start();
 		DataContext = new RoomWindowViewModel();
@@ -54,6 +59,43 @@ public partial class RoomWindow : Window
 			}
 		}
 	}
+	public SToC_Content? TryReceivePacket(NetworkStream stream, int timeoutInMs)
+	{
+		if(clientMutex.WaitOne(timeoutInMs))
+		{
+			try
+			{
+				Task task = Task.Run(() => { while(!stream.DataAvailable) { } return; });
+				int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
+				SToC_Content? ret = i == 0 ? SToC_Packet.Serialize(stream).content : null;
+				clientMutex.ReleaseMutex();
+				return ret;
+			}
+			catch(Exception e)
+			{
+				clientMutex.ReleaseMutex();
+				Functions.Log(e.Message, severity: Functions.LogSeverity.Warning);
+				return null;
+			}
+		}
+		return null;
+	}
+
+	public static T? TrySendAndReceive<T>(CToS_Content content, string address, int port) where T : SToC_Content
+	{
+		try
+		{
+			using TcpClient c = new(address, port);
+			using NetworkStream stream = c.GetStream();
+			stream.Write(new CToS_Packet(content).Deserialize());
+			return (T)SToC_Packet.Serialize(stream).content;
+		}
+		catch(Exception ex)
+		{
+			new ErrorPopup(ex.Message).Show();
+			return default;
+		}
+	}
 
 	private async void HandleNetwork()
 	{
@@ -61,40 +103,52 @@ public partial class RoomWindow : Window
 		{
 			if(client.Connected)
 			{
-				Packet? packet = await Task.Run(() => Functions.TryReceiveRawPacket(client.GetStream(), 100)).ConfigureAwait(false);
-				if(packet != null)
+				SToC_Content? content = await Task.Run(() => TryReceivePacket(client.GetStream(), 100)).ConfigureAwait(false);
+				if(content is not null)
 				{
-					await Dispatcher.UIThread.InvokeAsync(() => HandlePacket(packet));
+					await Dispatcher.UIThread.InvokeAsync(() => HandlePacket(content));
 				}
+				Thread.Sleep(100);
 			}
 		}
 	}
 
-	private void HandlePacket(Packet packet)
+	private void HandlePacket(SToC_Content content)
 	{
-		switch(packet)
+		switch(content)
 		{
-			case ServerPackets.OpponentChangedResponse response:
+			case SToC_Content.opponent_changed response:
 			{
-				string? name = response.name;
-				OpponentNameBlock.Text = name;
+				OpponentNameBlock.Text = response.value.name;
 			}
 			break;
-			case ServerPackets.StartResponse response:
+			case SToC_Content.start response:
 			{
-				if(response.success != ServerPackets.StartResponse.Result.Success)
+				switch(response.value)
 				{
-					_ = new ErrorPopup(response.reason ?? "Duel creation failed for unknown reason");
-				}
-				else
-				{
-					StartGame(response.port, response.id!);
+					case SToC_Response_Start.success_but_waiting:
+					{
+						Functions.Log("Unexpected success_but_waiting received");
+					}
+					break;
+					case SToC_Response_Start.success success:
+					{
+						StartGame(success.value.port, success.value.id);
+					}
+					break;
+					case SToC_Response_Start.failure failure:
+					{
+						new ErrorPopup(failure.value).Show();
+					}
+					break;
+					default:
+						throw new NotImplementedException();
 				}
 			}
 			break;
 			default:
 			{
-				throw new Exception($"Unexpected packet of type {packet.GetType()}");
+				throw new Exception($"Unexpected packet of type {content.GetType()}");
 			}
 		}
 	}
@@ -117,10 +171,14 @@ public partial class RoomWindow : Window
 		if(!closed)
 		{
 			networkTask.Dispose();
-			NetworkStream stream = client.GetStream();
-			if(stream.Socket.Connected)
+			if(clientMutex.WaitOne(1000))
 			{
-				stream.Write(Functions.GeneratePayload(new ServerPackets.LeaveRequest()));
+				NetworkStream stream = client.GetStream();
+				if(stream.Socket.Connected)
+				{
+					stream.Write(new CToS_Packet(new CToS_Content.leave()).Deserialize());
+				}
+				clientMutex.ReleaseMutex();
 			}
 			client.Close();
 			closed = true;
@@ -128,54 +186,66 @@ public partial class RoomWindow : Window
 	}
 	private async void TryStartClick(object? sender, RoutedEventArgs args)
 	{
+		Stopwatch watch = Stopwatch.StartNew();
+		if(sender is null)
+		{
+			return;
+		}
 		if(DeckSelectBox.SelectedItem is not string deckname || string.IsNullOrEmpty(deckname))
 		{
 			await new ErrorPopup("No deck selected").ShowDialog(this).ConfigureAwait(false);
 			return;
 		}
-		if(OpponentNameBlock.Text is null or "")
+		Deck? deck = DeckEditWindow.TrySendAndReceive<CardGameUtils.Structs.Deck.SToC_Content.decklist>(new CardGameUtils.Structs.Deck.CToS_Content.decklist(new(name: deckname)),
+			Program.config.deck_edit_url.address, Program.config.deck_edit_url.port)?.value.deck;
+		Functions.Log($"Received deck after {watch.ElapsedMilliseconds} ms.");
+		if(deck is null)
 		{
-			await new ErrorPopup("You have no opponent").ShowDialog(this).ConfigureAwait(false);
-			return;
-		}
-		DeckPackets.ListResponse? listResponse = UIUtils.TrySendAndReceive<DeckPackets.ListResponse>(new DeckPackets.ListRequest(name: deckname),
-			Program.config.deck_edit_url.address, Program.config.deck_edit_url.port, this);
-		if(listResponse == null)
-		{
-			return;
-		}
-		string[]? decklist = listResponse.deck.ToString()?.Split('\n');
-		if(decklist == null)
-		{
-			await new ErrorPopup("Deck list could not be loaded properly").ShowDialog(this).ConfigureAwait(false);
 			return;
 		}
 		try
 		{
-			client.GetStream().Write(Functions.GeneratePayload(new ServerPackets.StartRequest
+			Functions.Log($"Before entering mutex after {watch.ElapsedMilliseconds} ms.");
+			_ = clientMutex.WaitOne();
+			Functions.Log($"Entered mutex after {watch.ElapsedMilliseconds} ms.");
+			NetworkStream s = client.GetStream();
+			s.Write(new CToS_Packet(new CToS_Content.start(new
 			(
-				decklist: decklist,
-				noshuffle: NoShuffleBox.IsChecked ?? false
-			)));
-			ServerPackets.StartResponse response = Functions.ReceivePacket<ServerPackets.StartResponse>(client.GetStream());
-			if(response.success == ServerPackets.StartResponse.Result.Failure)
+				decklist: deck,
+				no_shuffle: NoShuffleBox.IsChecked ?? false
+			))).Deserialize());
+			Functions.Log($"Written start packet after {watch.ElapsedMilliseconds} ms.");
+			SToC_Response_Start content = ((SToC_Content.start)SToC_Packet.Serialize(s).content).value;
+			Functions.Log($"Received start response after {watch.ElapsedMilliseconds} ms.");
+			clientMutex.ReleaseMutex();
+			Functions.Log($"Exited mutex after {watch.ElapsedMilliseconds} ms.");
+			switch(content)
 			{
-				new ErrorPopup(response.reason!).Show();
-				return;
-			}
-			else
-			{
-				((Button)sender!).IsEnabled = false;
-				if(response.success == ServerPackets.StartResponse.Result.Success)
+				case SToC_Response_Start.success success:
 				{
-					StartGame(response.port, response.id!);
+					StartGame(success.value.port, success.value.id);
 				}
+				break;
+				case SToC_Response_Start.success_but_waiting:
+				{
+					((Button)sender).IsEnabled = false;
+					((Button)sender).Content = "Waiting";
+				}
+				break;
+				case SToC_Response_Start.failure failure:
+				{
+					new ErrorPopup(failure.value).Show();
+				}
+				break;
+				default:
+					throw new NotImplementedException();
 			}
 		}
 		catch(Exception ex)
 		{
 			new ErrorPopup(ex.Message).Show();
 		}
+		Functions.Log($"Done after {watch.ElapsedMilliseconds} ms.");
 	}
 
 	public async void StartGame(int port, string id)
@@ -205,13 +275,13 @@ public class RoomWindowViewModel : INotifyPropertyChanged
 
 	public void LoadDecks()
 	{
-		DeckPackets.NamesResponse? packet = UIUtils.TrySendAndReceive<DeckPackets.NamesResponse>(new DeckPackets.NamesRequest(), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port, null);
-		if(packet == null)
+		List<string>? names = DeckEditWindow.TrySendAndReceive<CardGameUtils.Structs.Deck.SToC_Content.decklists>(new CardGameUtils.Structs.Deck.CToS_Content.decklists(), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port)?.value.names;
+		if(names is null)
 		{
 			return;
 		}
 		Decknames.Clear();
-		Decknames.AddRange(packet.names);
+		Decknames.AddRange(names);
 	}
 
 	public event PropertyChangedEventHandler? PropertyChanged;

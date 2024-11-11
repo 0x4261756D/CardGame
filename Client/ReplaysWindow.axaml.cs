@@ -2,12 +2,10 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Text.Json;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using CardGameUtils;
-using CardGameUtils.Structs;
-using static CardGameUtils.Functions;
+using CardGameUtils.Replay;
+using CardGameUtils.Structs.Duel;
 
 namespace CardGameClient;
 
@@ -42,25 +40,23 @@ public partial class ReplaysWindow : Window
 	{
 		if(replay != null && window != null)
 		{
-			for(; actionIndex < replay.actions.Count; actionIndex++)
+			for(; actionIndex < replay.packets.Count; actionIndex++)
 			{
-				Replay.GameAction action = replay.actions[actionIndex];
-				NetworkingStructs.Packet packet = DeserializeRaw(action.PacketContentBytes());
+				ReplayPacket action = replay.packets[actionIndex];
 				((ReplaysViewModel)DataContext!).ActionList.Insert
 				(
 					0,
-					$"{(IsFieldUpdateForCurrentPlayer(action.clientToServer, action.player, packet) ? "*" : "")}{actionIndex}: Player {action.player}: {(action.clientToServer ? "<-" : "->")} {packet.GetType()}"
+					$"{(IsFieldUpdateForCurrentPlayer(action) ? "*" : "")}{actionIndex}: Player {action.player}: {(action.content is ReplayContent.ctos ? "<-" : "->")} {(action.content is ReplayContent.ctos ctos ? ctos.value.GetType() : ((ReplayContent.stoc)action.content).value.GetType())}"
 				);
 			}
-			Replay.GameAction lastAction = replay.actions.FindLast((action) => IsFieldUpdateForCurrentPlayer(action.clientToServer, action.player, DeserializeRaw(action.PacketContentBytes())))!;
-			window.EnqueueFieldUpdate((NetworkingStructs.DuelPackets.FieldUpdateRequest)DeserializeRaw(lastAction.PacketContentBytes()));
+			EnqueueFieldUpdateOrInfo(((ReplayContent.stoc)replay.packets.FindLast(IsFieldUpdateForCurrentPlayer)!.content).value);
 			window.UpdateField();
 		}
 	}
 
-	private bool IsFieldUpdateForCurrentPlayer(bool clientToServer, int player, NetworkingStructs.Packet packet)
+	private bool IsFieldUpdateForCurrentPlayer(ReplayPacket packet)
 	{
-		return !clientToServer && player == (((ReplaysViewModel)DataContext!).IsFirstPlayer ? 0 : 1) && packet is NetworkingStructs.DuelPackets.FieldUpdateRequest;
+		return packet.player == (((ReplaysViewModel)DataContext!).IsFirstPlayer ? 0 : 1) && packet.content is ReplayContent.stoc stoc && (stoc.value is SToC_Content.field_update || stoc.value is SToC_Content.show_info);
 	}
 
 	public void StartClick(object sender, RoutedEventArgs args)
@@ -70,9 +66,8 @@ public partial class ReplaysWindow : Window
 			new ErrorPopup($"Replay {FilePathBox.Text} does not exist").Show();
 			return;
 		}
-		string text = File.ReadAllText(FilePathBox.Text);
-		replay = JsonSerializer.Deserialize<Replay>(text, GenericConstants.replaySerialization);
-		if(replay == null)
+		replay = Replay.Serialize(File.ReadAllBytes(FilePathBox.Text));
+		if(replay is null)
 		{
 			new ErrorPopup($"Could not open replay {FilePathBox.Text}").Show();
 			return;
@@ -86,29 +81,23 @@ public partial class ReplaysWindow : Window
 	}
 	public void Next()
 	{
-		if(replay == null || window == null || actionIndex >= replay.actions.Count - 1)
+		if(replay == null || window == null || actionIndex >= replay.packets.Count - 1)
 		{
 			return;
 		}
-		Replay.GameAction action = replay.actions[actionIndex];
-		if(action.packetVersion != GenericConstants.PACKET_VERSION)
+		ReplayPacket action = replay.packets[actionIndex];
+		while(!IsFieldUpdateForCurrentPlayer(action))
 		{
-			new ErrorPopup($"Replay was made by an incompatble game version (expected {GenericConstants.PACKET_VERSION}, replay has {action.packetVersion})").Show();
-		}
-		NetworkingStructs.Packet packet = DeserializeRaw(action.PacketContentBytes());
-		while(!IsFieldUpdateForCurrentPlayer(action.clientToServer, action.player, packet))
-		{
-			((ReplaysViewModel)DataContext!).ActionList.Insert(0, $"{actionIndex}: Player {action.player}: {(action.clientToServer ? "<-" : "->")} {packet.GetType()}");
+			{ ((ReplaysViewModel)DataContext!).ActionList.Insert(0, $"  {actionIndex}: Player {action.player}: {(action.content is ReplayContent.ctos ? "<-" : "->")} {(action.content is ReplayContent.ctos ctos ? ctos.value.GetType() : ((ReplayContent.stoc)action.content).value.GetType())}"); }
 			actionIndex++;
-			if(actionIndex >= replay.actions.Count - 1)
+			if(actionIndex >= replay.packets.Count - 1)
 			{
 				return;
 			}
-			action = replay.actions[actionIndex];
-			packet = DeserializeRaw(action.PacketContentBytes());
+			action = replay.packets[actionIndex];
 		}
-		((ReplaysViewModel)DataContext!).ActionList.Insert(0, $"* {actionIndex}: Player {action.player}: {(action.clientToServer ? "<-" : "->")} {packet.GetType()}");
-		window.EnqueueFieldUpdate((NetworkingStructs.DuelPackets.FieldUpdateRequest)packet);
+		{ ((ReplaysViewModel)DataContext!).ActionList.Insert(0, $"* {actionIndex}: Player {action.player}: {(action.content is ReplayContent.ctos ? "<-" : "->")} {(action.content is ReplayContent.ctos ctos ? ctos.value.GetType() : ((ReplayContent.stoc)action.content).value.GetType())}"); }
+		EnqueueFieldUpdateOrInfo(((ReplayContent.stoc)action.content).value);
 		window.UpdateField();
 		actionIndex++;
 	}
@@ -121,12 +110,11 @@ public partial class ReplaysWindow : Window
 		}
 		actionIndex -= 2;
 		((ReplaysViewModel)DataContext!).ActionList.RemoveAt(0);
-		Replay.GameAction action = replay.actions[actionIndex];
-		NetworkingStructs.Packet packet = DeserializeRaw(action.PacketContentBytes());
-		while(!IsFieldUpdateForCurrentPlayer(action.clientToServer, action.player, packet))
+		ReplayPacket action = replay.packets[actionIndex];
+		while(!IsFieldUpdateForCurrentPlayer(action))
 		{
 			((ReplaysViewModel)DataContext!).ActionList.RemoveAt(0);
-			if(packet is NetworkingStructs.DuelPackets.GameResultResponse)
+			if(action.content is ReplayContent.stoc stoc && stoc.value is SToC_Content.game_result)
 			{
 				window.Close();
 				return;
@@ -138,10 +126,9 @@ public partial class ReplaysWindow : Window
 				window.Close();
 				return;
 			}
-			action = replay.actions[actionIndex];
-			packet = DeserializeRaw(action.PacketContentBytes());
+			action = replay.packets[actionIndex];
 		}
-		window.EnqueueFieldUpdate((NetworkingStructs.DuelPackets.FieldUpdateRequest)packet);
+		EnqueueFieldUpdateOrInfo(((ReplayContent.stoc)action.content).value);
 		window.UpdateField();
 		actionIndex++;
 	}
@@ -154,6 +141,19 @@ public partial class ReplaysWindow : Window
 	public void PrevClick(object sender, RoutedEventArgs args)
 	{
 		Prev();
+	}
+
+	public void EnqueueFieldUpdateOrInfo(SToC_Content content)
+	{
+		if(content is SToC_Content.field_update fieldUpdate)
+		{
+			window!.EnqueueFieldUpdateOrInfo(new DuelWindow.IFieldUpdateOrInfo.FieldUpdate(fieldUpdate.value));
+		}
+		else
+		{
+			window!.EnqueueFieldUpdateOrInfo(new DuelWindow.IFieldUpdateOrInfo.Info(((SToC_Content.show_info)content).value));
+		}
+
 	}
 }
 

@@ -1,9 +1,10 @@
 using System;
+using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using CardGameUtils.Structs;
+using CardGameUtils.Base;
 
 namespace CardGameClient;
 
@@ -11,7 +12,7 @@ public partial class ViewCardsWindow : Window
 {
 	private readonly Action<CardStruct> showCardAction;
 
-	public ViewCardsWindow(CardStruct[] cards, string? message, Action<CardStruct> showCardAction)
+	public ViewCardsWindow(List<CardStruct> cards, string? message, Action<CardStruct> showCardAction)
 	{
 		InitializeComponent();
 		Width = Program.config.width / 2;

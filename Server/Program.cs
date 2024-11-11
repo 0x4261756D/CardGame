@@ -8,9 +8,10 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 using CardGameUtils;
-using CardGameUtils.Structs;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Base;
+using CardGameUtils.Structs.Server;
 
 namespace CardGameServer;
 
@@ -18,7 +19,6 @@ class Program
 {
 	public static string baseDir = AppDomain.CurrentDomain.BaseDirectory;
 	public static ServerConfig config = new(additional_cards_path: "additional_cards/", artwork_path: null, port: 7043, room_min_port: 37042, room_max_port: 39942, core_info: new CoreInfo());
-	public static DateTime lastAdditionalCardsTimestamp;
 	public static string? seed;
 	public static SHA384 sha = SHA384.Create();
 	// TODO: MAKE THIS THREAD-SAFE SOMEHOW
@@ -63,10 +63,6 @@ class Program
 		{
 			config = platformConfig.windows;
 		}
-		if(File.Exists(config.additional_cards_path))
-		{
-			lastAdditionalCardsTimestamp = JsonSerializer.Deserialize<ServerPackets.AdditionalCardsResponse>(File.ReadAllText(config.additional_cards_path), GenericConstants.packetSerialization)!.time;
-		}
 		TcpListener listener = TcpListener.Create(config.port);
 		byte[] nowBytes = Encoding.UTF8.GetBytes(DateTime.Now.ToString());
 		seed = Convert.ToBase64String(sha.ComputeHash(nowBytes));
@@ -83,9 +79,9 @@ class Program
 				HandlePacketReturn decision = HandlePacketReturn.Continue;
 				try
 				{
-					Packet packet = Functions.ReceiveRawPacket(stream);
+					CToS_Content content = CToS_Packet.Serialize(stream).content;
 					Functions.Log("Server received a request", includeFullPath: true);
-					decision = HandlePacket(packet, stream);
+					decision = HandlePacket(content, stream);
 					if(decision == HandlePacketReturn.Break)
 					{
 						Functions.Log("Server received a request signalling it should stop", includeFullPath: true);
@@ -109,6 +105,20 @@ class Program
 		}
 		listener.Stop();
 	}
+	public static CToS_Content? TryReceivePacket(NetworkStream stream, int timeoutInMs)
+	{
+		try
+		{
+			Task task = Task.Run(() => { while(!stream.DataAvailable) { } return; });
+			int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
+			return i == 0 ? CToS_Packet.Serialize(stream).content : null;
+		}
+		catch(Exception e)
+		{
+			Functions.Log(e.Message, severity: Functions.LogSeverity.Warning);
+			return null;
+		}
+	}
 
 	private static void HandleRooms()
 	{
@@ -126,12 +136,12 @@ class Program
 					player.stream.CanRead &&
 					player.stream.DataAvailable)
 				{
-					Packet? packet = Functions.TryReceiveRawPacket(player.stream, 100);
-					if(packet != null)
+					CToS_Content? packet = TryReceivePacket(player.stream, 100);
+					if(packet is not null)
 					{
 						switch(packet)
 						{
-							case ServerPackets.LeaveRequest:
+							case CToS_Content.leave:
 							{
 								player.stream.Dispose();
 								room.players[playerIndex] = null;
@@ -146,7 +156,7 @@ class Program
 									{
 										try
 										{
-											room.players[1 - playerIndex]?.stream.Write(Functions.GeneratePayload(new ServerPackets.OpponentChangedResponse(null)));
+											room.players[1 - playerIndex]?.stream.Write(new SToC_Packet(new SToC_Content.opponent_changed(new(null))).Deserialize());
 										}
 										catch(IOException e)
 										{
@@ -156,30 +166,37 @@ class Program
 								}
 							}
 							break;
-							case ServerPackets.StartRequest request:
+							case CToS_Content.start r:
 							{
+								CToS_Request_Start request = r.value;
 								Functions.Log("----START REQUEST HANDLING----", includeFullPath: true);
-								if(request.decklist.Length != GameConstants.DECK_SIZE + 3)
+								if(request.decklist.cards.Count != GameConstantsElectricBoogaloo.DECK_SIZE)
 								{
-									player.stream.Write(Functions.GeneratePayload(new ServerPackets.StartResponse
-									{
-										success = ServerPackets.StartResponse.Result.Failure,
-										reason = "Your deck has the wrong size",
-									}));
+									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Your deck has the wrong size"))).Deserialize());
+									break;
+								}
+								if(request.decklist.ability is null)
+								{
+									Functions.Log("Deck has no ability", includeFullPath: true);
+									Functions.Log(string.Join(',', new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Your deck has no ability"))).Deserialize()));
+									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Your deck has no ability"))).Deserialize());
+									break;
+								}
+								if(request.decklist.quest is null)
+								{
+									Functions.Log("Deck has no quest", includeFullPath: true);
+									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Your deck has no quest"))).Deserialize());
 									break;
 								}
 								Functions.Log("Player: " + playerIndex, includeFullPath: true);
 								player.ready = true;
-								player.noshuffle = request.noshuffle;
+								player.noshuffle = request.no_shuffle;
 								player.Decklist = request.decklist;
 								if(room.players[1 - playerIndex] == null)
 								{
 									Functions.Log("No opponent", includeFullPath: true);
-									player.stream.Write(Functions.GeneratePayload(new ServerPackets.StartResponse
-									{
-										success = ServerPackets.StartResponse.Result.Failure,
-										reason = "You have no opponent",
-									}));
+									Functions.Log(string.Join(',', new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("You have no opponent"))).Deserialize()));
+									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("You have no opponent"))).Deserialize());
 									break;
 								}
 								Functions.Log("Opponent present", includeFullPath: true);
@@ -192,31 +209,26 @@ class Program
 										{
 											if(p != null && p.stream.Socket.Connected)
 											{
-												p.stream.Write(Functions.GeneratePayload(new ServerPackets.StartResponse
-												{
-													success = ServerPackets.StartResponse.Result.SuccessButWaiting,
-												}));
+												p.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.success_but_waiting())).Deserialize());
 											}
 										}
 									}
 									else
 									{
 										Functions.Log("Could not create the core", severity: Functions.LogSeverity.Error, includeFullPath: true);
-										byte[] startPayload = Functions.GeneratePayload(new ServerPackets.StartResponse
+										foreach(Room.Player? p in room.players)
 										{
-											success = ServerPackets.StartResponse.Result.Failure,
-											reason = "Could not create a core"
-										});
+											if(p is not null && p.stream.Socket.Connected)
+											{
+												p.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Could not create the core"))).Deserialize());
+											}
+										}
 									}
 								}
 								else
 								{
 									Functions.Log("Opponent not ready", includeFullPath: true);
-									player.stream.Write(Functions.GeneratePayload(new ServerPackets.StartResponse
-									{
-										success = ServerPackets.StartResponse.Result.Failure,
-										reason = "Your opponent isn't ready yet"
-									}));
+									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Opponent not ready"))).Deserialize());
 								}
 								Functions.Log("----END----", includeFullPath: true);
 							}
@@ -251,32 +263,27 @@ class Program
 		Functions.Log($"Cleaned up {waitingCount} abandoned waiting rooms, {waitingList.Count} rooms still open", includeFullPath: true);
 	}
 
-	private static HandlePacketReturn HandlePacket(Packet packet, NetworkStream stream)
+	private static HandlePacketReturn HandlePacket(CToS_Content content, NetworkStream stream)
 	{
 		CleanupRooms();
 		// THIS MIGHT CHANGE AS SENDING RAW JSON MIGHT BE TOO EXPENSIVE/SLOW
-		byte[]? payload = null;
-		switch(packet)
+		SToC_Content reply;
+		switch(content)
 		{
-			case ServerPackets.CreateRequest request:
+			case CToS_Content.create request:
 			{
-				string name = request.name!;
+				string name = request.value.name;
 				if(string.IsNullOrWhiteSpace(name))
 				{
-					payload = Functions.GeneratePayload(new ServerPackets.CreateResponse
-					(
-						success: false,
-						reason: "Names cannot be empty"
-					));
+					reply = new SToC_Content.create(new(new ErrorOr.error(new("Names cannot be empty"))));
 				}
 				else
 				{
 					if(waitingList.Exists(x => x.players[0]?.Name == name || x.players[1]?.Name == name))
 					{
-						payload = Functions.GeneratePayload(new ServerPackets.CreateResponse
+						reply = new SToC_Content.create(new
 						(
-							success: false,
-							reason: "Oh oh, sorry kiddo, looks like someone else already has that name. Why don't you pick something else? (Please watch SAO Abridged if you don't get this reference)"
+							new ErrorOr.error("Oh oh, sorry kiddo, looks like someone else already has that name. Why don't you pick something else? (Please watch SAO Abridged if you don't get this reference)")
 						));
 					}
 					else
@@ -311,176 +318,140 @@ class Program
 						if(currentPort == -1)
 						{
 							Functions.Log("No free port found", severity: Functions.LogSeverity.Warning);
-							payload = Functions.GeneratePayload(new ServerPackets.CreateResponse
-							(
-								success: false,
-								reason: "No free port found"
-							));
+							reply = new SToC_Content.create(new(new ErrorOr.error("No free port found")));
 						}
 						else
 						{
 							waitingList.Add(new Room(name, id, currentPort, stream));
-							payload = Functions.GeneratePayload(new ServerPackets.CreateResponse
-							(
-								success: true
-							));
-							stream.Write(payload);
+							reply = new SToC_Content.create(new(new ErrorOr.success()));
+							stream.Write(new SToC_Packet(reply).Deserialize());
 							return HandlePacketReturn.ContinueKeepStream;
 						}
 					}
 				}
 			}
 			break;
-			case ServerPackets.JoinRequest request:
+			case CToS_Content.join request:
 			{
-				if(string.IsNullOrWhiteSpace(request.name) || string.IsNullOrWhiteSpace(request.targetName))
+				if(string.IsNullOrWhiteSpace(request.value.own_name) || string.IsNullOrWhiteSpace(request.value.opp_name))
 				{
-					payload = Functions.GeneratePayload(new ServerPackets.JoinResponse
-					(
-						success: false,
-						reason: "Names cannot be empty"
-					));
+					reply = new SToC_Content.join(new(new ErrorOr.error("Names cannot be empty")));
 				}
 				else
 				{
-					if(waitingList.FindIndex(x => x.players[0]?.Name == request.name || x.players[1]?.Name == request.name) != -1)
+					if(waitingList.FindIndex(x => x.players[0]?.Name == request.value.own_name || x.players[1]?.Name == request.value.own_name) != -1)
 					{
-						payload = Functions.GeneratePayload(new ServerPackets.JoinResponse
+						reply = new SToC_Content.join(new
 						(
-							success: false,
-							reason: "Oh oh, sorry kiddo, looks like someone else already has that name. Why don't you pick something else? (Please watch SAO Abridged if you don't get this reference)"
+							new ErrorOr.error("Oh oh, sorry kiddo, looks like someone else already has that name. Why don't you pick something else? (Please watch SAO Abridged if you don't get this reference)")
 						));
 					}
 					else
 					{
-						int index = waitingList.FindIndex(x => x.players[0]?.Name == request.targetName || x.players[1]?.Name == request.targetName);
+						int index = waitingList.FindIndex(x => x.players[0]?.Name == request.value.opp_name || x.players[1]?.Name == request.value.opp_name);
 						if(index == -1)
 						{
-							payload = Functions.GeneratePayload(new ServerPackets.JoinResponse
-							(
-								success: false,
-								reason: "No player with that name hosts a game right now"
-							));
+							reply = new SToC_Content.join(new(new ErrorOr.error("No player with that name hosts a game right now")));
 						}
 						else
 						{
-							string id = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(seed + request.name))).Replace("-", "");
+							string id = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(seed + request.value.own_name))).Replace("-", "");
 							int playerIndex = waitingList[index].players[0] == null ? 0 : 1;
-							waitingList[index].players[playerIndex] = new Room.Player(Name: request.name, id: id, stream: stream, ready: false, noshuffle: false);
-							payload = Functions.GeneratePayload(new ServerPackets.JoinResponse
-							(
-								success: true
-							));
+							waitingList[index].players[playerIndex] = new Room.Player(Name: request.value.own_name, id: id, stream: stream, ready: false, noshuffle: false);
+							reply = new SToC_Content.join(new(new ErrorOr.success()));
 							if(waitingList[index].players[1 - playerIndex]!.stream != null && waitingList[index].players[1 - playerIndex]!.stream.Socket.Connected)
 							{
-								waitingList[index].players[1 - playerIndex]!.stream.Write(Functions.GeneratePayload(new ServerPackets.OpponentChangedResponse(request.name)));
+								waitingList[index].players[1 - playerIndex]!.stream.Write(new SToC_Packet(new SToC_Content.opponent_changed(new(request.value.own_name))).Deserialize());
 							}
-							stream.Write(payload);
+							stream.Write(new SToC_Packet(reply).Deserialize());
 							return HandlePacketReturn.ContinueKeepStream;
 						}
 					}
 				}
 			}
 			break;
-			case ServerPackets.RoomsRequest:
+			case CToS_Content.rooms:
 			{
 				if(waitingList.Exists(x => x.players[0]?.Name == null && x.players[1]?.Name == null))
 				{
 					Functions.Log($"There is a player whose name is null", severity: Functions.LogSeverity.Error, includeFullPath: true);
 					return HandlePacketReturn.Continue;
 				}
-				payload = Functions.GeneratePayload(new ServerPackets.RoomsResponse([.. waitingList.FindAll(x => !Array.TrueForAll(x.players, y => y?.ready ?? false)).ConvertAll(x => x.players[0]?.Name ?? x.players[1]?.Name)]));
+				reply = new SToC_Content.rooms(new(waitingList.FindAll(x => !Array.TrueForAll(x.players, y => y?.ready ?? false)).ConvertAll(x => x.players[0]?.Name ?? x.players[1]?.Name ?? throw new Exception("Empty name, this should not happen"))));
 			}
 			break;
-			case ServerPackets.AdditionalCardsRequest:
+			case CToS_Content.additional_cards:
 			{
 				string fullAdditionalCardsPath = Path.Combine(baseDir, config.additional_cards_path);
-				if(!File.Exists(fullAdditionalCardsPath) ||
-					JsonSerializer.Deserialize<ServerPackets.AdditionalCardsResponse>(File.ReadAllText(fullAdditionalCardsPath), GenericConstants.packetSerialization)?.time > lastAdditionalCardsTimestamp)
-				{
-					ProcessStartInfo info = new()
-					{
-						Arguments = config.core_info.Arguments + " --additional_cards_path=" + fullAdditionalCardsPath,
-						CreateNoWindow = config.core_info.CreateNoWindow,
-						UseShellExecute = config.core_info.UseShellExecute,
-						FileName = config.core_info.FileName,
-						WorkingDirectory = config.core_info.WorkingDirectory,
-					};
-					_ = (Process.Start(info)?.WaitForExit(10000));
-				}
+				LetCoreGenerateAdditionalCards(fullAdditionalCardsPath);
 				if(File.Exists(fullAdditionalCardsPath))
 				{
-					ServerPackets.AdditionalCardsResponse response = JsonSerializer.Deserialize<ServerPackets.AdditionalCardsResponse>(File.ReadAllText(fullAdditionalCardsPath), GenericConstants.packetSerialization)!;
-					lastAdditionalCardsTimestamp = response.time;
-					payload = Functions.GeneratePayload(response);
-					Functions.Log($"additional cards packet length: {payload.Length}");
+					SToC_Content savedContent = SToC_Packet.Serialize(File.ReadAllBytes(fullAdditionalCardsPath)).content;
+					if(savedContent is not SToC_Content.additional_cards)
+					{
+						Functions.Log($"Saved additional cards packet is of unexpected type {savedContent.GetType()}");
+						reply = new SToC_Content.additional_cards(new(0, []));
+					}
+					else
+					{
+						reply = savedContent;
+					}
 				}
 				else
 				{
+					reply = new SToC_Content.additional_cards(new(0, []));
 					Functions.Log("No additional cards file exists", severity: Functions.LogSeverity.Warning);
-					payload = Functions.GeneratePayload(new ServerPackets.AdditionalCardsResponse(DateTime.Now, []));
 				}
 			}
 			break;
-			case ServerPackets.ArtworkRequest request:
+			case CToS_Content.artworks request:
 			{
 				if(config.artwork_path is null)
 				{
-					payload = Functions.GeneratePayload(new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.None, null));
+					reply = new SToC_Content.artworks(new([]));
 					break;
 				}
-				string sanitizedName = Functions.CardnameToFilename(request.name);
-				string pngPath = Path.Combine(config.artwork_path, sanitizedName + ".png");
-				string jpgPath = Path.Combine(config.artwork_path, sanitizedName + ".jpg");
-				if(File.Exists(pngPath))
-				{
-					payload = Functions.GeneratePayload(new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.PNG, Convert.ToBase64String(File.ReadAllBytes(pngPath))));
-				}
-				else if(File.Exists(jpgPath))
-				{
-					payload = Functions.GeneratePayload(new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.JPG, Convert.ToBase64String(File.ReadAllBytes(jpgPath))));
-				}
-				else
-				{
-					payload = Functions.GeneratePayload(new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.None, null));
-				}
-			}
-			break;
-			case ServerPackets.ArtworksRequest request:
-			{
-				if(config.artwork_path is null)
-				{
-					payload = Functions.GeneratePayload(new ServerPackets.ArtworksResponse([], false));
-					break;
-				}
-				Dictionary<string, ServerPackets.ArtworkResponse> artworks = [];
-				foreach(string name in request.names)
+				List<Artwork> artworks = [];
+				foreach(string name in request.value.names)
 				{
 					string sanitizedName = Functions.CardnameToFilename(name);
 					string pngPath = Path.Combine(config.artwork_path, sanitizedName + ".png");
 					string jpgPath = Path.Combine(config.artwork_path, sanitizedName + ".jpg");
 					if(File.Exists(pngPath))
 					{
-						artworks[sanitizedName] = new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.PNG, Convert.ToBase64String(File.ReadAllBytes(pngPath)));
+						artworks.Add(new(name: sanitizedName, filetype: ArtworkFiletype.PNG, data: [.. File.ReadAllBytes(pngPath)]));
 					}
 					else if(File.Exists(jpgPath))
 					{
-						artworks[sanitizedName] = new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.JPG, Convert.ToBase64String(File.ReadAllBytes(jpgPath)));
+						artworks.Add(new(name: sanitizedName, filetype: ArtworkFiletype.JPG, data: [.. File.ReadAllBytes(pngPath)]));
 					}
-					else
-					{
-						artworks[sanitizedName] = new ServerPackets.ArtworkResponse(ServerPackets.ArtworkFiletype.None, null);
-					}
+					// Else just don't add it, the client MUST handle not receiving an artwork for every name requested.
 				}
-				payload = Functions.GeneratePayload(new ServerPackets.ArtworksResponse(artworks, true));
+				reply = new SToC_Content.artworks(new(artworks));
 			}
 			break;
 			default:
 			{
-				throw new Exception($"ERROR: Unable to process this packet: Packet type: {packet.GetType()}");
+				throw new Exception($"ERROR: Unable to process this packet: Packet type: {content.GetType()}");
 			}
 		}
-		stream.Write(payload);
+
+		SToC_Packet p = new(reply);
+		Functions.Log(string.Join(',', p.Deserialize()), Functions.LogSeverity.Warning);
+		stream.Write(p.Deserialize());
 		return HandlePacketReturn.Continue;
+	}
+
+	private static void LetCoreGenerateAdditionalCards(string fullAdditionalCardsPath)
+	{
+		ProcessStartInfo info = new()
+		{
+			Arguments = config.core_info.Arguments + " --additional_cards_path=" + fullAdditionalCardsPath,
+			CreateNoWindow = config.core_info.CreateNoWindow,
+			UseShellExecute = config.core_info.UseShellExecute,
+			FileName = config.core_info.FileName,
+			WorkingDirectory = config.core_info.WorkingDirectory,
+		};
+		_ = (Process.Start(info)?.WaitForExit(10000));
 	}
 }

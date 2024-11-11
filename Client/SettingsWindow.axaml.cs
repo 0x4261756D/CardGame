@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using CardGameUtils.Structs;
+using CardGameUtils;
 
 namespace CardGameClient;
 

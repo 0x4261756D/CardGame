@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -7,9 +8,9 @@ using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using CardGameUtils.Structs;
-using static CardGameUtils.Functions;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Base;
+using CardGameUtils.Structs.Duel;
+using System.Threading;
 
 namespace CardGameClient;
 
@@ -19,14 +20,15 @@ public partial class SelectCardsWindow : Window
 	private bool shouldReallyClose;
 	private readonly Action<CardStruct> showCardAction;
 
-	public SelectCardsWindow(string text, int amount, CardStruct[] cards, Stream stream, int playerIndex, Action<CardStruct> showCardAction)
+	public SelectCardsWindow(string text, uint amount, List<CardStruct> cards, Stream stream, Mutex streamMutex, int playerIndex, Action<CardStruct> showCardAction)
 	{
-		if(cards.Length < amount)
+		if(cards.Count < amount)
 		{
-			throw new Exception($"Tried to create a SelectCardWindow requiring to select more cards than possible: {cards.Length}/{amount}");
+			throw new Exception($"Tried to create a SelectCardWindow requiring to select more cards than possible: {cards.Count}/{amount}");
 		}
 		this.showCardAction = showCardAction;
 		this.stream = stream;
+		_ = streamMutex.WaitOne();
 		DataContext = new SelectedCardViewModel(amount);
 		InitializeComponent();
 		Width = Program.config.width / 2;
@@ -55,6 +57,7 @@ public partial class SelectCardsWindow : Window
 		{
 			args.Cancel = !shouldReallyClose;
 		};
+		Closed += (_, _) => streamMutex.ReleaseMutex();
 		if(amount == 1)
 		{
 			CardSelectionList.SelectionMode = SelectionMode.Single | SelectionMode.Toggle;
@@ -86,7 +89,7 @@ public partial class SelectCardsWindow : Window
 
 	public void ConfirmClick(object? sender, RoutedEventArgs args)
 	{
-		stream.Write(GeneratePayload(new DuelPackets.SelectCardsResponse(uids: UIUtils.CardListBoxSelectionToUID(CardSelectionList))));
+		stream.Write(new CToS_Packet(new CToS_Content.select_cards(new(uids: UIUtils.CardListBoxSelectionToUID(CardSelectionList)))).Deserialize());
 		shouldReallyClose = true;
 		Close();
 	}
@@ -94,7 +97,7 @@ public partial class SelectCardsWindow : Window
 
 public class SelectedCardViewModel : INotifyPropertyChanged
 {
-	public SelectedCardViewModel(int amount)
+	public SelectedCardViewModel(uint amount)
 	{
 		Amount = amount;
 		NotifyPropertyChanged("Amount");
@@ -106,7 +109,7 @@ public class SelectedCardViewModel : INotifyPropertyChanged
 		PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 	}
 
-	public readonly int Amount;
+	public readonly uint Amount;
 
 	public bool CanConfirm
 	{

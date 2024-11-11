@@ -7,8 +7,8 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using CardGameUtils;
-using CardGameUtils.Structs;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Base;
+using CardGameUtils.Structs.Server;
 
 namespace CardGameServer;
 
@@ -17,7 +17,7 @@ partial class Room
 	public class Player(string Name, string id, bool ready, bool noshuffle, NetworkStream stream)
 	{
 		public string Name = Name;
-		public string[]? Decklist;
+		public Deck? Decklist;
 		public string ID = id;
 		public bool ready = ready;
 		public bool noshuffle = noshuffle;
@@ -50,7 +50,7 @@ partial class Room
 				Functions.Log($"Unable to generate player string, player {i} ({players[i]?.Name}) has no decklist", severity: Functions.LogSeverity.Error, includeFullPath: true);
 				return null;
 			}
-			infos[i] = new CoreConfig.PlayerConfig(name: players[i]!.Name!, id: players[i]!.ID, decklist: players[i]!.Decklist!);
+			infos[i] = new CoreConfig.PlayerConfig(name: players[i]!.Name!, id: players[i]!.ID, decklist: Functions.GetDeckString(players[i]!.Decklist!).Split('\n'));
 		}
 		return JsonSerializer.Serialize(infos, options: GenericConstants.platformCoreConfigSerialization);
 	}
@@ -98,12 +98,11 @@ partial class Room
 		Functions.Log("Done reading", severity: Functions.LogSeverity.Warning);
 		foreach(Player? player in players)
 		{
-			player!.stream.Write(Functions.GeneratePayload(new ServerPackets.StartResponse
-			{
-				success = ServerPackets.StartResponse.Result.Success,
-				id = player.ID,
-				port = port,
-			}));
+			player!.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.success(new
+			(
+				id: player.ID,
+				port: port
+			)))).Deserialize());
 			player.stream.Close();
 			player.stream.Dispose();
 		}

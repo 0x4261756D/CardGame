@@ -1,6 +1,6 @@
 // Scripted by Dotlof
 using CardGameCore;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.GameConstants;
 
 class FiendishDealer : Creature
 {

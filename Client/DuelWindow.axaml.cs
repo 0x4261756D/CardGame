@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -11,9 +12,9 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using CardGameUtils;
-using CardGameUtils.Structs;
+using CardGameUtils.Base;
+using CardGameUtils.Structs.Duel;
 using static CardGameUtils.Functions;
-using static CardGameUtils.Structs.NetworkingStructs;
 
 namespace CardGameClient;
 
@@ -22,9 +23,15 @@ public partial class DuelWindow : Window
 	private readonly int playerIndex;
 	private readonly TcpClient client;
 	private readonly Stream stream;
+	private readonly Mutex streamMutex;
 	private readonly Task networkingTask;
 	private readonly Flyout optionsFlyout = new();
-	readonly Queue<DuelPackets.FieldUpdateRequest> fieldUpdateQueue = new();
+	public interface IFieldUpdateOrInfo
+	{
+		public record FieldUpdate(SToC_Broadcast_FieldUpdate Value) : IFieldUpdateOrInfo;
+		public record Info(SToC_Broadcast_ShowInfo Value) : IFieldUpdateOrInfo;
+	}
+	readonly Queue<IFieldUpdateOrInfo> fieldUpdateQueue = new();
 	private Task? fieldUpdateTask;
 	private bool closing;
 	private bool shouldEnablePassButtonAfterUpdate;
@@ -37,6 +44,7 @@ public partial class DuelWindow : Window
 		InitializeComponent();
 		client = new TcpClient();
 		stream = new MemoryStream();
+		streamMutex = new Mutex();
 		networkingTask = new Task(() => { });
 		OppField.LayoutUpdated += FieldInitialized;
 		OwnField.LayoutUpdated += FieldInitialized;
@@ -47,6 +55,7 @@ public partial class DuelWindow : Window
 		InitializeComponent();
 		this.client = client;
 		stream = client.GetStream();
+		streamMutex = new Mutex();
 		networkingTask = new Task(HandleNetwork, TaskCreationOptions.LongRunning);
 		networkingTask.Start();
 		Closed += (sender, args) =>
@@ -64,11 +73,11 @@ public partial class DuelWindow : Window
 			return;
 		}
 		Panel panel = (Panel)sender;
-		for(int i = 0; i < GameConstants.FIELD_SIZE; i++)
+		for(int i = 0; i < GameConstantsElectricBoogaloo.FIELD_SIZE; i++)
 		{
 			panel.Children.Add(new Button
 			{
-				Width = (panel.Bounds.Width - 10) / GameConstants.FIELD_SIZE,
+				Width = (panel.Bounds.Width - 10) / GameConstantsElectricBoogaloo.FIELD_SIZE,
 				Height = panel.Bounds.Height - 10,
 			});
 		}
@@ -81,20 +90,42 @@ public partial class DuelWindow : Window
 		Cleanup();
 		Close();
 	}
-	private void TrySend(byte[] packet)
+	private void TrySend(CToS_Content content)
 	{
 		if(client.Connected)
 		{
-			stream.Write(packet);
+			_ = streamMutex.WaitOne();
+			stream.Write(new CToS_Packet(content).Deserialize());
+			streamMutex.ReleaseMutex();
 		}
 		else
 		{
 			new ErrorPopup("Stream was closed").Show(this);
 		}
 	}
+	public SToC_Content? TryReceivePacket(NetworkStream stream, int timeoutInMs)
+	{
+		try
+		{
+			if(streamMutex.WaitOne(timeoutInMs))
+			{
+				Task task = Task.Run(() => { while(!stream.DataAvailable) { } });
+				int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
+				SToC_Content? ret = i == 0 ? SToC_Packet.Serialize(stream).content : null;
+				streamMutex.ReleaseMutex();
+				return ret;
+			}
+			return null;
+		}
+		catch(Exception e)
+		{
+			Log(e.Message, severity: LogSeverity.Warning);
+			return null;
+		}
+	}
 	private void PassClick(object? sender, RoutedEventArgs args)
 	{
-		TrySend(GeneratePayload(new DuelPackets.PassRequest { }));
+		TrySend(new CToS_Content.pass());
 	}
 	private async void HandleNetwork()
 	{
@@ -104,8 +135,8 @@ public partial class DuelWindow : Window
 		{
 			if(client.Connected)
 			{
-				Packet? packet = await Task.Run(() => TryReceiveRawPacket((NetworkStream)stream, 100)).ConfigureAwait(false);
-				if(packet != null && await Dispatcher.UIThread.InvokeAsync(() => HandlePacket(packet)))
+				SToC_Content? content = await Task.Run(() => TryReceivePacket((NetworkStream)stream, 100)).ConfigureAwait(false);
+				if(content != null && await Dispatcher.UIThread.InvokeAsync(() => HandlePacket(content)))
 				{
 					return;
 				}
@@ -152,79 +183,88 @@ public partial class DuelWindow : Window
 					}
 				}
 			}
+			Thread.Sleep(10);
 		}
 	}
 
-	private bool HandlePacket(Packet packet)
+	private bool HandlePacket(SToC_Content content)
 	{
-		switch(packet)
+		switch(content)
 		{
-			case DuelPackets.FieldUpdateRequest request:
+			case SToC_Content.field_update request:
 			{
-				EnqueueFieldUpdate(request);
+				EnqueueFieldUpdateOrInfo(new IFieldUpdateOrInfo.FieldUpdate(request.value));
 			}
 			break;
-			case DuelPackets.YesNoRequest request:
+			case SToC_Content.show_info request:
+			{
+				EnqueueFieldUpdateOrInfo(new IFieldUpdateOrInfo.Info(request.value));
+			}
+			break;
+			case SToC_Content.yes_no request:
 			{
 				Log("Received a yesno requets", severity: LogSeverity.Error);
-				windowToShowAfterUpdate = new YesNoWindow(request.question, stream);
+				windowToShowAfterUpdate = new YesNoWindow(request.value.question, stream, streamMutex);
 			}
 			break;
-			case DuelPackets.CustomSelectCardsRequest request:
+			case SToC_Content.select_cards_custom r:
 			{
-				windowToShowAfterUpdate = new CustomSelectCardsWindow(request.desc!, request.cards, request.initialState, stream, playerIndex, ShowCard);
+				SToC_Request_SelectCardsCustom request = r.value;
+				windowToShowAfterUpdate = new CustomSelectCardsWindow(request.description!, request.cards, request.initial_state, stream, streamMutex, playerIndex, ShowCard);
 			}
 			break;
-			case DuelPackets.GetOptionsResponse request:
+			case SToC_Content.get_actions request:
 			{
-				UpdateCardOptions(request);
+				UpdateCardOptions(request.value);
 			}
 			break;
-			case DuelPackets.SelectZoneRequest request:
+			case SToC_Content.select_zone request:
 			{
-				windowToShowAfterUpdate = new SelectZoneWindow(request.options, stream);
+				windowToShowAfterUpdate = new SelectZoneWindow(request.value.options, stream, streamMutex);
 			}
 			break;
-			case DuelPackets.GameResultResponse request:
+			case SToC_Content.game_result request:
 			{
-				windowToShowAfterUpdate = new GameResultWindow(this, request);
+				windowToShowAfterUpdate = new GameResultWindow(this, request.value);
 			}
 			break;
-			case DuelPackets.SelectCardsRequest request:
+			case SToC_Content.select_cards r:
 			{
-				windowToShowAfterUpdate = new SelectCardsWindow(request.desc, request.amount, request.cards, stream, playerIndex, ShowCard);
+				SToC_Request_SelectCards request = r.value;
+				windowToShowAfterUpdate = new SelectCardsWindow(request.description, request.amount, request.cards, stream, streamMutex, playerIndex, ShowCard);
 			}
 			break;
-			case DuelPackets.ViewCardsResponse request:
+			case SToC_Content.show_cards r:
 			{
-				windowToShowAfterUpdate = new ViewCardsWindow(cards: request.cards, message: request.message, showCardAction: ShowCard);
+				SToC_Response_ShowCards request = r.value;
+				windowToShowAfterUpdate = new ViewCardsWindow(cards: request.cards, message: request.description, showCardAction: ShowCard);
 			}
 			break;
 			default:
-				throw new NotImplementedException($"{packet.GetType()}");
+				throw new NotImplementedException($"{content.GetType()}");
 		}
 		return false;
 	}
 
 	private void ShowCard(CardStruct c)
 	{
-		UIUtils.CardHover(CardImagePanel, CardTextBlock, c, false);
+		UIUtils.CardHover(CardImagePanel, CardTextBlock, c, true);
 	}
 
-	private void UpdateCardOptions(DuelPackets.GetOptionsResponse response)
+	private void UpdateCardOptions(SToC_Response_GetActions response)
 	{
-		if(response.location == GameConstants.Location.Hand)
+		if(response.location == CardGameUtils.GameConstants.Location.Hand)
 		{
 			foreach(Control b in OwnHandPanel.Children)
 			{
 				if(((CardStruct)b.DataContext!).uid == response.uid)
 				{
-					if(response.options.Length == 0)
+					if(response.actions.Count == 0)
 					{
 						return;
 					}
 					StackPanel p = new();
-					foreach(CardAction action in response.options)
+					foreach(CardAction action in response.actions)
 					{
 						Button option = new()
 						{
@@ -242,7 +282,7 @@ public partial class DuelWindow : Window
 				}
 			}
 		}
-		else if(response.location == GameConstants.Location.Field)
+		else if(response.location == CardGameUtils.GameConstants.Location.Field)
 		{
 			foreach(Control b in OwnField.Children)
 			{
@@ -253,7 +293,7 @@ public partial class DuelWindow : Window
 				if(((CardStruct)b.DataContext).uid == response.uid)
 				{
 					StackPanel p = new();
-					foreach(CardAction action in response.options)
+					foreach(CardAction action in response.actions)
 					{
 						Button option = new()
 						{
@@ -271,10 +311,10 @@ public partial class DuelWindow : Window
 				}
 			}
 		}
-		else if(response.location == GameConstants.Location.Quest)
+		else if(response.location == CardGameUtils.GameConstants.Location.Quest)
 		{
 			StackPanel p = new();
-			foreach(CardAction action in response.options)
+			foreach(CardAction action in response.actions)
 			{
 				Button option = new()
 				{
@@ -289,10 +329,10 @@ public partial class DuelWindow : Window
 			optionsFlyout.Content = p;
 			optionsFlyout.ShowAt(OwnQuestPanel, true);
 		}
-		else if(response.location == GameConstants.Location.Ability)
+		else if(response.location == CardGameUtils.GameConstants.Location.Ability)
 		{
 			StackPanel p = new();
-			foreach(CardAction action in response.options)
+			foreach(CardAction action in response.actions)
 			{
 				Button option = new()
 				{
@@ -315,23 +355,23 @@ public partial class DuelWindow : Window
 
 	public void OppGraveClick(object? sender, RoutedEventArgs args)
 	{
-		TrySend(GeneratePayload(new DuelPackets.ViewGraveRequest(opponent: true)));
+		TrySend(new CToS_Content.view_grave(new(for_opponent: true)));
 	}
 	public void OwnGraveClick(object? sender, RoutedEventArgs args)
 	{
-		TrySend(GeneratePayload(new DuelPackets.ViewGraveRequest(opponent: false)));
+		TrySend(new CToS_Content.view_grave(new(for_opponent: false)));
 	}
-	private void SendCardOption(CardAction action, int uid, GameConstants.Location location)
+	private void SendCardOption(CardAction action, uint uid, CardGameUtils.GameConstants.Location location)
 	{
-		TrySend(GeneratePayload(new DuelPackets.SelectOptionRequest
+		TrySend(new CToS_Content.select_option(new
 		(
 			location: location,
 			uid: uid,
-			cardAction: action
+			action: action
 		)));
 	}
 
-	public void EnqueueFieldUpdate(DuelPackets.FieldUpdateRequest request)
+	public void EnqueueFieldUpdateOrInfo(IFieldUpdateOrInfo request)
 	{
 		fieldUpdateQueue.Enqueue(request);
 	}
@@ -343,164 +383,209 @@ public partial class DuelWindow : Window
 		{
 			return;
 		}
-		DuelPackets.FieldUpdateRequest request = fieldUpdateQueue.Dequeue();
-		string turnText = $"Turn {request.turn}";
-		if(TurnBlock.Text != turnText)
+		switch(fieldUpdateQueue.Dequeue())
 		{
-			KeepPassingBox.IsChecked = false;
-		}
-		TurnBlock.Text = turnText;
-		InitBlock.Text = request.hasInitiative ? "You have initiative" : "Your opponent has initiative";
-		DirectionBlock.Text = "Battle direction: " + (request.battleDirectionLeftToRight ? "->" : "<-");
-		if(request.hasInitiative)
-		{
-			Background = Brushes.Purple;
-		}
-		else
-		{
-			ClearValue(BackgroundProperty);
-		}
-		shouldEnablePassButtonAfterUpdate = request.hasInitiative;
+			case IFieldUpdateOrInfo.FieldUpdate r:
+			{
+				SToC_Broadcast_FieldUpdate request = r.Value;
+				string turnText = $"Turn {request.turn}";
+				if(TurnBlock.Text != turnText)
+				{
+					KeepPassingBox.IsChecked = false;
+				}
+				TurnBlock.Text = turnText;
+				InitBlock.Text = request.has_initiative ? "You have initiative" : "Your opponent has initiative";
+				DirectionBlock.Text = "Battle direction: " + (request.is_battle_direction_left_to_right ? "->" : "<-");
+				if(request.has_initiative)
+				{
+					Background = Brushes.Purple;
+				}
+				else
+				{
+					ClearValue(BackgroundProperty);
+				}
+				shouldEnablePassButtonAfterUpdate = request.has_initiative;
 
-		OppNameBlock.Text = request.oppField.name;
-		OppLifeBlock.Text = $"Life: {request.oppField.life}";
-		OppMomentumBlock.Text = $"Momentum: {request.oppField.momentum}";
-		OppDeckButton.Content = request.oppField.deckSize;
-		OppGraveButton.Content = request.oppField.graveSize;
-		OppAbilityPanel.Children.Clear();
-		OppAbilityPanel.Children.Add(CreateCardButton(request.oppField.ability));
-		OppQuestPanel.Children.Clear();
-		OppQuestPanel.Children.Add(CreateCardButton(request.oppField.quest));
-		Avalonia.Thickness oppBorderThickness = new(2, 2, 2, 0);
-		PhaseBlock.Text = (request.markedZone != null) ? "Battle Phase" : "Main Phase";
-		if(request.ownField.shownInfo.card != null && request.ownField.shownInfo.description != null)
-		{
-			TextBlock text = new() { Text = $"You: {request.ownField.shownInfo.card.name}: {request.ownField.shownInfo.description}" };
-			text.PointerEntered += (sender, args) =>
-			{
-				if(sender == null)
+				OppNameBlock.Text = request.opp_field.name;
+				OppLifeBlock.Text = $"Life: {request.opp_field.life}";
+				OppMomentumBlock.Text = $"Momentum: {request.opp_field.momentum}";
+				OppDeckButton.Content = request.opp_field.deck_size;
+				OppGraveButton.Content = request.opp_field.grave_size;
+				OppAbilityPanel.Children.Clear();
+				OppAbilityPanel.Children.Add(CreateCardButton(request.opp_field.ability));
+				OppQuestPanel.Children.Clear();
+				OppQuestPanel.Children.Add(CreateCardButton(request.opp_field.quest));
+				Avalonia.Thickness oppBorderThickness = new(2, 2, 2, 0);
+				PhaseBlock.Text = (request.marked_zone != null) ? "Battle Phase" : "Main Phase";
+				for(int i = 0; i < GameConstantsElectricBoogaloo.FIELD_SIZE; i++)
 				{
-					return;
+					CardStruct? c = request.opp_field.field[GameConstantsElectricBoogaloo.FIELD_SIZE - i - 1];
+					if(c != null)
+					{
+						Button b = CreateCardButton(c);
+						if(request.marked_zone != null && i == request.marked_zone)
+						{
+							b.BorderBrush = Brushes.Yellow;
+							b.BorderThickness = oppBorderThickness;
+						}
+						OppField.Children[i] = b;
+					}
+					else
+					{
+						Button b = new()
+						{
+							Width = (OppField.Bounds.Width - 10) / GameConstantsElectricBoogaloo.FIELD_SIZE,
+							Height = OppField.Bounds.Height - 10,
+						};
+						if(request.marked_zone != null && i == request.marked_zone)
+						{
+							b.BorderBrush = Brushes.Yellow;
+							b.BorderThickness = oppBorderThickness;
+						}
+						OppField.Children[i] = b;
+					}
 				}
-				if(args.KeyModifiers.HasFlag(KeyModifiers.Control))
+				OppHandPanel.Children.Clear();
+				UIUtils.CacheArtworkBatchFromServer(request.opp_field.hand.ConvertAll(x => x.name));
+				for(int i = 0; i < request.opp_field.hand.Count; i++)
 				{
-					return;
+					OppHandPanel.Children.Add(CreateCardButton(request.opp_field.hand[i]));
 				}
-				if(request.ownField.shownInfo.card != null)
-				{
-					UIUtils.CardHover(CardImagePanel, CardTextBlock, request.ownField.shownInfo.card, false);
-				}
-			};
-			activities.Insert(0, text);
-		}
-		if(request.oppField.shownInfo.card != null && request.oppField.shownInfo.description != null)
-		{
-			TextBlock text = new() { Text = $"Opp: {request.oppField.shownInfo.card.name}: {request.oppField.shownInfo.description}" };
-			text.PointerEntered += (sender, args) =>
-			{
-				if(sender == null)
-				{
-					return;
-				}
-				if(args.KeyModifiers.HasFlag(KeyModifiers.Control))
-				{
-					return;
-				}
-				if(request.oppField.shownInfo.card != null)
-				{
-					UIUtils.CardHover(CardImagePanel, CardTextBlock, request.oppField.shownInfo.card, false);
-				}
-			};
-			activities.Insert(0, text);
-		}
-		for(int i = 0; i < GameConstants.FIELD_SIZE; i++)
-		{
-			CardStruct? c = request.oppField.field[GameConstants.FIELD_SIZE - i - 1];
-			if(c != null)
-			{
-				Button b = CreateCardButton(c);
-				if(request.markedZone != null && i == request.markedZone)
-				{
-					b.BorderBrush = Brushes.Yellow;
-					b.BorderThickness = oppBorderThickness;
-				}
-				OppField.Children[i] = b;
-			}
-			else
-			{
-				Button b = new()
-				{
-					Width = (OppField.Bounds.Width - 10) / GameConstants.FIELD_SIZE,
-					Height = OppField.Bounds.Height - 10,
-				};
-				if(request.markedZone != null && i == request.markedZone)
-				{
-					b.BorderBrush = Brushes.Yellow;
-					b.BorderThickness = oppBorderThickness;
-				}
-				OppField.Children[i] = b;
-			}
-		}
-		OppHandPanel.Children.Clear();
-		UIUtils.CacheArtworkBatchFromServer(Array.ConvertAll(request.oppField.hand, x => x.name));
-		for(int i = 0; i < request.oppField.hand.Length; i++)
-		{
-			OppHandPanel.Children.Add(CreateCardButton(request.oppField.hand[i]));
-		}
-		OppShowPanel.Children.Clear();
-		if(request.oppField.shownInfo.card != null)
-		{
-			OppShowPanel.Children.Add(CreateCardButton(request.oppField.shownInfo.card));
-		}
 
-		OwnNameBlock.Text = request.ownField.name;
-		OwnLifeBlock.Text = $"Life: {request.ownField.life}";
-		OwnMomentumBlock.Text = $"Momentum: {request.ownField.momentum}";
-		OwnDeckButton.Content = request.ownField.deckSize;
-		OwnGraveButton.Content = request.ownField.graveSize;
-		OwnAbilityPanel.Children.Clear();
-		OwnAbilityPanel.Children.Add(CreateCardButton(request.ownField.ability));
-		OwnQuestPanel.Children.Clear();
-		OwnQuestPanel.Children.Add(CreateCardButton(request.ownField.quest));
-		Avalonia.Thickness ownBorderThickness = new(2, 0, 2, 2);
-		for(int i = 0; i < GameConstants.FIELD_SIZE; i++)
-		{
-			CardStruct? c = request.ownField.field[i];
-			if(c != null)
-			{
-				Button b = CreateCardButton(c);
-				if(request.markedZone != null && i == request.markedZone)
+
+				OwnNameBlock.Text = request.own_field.name;
+				OwnLifeBlock.Text = $"Life: {request.own_field.life}";
+				OwnMomentumBlock.Text = $"Momentum: {request.own_field.momentum}";
+				OwnDeckButton.Content = request.own_field.deck_size;
+				OwnGraveButton.Content = request.own_field.grave_size;
+				OwnAbilityPanel.Children.Clear();
+				OwnAbilityPanel.Children.Add(CreateCardButton(request.own_field.ability));
+				OwnQuestPanel.Children.Clear();
+				OwnQuestPanel.Children.Add(CreateCardButton(request.own_field.quest));
+				Avalonia.Thickness ownBorderThickness = new(2, 0, 2, 2);
+				for(int i = 0; i < GameConstantsElectricBoogaloo.FIELD_SIZE; i++)
 				{
-					b.BorderBrush = Brushes.Yellow;
-					b.BorderThickness = ownBorderThickness;
+					CardStruct? c = request.own_field.field[i];
+					if(c != null)
+					{
+						Button b = CreateCardButton(c);
+						if(request.marked_zone != null && i == request.marked_zone)
+						{
+							b.BorderBrush = Brushes.Yellow;
+							b.BorderThickness = ownBorderThickness;
+						}
+						OwnField.Children[i] = b;
+					}
+					else
+					{
+						Button b = new()
+						{
+							Width = (OppField.Bounds.Width - 10) / GameConstantsElectricBoogaloo.FIELD_SIZE,
+							Height = OppField.Bounds.Height - 10,
+						};
+						if(request.marked_zone != null && i == request.marked_zone)
+						{
+							b.BorderBrush = Brushes.Yellow;
+							b.BorderThickness = ownBorderThickness;
+						}
+						OwnField.Children[i] = b;
+					}
 				}
-				OwnField.Children[i] = b;
-			}
-			else
-			{
-				Button b = new()
+				OwnHandPanel.Children.Clear();
+				UIUtils.CacheArtworkBatchFromServer(request.own_field.hand.ConvertAll(x => x.name));
+				for(int i = 0; i < request.own_field.hand.Count; i++)
 				{
-					Width = (OppField.Bounds.Width - 10) / GameConstants.FIELD_SIZE,
-					Height = OppField.Bounds.Height - 10,
-				};
-				if(request.markedZone != null && i == request.markedZone)
-				{
-					b.BorderBrush = Brushes.Yellow;
-					b.BorderThickness = ownBorderThickness;
+					OwnHandPanel.Children.Add(CreateCardButton(request.own_field.hand[i]));
 				}
-				OwnField.Children[i] = b;
 			}
-		}
-		OwnHandPanel.Children.Clear();
-		UIUtils.CacheArtworkBatchFromServer(Array.ConvertAll(request.ownField.hand, x => x.name));
-		for(int i = 0; i < request.ownField.hand.Length; i++)
-		{
-			OwnHandPanel.Children.Add(CreateCardButton(request.ownField.hand[i]));
-		}
-		OwnShowPanel.Children.Clear();
-		if(request.ownField.shownInfo.card != null)
-		{
-			OwnShowPanel.Children.Add(CreateCardButton(request.ownField.shownInfo.card));
+			break;
+			case IFieldUpdateOrInfo.Info r:
+			{
+				SToC_Broadcast_ShowInfo request = r.Value;
+				if(request.player == playerIndex)
+				{
+					OwnShowPanel.Children.Clear();
+					if(request.info is not null)
+					{
+						StringBuilder text = new("You");
+						TextBlock block = new();
+						if(request.info.card is not null)
+						{
+							_ = text.Append(": ").Append(request.info.card.name);
+							OwnShowPanel.Children.Add(CreateCardButton(request.info.card));
+							block.PointerEntered += (sender, args) =>
+							{
+								if(sender == null)
+								{
+									return;
+								}
+								if(args.KeyModifiers.HasFlag(KeyModifiers.Control))
+								{
+									return;
+								}
+								UIUtils.CardHover(CardImagePanel, CardTextBlock, request.info.card, true);
+								OwnShowPanel.Children.Add(CreateCardButton(request.info.card));
+							};
+							block.PointerExited += (sender, args) =>
+							{
+								if(sender is null)
+								{
+									return;
+								}
+								OwnShowPanel.Children.Clear();
+							};
+						}
+						if(request.info.description is not null)
+						{
+							_ = text.Append(": ").Append(request.info.description);
+						}
+						block.Text = text.ToString();
+						activities.Insert(0, block);
+					}
+				}
+				else
+				{
+					OppShowPanel.Children.Clear();
+					if(request.info is not null)
+					{
+						StringBuilder text = new("Opp");
+						TextBlock block = new();
+						if(request.info.card is not null)
+						{
+							_ = text.Append(": ").Append(request.info.card.name);
+							OppShowPanel.Children.Add(CreateCardButton(request.info.card));
+							block.PointerEntered += (sender, args) =>
+							{
+								if(sender == null)
+								{
+									return;
+								}
+								if(args.KeyModifiers.HasFlag(KeyModifiers.Control))
+								{
+									return;
+								}
+								UIUtils.CardHover(CardImagePanel, CardTextBlock, request.info.card, true);
+								OppShowPanel.Children.Add(CreateCardButton(request.info.card));
+							};
+							block.PointerExited += (sender, args) =>
+							{
+								if(sender is null)
+								{
+									return;
+								}
+								OppShowPanel.Children.Clear();
+							};
+						}
+						if(request.info.description is not null)
+						{
+							_ = text.Append(": ").Append(request.info.description);
+						}
+						block.Text = text.ToString();
+						activities.Insert(0, block);
+					}
+				}
+			}
+			break;
 		}
 		ActivityLogList.ItemsSource = activities;
 	}
@@ -510,15 +595,15 @@ public partial class DuelWindow : Window
 		Button b = new()
 		{
 			DataContext = card,
-			Background = (card.card_type == GameConstants.CardType.Quest && card.text.Contains("REWARD CLAIMED")) ? Brushes.Green : null,
+			Background = (card.type_specifics is TypeSpecifics.quest && card.text.Contains("REWARD CLAIMED")) ? Brushes.Green : null,
 		};
-		if(card.location != GameConstants.Location.Hand)
+		if(card.location != CardGameUtils.GameConstants.Location.Hand)
 		{
-			b.MinWidth = OwnField.Bounds.Width / GameConstants.FIELD_SIZE;
+			b.MinWidth = OwnField.Bounds.Width / GameConstantsElectricBoogaloo.FIELD_SIZE;
 		}
-		if(card.location == GameConstants.Location.Field)
+		if(card.location == CardGameUtils.GameConstants.Location.Field)
 		{
-			b.Width = (OwnField.Bounds.Width - 10) / GameConstants.FIELD_SIZE;
+			b.Width = (OwnField.Bounds.Width - 10) / GameConstantsElectricBoogaloo.FIELD_SIZE;
 		}
 		b.Height = OwnField.Bounds.Height - 10;
 		b.PointerEntered += (sender, args) =>
@@ -531,7 +616,7 @@ public partial class DuelWindow : Window
 			{
 				return;
 			}
-			UIUtils.CardHover(CardImagePanel, CardTextBlock, card, false);
+			UIUtils.CardHover(CardImagePanel, CardTextBlock, card, true);
 		};
 		if(card.controller == playerIndex)
 		{
@@ -541,7 +626,7 @@ public partial class DuelWindow : Window
 				OptionsRequest(card.location, card.uid);
 			};
 		}
-		if(card.card_type == GameConstants.CardType.UNKNOWN)
+		if(card.type_specifics is TypeSpecifics.unknown)
 		{
 			b.Background = Brushes.DimGray;
 		}
@@ -552,9 +637,9 @@ public partial class DuelWindow : Window
 		return b;
 	}
 
-	private void OptionsRequest(GameConstants.Location location, int uid)
+	private void OptionsRequest(CardGameUtils.GameConstants.Location location, uint uid)
 	{
-		TrySend(GeneratePayload(new DuelPackets.GetOptionsRequest(location: location, uid: uid)));
+		TrySend(new CToS_Content.get_actions(new(location: location, uid: uid)));
 	}
 
 	private void Cleanup()
@@ -564,19 +649,19 @@ public partial class DuelWindow : Window
 			return;
 		}
 		closing = true;
-		Monitor.Enter(stream);
 		if(client.Connected)
 		{
 			try
 			{
-				stream.Write(GeneratePayload(new DuelPackets.SurrenderRequest { }));
+				_ = streamMutex.WaitOne();
+				stream.Write(new CToS_Packet(new CToS_Content.surrender()).Deserialize());
+				streamMutex.ReleaseMutex();
 			}
 			catch(Exception e)
 			{
 				Log($"Exception while sending cleanup message: {e}", severity: LogSeverity.Warning);
 			}
 		}
-		Monitor.Exit(stream);
 		networkingTask.Dispose();
 		client.Close();
 	}

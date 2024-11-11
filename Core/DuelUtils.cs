@@ -1,4 +1,5 @@
 using CardGameUtils;
+using CardGameUtils.GameConstants;
 
 namespace CardGameCore;
 
@@ -41,15 +42,15 @@ public class LocationBasedTrigger
 {
 	public TriggerCondition condition;
 	public Effect effect;
-	public GameConstants.Location influenceLocation;
+	public Location influenceLocation;
 
-	public LocationBasedTrigger(Effect effect, TriggerCondition condition, GameConstants.Location influenceLocation)
+	public LocationBasedTrigger(Effect effect, TriggerCondition condition, Location influenceLocation)
 	{
 		this.influenceLocation = influenceLocation;
 		this.condition = condition;
 		this.effect = effect;
 	}
-	public LocationBasedTrigger(Effect effect, GameConstants.Location influenceLocation)
+	public LocationBasedTrigger(Effect effect, Location influenceLocation)
 	{
 		this.influenceLocation = influenceLocation;
 		this.effect = effect;
@@ -58,13 +59,13 @@ public class LocationBasedTrigger
 }
 public class StateReachedTrigger
 {
-	public GameConstants.Location influenceLocation;
-	public GameConstants.State state;
+	public Location influenceLocation;
+	public GameConstantsElectricBoogaloo.State state;
 	public TriggerCondition condition;
 	public Effect effect;
 	public bool oneshot, wasTriggered;
 
-	public StateReachedTrigger(Effect effect, TriggerCondition condition, GameConstants.State state, GameConstants.Location influenceLocation = GameConstants.Location.Field, bool oneshot = false)
+	public StateReachedTrigger(Effect effect, TriggerCondition condition, GameConstantsElectricBoogaloo.State state, Location influenceLocation = Location.Field, bool oneshot = false)
 	{
 		this.influenceLocation = influenceLocation;
 		this.state = state;
@@ -72,7 +73,7 @@ public class StateReachedTrigger
 		this.effect = effect;
 		this.condition = condition;
 	}
-	public StateReachedTrigger(Effect effect, GameConstants.State state, GameConstants.Location influenceLocation = GameConstants.Location.Field, bool oneshot = false)
+	public StateReachedTrigger(Effect effect, GameConstantsElectricBoogaloo.State state, Location influenceLocation = Location.Field, bool oneshot = false)
 	{
 		this.influenceLocation = influenceLocation;
 		this.state = state;
@@ -83,17 +84,17 @@ public class StateReachedTrigger
 }
 public class LocationBasedTargetingTrigger
 {
-	public GameConstants.Location influenceLocation;
+	public Location influenceLocation;
 	public TargetingCondition condition;
 	public TargetingEffect effect;
 
-	public LocationBasedTargetingTrigger(TargetingEffect effect, TargetingCondition condition, GameConstants.Location influenceLocation)
+	public LocationBasedTargetingTrigger(TargetingEffect effect, TargetingCondition condition, Location influenceLocation)
 	{
 		this.influenceLocation = influenceLocation;
 		this.condition = condition;
 		this.effect = effect;
 	}
-	public LocationBasedTargetingTrigger(TargetingEffect effect, GameConstants.Location influenceLocation)
+	public LocationBasedTargetingTrigger(TargetingEffect effect, Location influenceLocation)
 	{
 		this.influenceLocation = influenceLocation;
 		this.condition = (_) => true;
@@ -103,17 +104,17 @@ public class LocationBasedTargetingTrigger
 
 public class TokenCreationTrigger
 {
-	public GameConstants.Location influenceLocation;
+	public Location influenceLocation;
 	public TokenCreationCondition condition;
 	public TokenCreationEffect effect;
 
-	public TokenCreationTrigger(TokenCreationEffect effect, TokenCreationCondition condition, GameConstants.Location influenceLocation)
+	public TokenCreationTrigger(TokenCreationEffect effect, TokenCreationCondition condition, Location influenceLocation)
 	{
 		this.influenceLocation = influenceLocation;
 		this.condition = condition;
 		this.effect = effect;
 	}
-	public TokenCreationTrigger(TokenCreationEffect effect, GameConstants.Location influenceLocation)
+	public TokenCreationTrigger(TokenCreationEffect effect, Location influenceLocation)
 	{
 		this.influenceLocation = influenceLocation;
 		this.condition = (_, _) => true;
@@ -121,13 +122,13 @@ public class TokenCreationTrigger
 	}
 }
 
-public class CreatureTargetingTrigger(CreatureTargetingEffect effect, CreatureTargetingCondition condition, GameConstants.Location influenceLocation)
+public class CreatureTargetingTrigger(CreatureTargetingEffect effect, CreatureTargetingCondition condition, Location influenceLocation)
 {
 	public CreatureTargetingCondition condition = condition;
 	public CreatureTargetingEffect effect = effect;
-	public GameConstants.Location influenceLocation = influenceLocation;
+	public Location influenceLocation = influenceLocation;
 
-	public CreatureTargetingTrigger(CreatureTargetingEffect effect, GameConstants.Location influenceLocation) : this(effect, (_) => true, influenceLocation) { }
+	public CreatureTargetingTrigger(CreatureTargetingEffect effect, Location influenceLocation) : this(effect, (_) => true, influenceLocation) { }
 }
 
 public class LingeringEffectInfo
@@ -136,14 +137,14 @@ public class LingeringEffectInfo
 	public int timestamp;
 	public TargetingEffect effect;
 	public Card referrer;
-	public GameConstants.Location influenceLocation;
+	public Location influenceLocation;
 
 	public delegate void SpecificTargetingEffect<T>(T target);
-	public static LingeringEffectInfo Create<T>(SpecificTargetingEffect<T> effect, T referrer, GameConstants.Location influenceLocation = GameConstants.Location.Field) where T : Card
+	public static LingeringEffectInfo Create<T>(SpecificTargetingEffect<T> effect, T referrer, Location influenceLocation = Location.Field) where T : Card
 	{
 		return new LingeringEffectInfo(effect: (target) => effect((T)target), referrer: referrer, influenceLocation: influenceLocation);
 	}
-	private LingeringEffectInfo(TargetingEffect effect, Card referrer, GameConstants.Location influenceLocation)
+	private LingeringEffectInfo(TargetingEffect effect, Card referrer, Location influenceLocation)
 	{
 		this.effect = effect;
 		this.referrer = referrer;
@@ -157,12 +158,12 @@ public class ActivatedEffectInfo
 	public ActivatedEffectCondition condition;
 	public Effect effect;
 	public string name;
-	public GameConstants.Location influenceLocation;
+	public Location influenceLocation;
 	public Card referrer;
 	public int uses, maxUses;
-	public int cardActionUid;
+	public uint cardActionUid;
 
-	public ActivatedEffectInfo(string name, Effect effect, ActivatedEffectCondition condition, Card referrer, int maxUses = 1, GameConstants.Location influenceLocation = GameConstants.Location.Field)
+	public ActivatedEffectInfo(string name, Effect effect, ActivatedEffectCondition condition, Card referrer, int maxUses = 1, Location influenceLocation = Location.Field)
 	{
 		this.condition = condition;
 		this.effect = effect;
@@ -174,12 +175,12 @@ public class ActivatedEffectInfo
 		DuelCore.CardActionUIDCount += 1;
 	}
 
-	public ActivatedEffectInfo(string name, Effect effect, Card referrer, int maxUses = 1, GameConstants.Location influenceLocation = GameConstants.Location.Field)
+	public ActivatedEffectInfo(string name, Effect effect, Card referrer, int maxUses = 1, Location influenceLocation = Location.Field)
 		: this(name, effect, () => true, referrer, maxUses, influenceLocation)
 	{
 	}
 
-	public bool CanActivate(GameConstants.Location location)
+	public bool CanActivate(Location location)
 	{
 		return uses < maxUses && Functions.IsInLocation(influenceLocation, location) && Functions.IsInLocation(referrer.Location, location) && condition();
 	}
@@ -201,7 +202,7 @@ public delegate void RegisterLocationBasedTriggerDelegate(LocationBasedTrigger t
 public delegate void RegisterStateReachedTriggerDelegate(StateReachedTrigger trigger, Card referrer);
 public delegate void RegisterCreatureTargetingTriggerDelegate(CreatureTargetingTrigger trigger, Card referrer);
 public delegate void RegisterLingeringEffectDelegate(LingeringEffectInfo info);
-public delegate void RegisterStateTemporaryLingeringEffectDelegate(LingeringEffectInfo info, GameConstants.State state);
+public delegate void RegisterStateTemporaryLingeringEffectDelegate(LingeringEffectInfo info, GameConstantsElectricBoogaloo.State state);
 public delegate void RegisterActivatedEffectDelegate(ActivatedEffectInfo info);
 public delegate void CastDelegate(int player, Card card);
 public delegate void DrawDelegate(int player, int amount);
@@ -210,9 +211,9 @@ public delegate int GetDamageMultiplierDelegate();
 public delegate Card[] GetCardsInLocationDelegate(int player);
 public delegate Creature[] GetFieldUsedDelegate(int player);
 public delegate Creature?[] GetWholeFieldDelegate(int player);
-public delegate Card[] SelectCardsDelegate(int player, Card[] cards, int amount, string description);
+public delegate Card[] SelectCardsDelegate(int player, Card[] cards, uint amount, string description);
 public delegate void DiscardDelegate(Card card);
-public delegate void DiscardAmountDelegate(int player, int amount);
+public delegate void DiscardAmountDelegate(int player, uint amount);
 public delegate void CreateTokenOnFieldDelegate(int player, int power, int life, string name, Card source);
 public delegate Token CreateTokenDelegate(int player, int power, int life, string name);
 public delegate Creature CreateTokenCopyDelegate(int player, Creature card);

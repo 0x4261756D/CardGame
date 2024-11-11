@@ -1,7 +1,7 @@
 //Scripted by Dotlof
 using CardGameCore;
 using static CardGameCore.CardUtils;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.GameConstants;
 
 class Recruit : Spell
 {
@@ -21,11 +21,11 @@ class Recruit : Spell
 	private void CastEffect()
 	{
 		Card target = Gather(player: Controller, amount: 5);
-		if(target.CardType == CardType.Creature)
+		if(target is Creature creature)
 		{
 			if(HasEmpty(GetField(Controller)))
 			{
-				MoveToField(Controller, Controller, (Creature)target, this);
+				MoveToField(Controller, Controller, creature, this);
 			}
 		}
 	}

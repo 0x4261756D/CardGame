@@ -1,0 +1,106 @@
+import "./Base.brief";
+version 1;
+namespace CardGameUtils.Structs.Duel;
+
+root SToC_Packet;
+
+table SToC_Packet
+{
+	content: SToC_Content;
+}
+
+union SToC_Content
+{
+	game_result: SToC_Broadcast_GameResult;
+	get_actions: SToC_Response_GetActions;
+	yes_no: SToC_Request_YesNo;
+	select_cards: SToC_Request_SelectCards;
+	select_cards_custom: SToC_Request_SelectCardsCustom;
+	select_cards_custom_intermediate: SToC_Response_SelectCardsCustomIntermediate;
+	select_zone: SToC_Request_SelectZone;
+	field_update: SToC_Broadcast_FieldUpdate;
+	show_cards: SToC_Response_ShowCards;
+	show_info: SToC_Broadcast_ShowInfo;
+}
+
+table SToC_Broadcast_ShowInfo
+{
+	player: i32;
+	info: ShownInfo?;
+}
+
+table SToC_Broadcast_GameResult
+{
+	result: #CardGameUtils.GameConstants.GameResult;
+}
+
+table SToC_Response_GetActions
+{
+	location: #CardGameUtils.GameConstants.Location;
+	uid: n32;
+	actions: [#CardGameUtils.Base.CardAction];
+}
+
+table SToC_Request_YesNo
+{
+	question: str;
+}
+
+table SToC_Request_SelectCards
+{
+	cards: [#CardGameUtils.Base.CardStruct];
+	description: str;
+	amount: n32;
+}
+
+table SToC_Request_SelectCardsCustom
+{
+	cards: [#CardGameUtils.Base.CardStruct];
+	description: str;
+	initial_state: bool;
+}
+
+table SToC_Response_SelectCardsCustomIntermediate
+{
+	is_valid: bool;
+}
+
+table SToC_Request_SelectZone
+{
+	options: [bool];
+}
+
+table SToC_Broadcast_FieldUpdate
+{
+	own_field: FieldStruct;
+	opp_field: FieldStruct;
+	turn: n32;
+	has_initiative: bool;
+	is_battle_direction_left_to_right: bool;
+	marked_zone: i32?;
+}
+
+table SToC_Response_ShowCards
+{
+	cards: [#CardGameUtils.Base.CardStruct];
+	description: str;
+}
+
+table FieldStruct
+{
+	life: i32;
+	deck_size: n32;
+	grave_size: n32;
+	momentum: i32;
+	hand: [#CardGameUtils.Base.CardStruct];
+	field: [#CardGameUtils.Base.CardStruct?];
+	name: str?;
+	ability: #CardGameUtils.Base.CardStruct;
+	quest: #CardGameUtils.Base.CardStruct;
+}
+
+table ShownInfo
+{
+	card: #CardGameUtils.Base.CardStruct?;
+	description: str?;
+}

@@ -1,0 +1,43 @@
+import "./Base.brief";
+version 1;
+namespace CardGameUtils.Structs.Server;
+
+root CToS_Packet;
+
+table CToS_Packet
+{
+	content: CToS_Content;
+}
+
+union CToS_Content
+{
+	additional_cards: void;
+	artworks: CToS_Request_Artworks;
+	create: CToS_Request_Create;
+	join: CToS_Request_Join;
+	leave: void;
+	rooms: void;
+	start: CToS_Request_Start;
+}
+
+table CToS_Request_Artworks
+{
+	names: [str];
+}
+
+table CToS_Request_Create
+{
+	name: str;
+}
+
+table CToS_Request_Join
+{
+	own_name: str;
+	opp_name: str;
+}
+
+table CToS_Request_Start
+{
+	decklist: #CardGameUtils.Base.Deck;
+	no_shuffle: bool;
+}

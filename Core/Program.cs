@@ -1,12 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using CardGameUtils;
-using CardGameUtils.Structs;
+using CardGameUtils.Replay;
 using static CardGameUtils.Functions;
 namespace CardGameCore;
 
@@ -15,7 +13,7 @@ class Program
 	public static string baseDir = AppDomain.CurrentDomain.BaseDirectory;
 	public static Replay? replay;
 	public static int seed;
-	public static DateTime versionTime;
+	public static ulong versionTime;
 	public static void Main(string[] args)
 	{
 		seed = new Random().Next();
@@ -117,7 +115,7 @@ class Program
 						break;
 					case "replay":
 						Log("Recording replay");
-						replay = new Replay(args, seed);
+						replay = new Replay(cmdline_args: [.. args], seed: seed, packets: []);
 						break;
 					case "additional_cards_url":
 						if(config.deck_config != null)
@@ -155,23 +153,23 @@ class Program
 		}
 		core.Init(pipeStream);
 		Log("EXITING");
-		if(replay != null)
+		if(replay is not null)
 		{
 			string replayPath = Path.Combine(baseDir, "replays");
 			_ = Directory.CreateDirectory(replayPath);
 			string filePath = Path.Combine(replayPath, $"{DateTime.UtcNow:yyyyMMdd_HHmmss}_{UsernameToFilename(config.duel_config!.players[0].name)}_vs_{UsernameToFilename(config.duel_config!.players[1].name)}.replay");
-			File.WriteAllText(filePath, JsonSerializer.Serialize(replay, GenericConstants.replaySerialization));
+			File.WriteAllBytes(filePath, replay.Deserialize());
 			Log("Wrote replay to " + filePath);
 		}
 	}
 
-	private static DateTime GenerateVersionTime()
+	private static ulong GenerateVersionTime()
 	{
 		foreach(string file in Directory.EnumerateFiles(baseDir))
 		{
 			if(Path.GetFileName(file) is "CardGameCore.dll" or "CardGameCore" or "CardGameCore.exe")
 			{
-				return File.GetCreationTime(file);
+				return (ulong)(new DateTimeOffset(File.GetCreationTime(file)).ToUnixTimeSeconds());
 			}
 		}
 		throw new Exception($"Could not find executable in {baseDir} to generate version time");
@@ -179,21 +177,22 @@ class Program
 
 	public static void GenerateAdditionalCards(string path)
 	{
-		if(!File.Exists(path) || JsonSerializer.Deserialize<NetworkingStructs.ServerPackets.AdditionalCardsResponse>(File.ReadAllText(path), GenericConstants.packetSerialization)?.time < versionTime)
-		{
-			Log("Generating new additional cards");
-			List<CardStruct> cards = [];
-			foreach(Type card in Array.FindAll(Assembly.GetExecutingAssembly().GetTypes(), IsCardSubclass))
-			{
-				Card c = (Card)Activator.CreateInstance(card)!;
-				cards.Add(c.ToStruct(client: true));
-			}
-			File.WriteAllText(path, JsonSerializer.Serialize(new NetworkingStructs.ServerPackets.AdditionalCardsResponse
-			(
-				cards: [.. cards],
-				time: versionTime
-			), GenericConstants.packetSerialization));
-		}
+		// if(!File.Exists(path) || JsonSerializer.Deserialize<NetworkingStructs.ServerPackets.AdditionalCardsResponse>(File.ReadAllText(path), GenericConstants.packetSerialization)?.time < versionTime)
+		// {
+		// 	Log("Generating new additional cards");
+		// 	List<CardStruct> cards = [];
+		// 	foreach(Type card in Array.FindAll(Assembly.GetExecutingAssembly().GetTypes(), IsCardSubclass))
+		// 	{
+		// 		Card c = (Card)Activator.CreateInstance(card)!;
+		// 		cards.Add(c.ToStruct(client: true));
+		// 	}
+		// 	File.WriteAllText(path, JsonSerializer.Serialize(new NetworkingStructs.ServerPackets.AdditionalCardsResponse
+		// 	(
+		// 		cards: [.. cards],
+		// 		time: versionTime
+		// 	), GenericConstants.packetSerialization));
+		// }
+		throw new NotImplementedException();
 	}
 
 	public static readonly Predicate<Type> IsCardSubclass = card =>

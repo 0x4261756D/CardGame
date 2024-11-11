@@ -1,8 +1,8 @@
 // Scripted by 0x4261756D
 using CardGameCore;
-using CardGameUtils.Structs;
 using static CardGameCore.CardUtils;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.GameConstants;
+using CardGameUtils.Base;
 
 class Ignite : Spell
 {

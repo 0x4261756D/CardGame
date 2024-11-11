@@ -1,7 +1,7 @@
 // Scripted by 0x4261756D
 using CardGameCore;
 using static CardGameCore.CardUtils;
-using static CardGameUtils.GameConstants;
+using CardGameUtils.GameConstants;
 
 class Unbury : Spell
 {
@@ -20,7 +20,7 @@ class Unbury : Spell
 
 	public void CastEffect()
 	{
-		ReturnCardsToDeck(FilterValid(cards: GetForBoth(GetGrave), card => card.CardType == CardType.Creature));
+		ReturnCardsToDeck(FilterValid(cards: GetForBoth(GetGrave), card => card is Creature));
 	}
 
 }

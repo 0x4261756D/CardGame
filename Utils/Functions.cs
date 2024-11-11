@@ -1,17 +1,106 @@
 using System;
-using System.Diagnostics;
 using System.IO;
-using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Text.Json;
+using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
-using static CardGameUtils.Structs.NetworkingStructs;
+using CardGameUtils.Base;
+using CardGameUtils.GameConstants;
 
 namespace CardGameUtils;
 
 partial class Functions
 {
+	public static string GetDeckString(Deck deck)
+	{
+		StringBuilder builder = new();
+		_ = builder.Append(deck.player_class);
+		if(deck.ability is not null)
+		{
+			_ = builder.AppendLine().Append('#').Append(deck.ability.name);
+		}
+		if(deck.quest is not null)
+		{
+			_ = builder.AppendLine().Append('|').Append(deck.quest.name);
+		}
+		foreach(CardStruct card in deck.cards)
+		{
+			_ = builder.AppendLine().Append(card.name);
+		}
+		Log(builder.ToString(), LogSeverity.Warning);
+		return builder.AppendLine().ToString();
+	}
+
+	public static string FormatCardStruct(CardStruct card, char separator = '\n', bool includeInfoIrrelevantForDeckEdit = true)
+	{
+		StringBuilder builder = new();
+		if(includeInfoIrrelevantForDeckEdit)
+		{
+			_ = builder.Append("UID: ").Append(card.uid).Append(separator);
+		}
+		_ = builder.Append("name: ").Append(card.name).Append(separator, 2);
+		if(card.type_specifics is TypeSpecifics.quest quest)
+		{
+			_ = builder.Append("quest progress: ").Append(quest.value.progress).Append('/').Append(quest.value.goal);
+		}
+		else if(card.location == Location.Ability)
+		{
+			_ = builder.Append("cost: 1");
+		}
+		else
+		{
+			_ = builder.Append("cost: ");
+			if(card.type_specifics is TypeSpecifics.creature creature)
+			{
+				_ = builder.Append(creature.value.cost);
+				if(includeInfoIrrelevantForDeckEdit)
+				{
+					_ = builder.Append('/').Append(creature.value.base_cost);
+				}
+			}
+			else if(card.type_specifics is TypeSpecifics.spell spell)
+			{
+				_ = builder.Append(spell.value.cost);
+				if(includeInfoIrrelevantForDeckEdit)
+				{
+					_ = builder.Append('/').Append(spell.value.base_cost);
+				}
+			}
+		}
+		if(includeInfoIrrelevantForDeckEdit)
+		{
+			_ = builder.Append(separator).Append("controller: ").Append(card.controller).Append('/').Append(card.base_controller);
+		}
+		_ = builder.Append(separator).Append("class: ").Append(card.card_class);
+		if(includeInfoIrrelevantForDeckEdit)
+		{
+			_ = builder.Append(separator).Append("location: ").Append(card.location);
+		}
+		{
+			if(card.type_specifics is TypeSpecifics.creature creature)
+			{
+				_ = builder.Append(separator).Append("power: ").Append(creature.value.power);
+				if(includeInfoIrrelevantForDeckEdit)
+				{
+					_ = builder.Append('/').Append(creature.value.base_power);
+				}
+				_ = builder.Append(separator).Append("life: ").Append(creature.value.life);
+				if(includeInfoIrrelevantForDeckEdit)
+				{
+					_ = builder.Append('/').Append(creature.value.base_life);
+				}
+				if(card.location == Location.Field)
+				{
+					_ = builder.Append(separator).Append("position: ").Append(creature.value.position);
+				}
+			}
+			else if(!includeInfoIrrelevantForDeckEdit && card.type_specifics is TypeSpecifics.spell spell)
+			{
+				_ = builder.Append(separator).Append("can be class ability: ").Append(spell.value.can_be_class_ability).Append(separator).Append("is class ability: ").Append(spell.value.is_class_ability);
+			}
+		}
+		_ = builder.Append(separator).Append('-', 16).Append(separator, 2).Append(card.text).Append(separator);
+		return builder.ToString();
+	}
 	public enum LogSeverity
 	{
 		Debug,
@@ -48,153 +137,26 @@ partial class Functions
 		if(severity != LogSeverity.Debug)
 		{
 #endif
-		Console.WriteLine($"{severity.ToString().ToUpper()}: [{(includeFullPath ? propertyName : Path.GetFileNameWithoutExtension(propertyName))}:{lineNumber}]: {message}");
+		Console.WriteLine($"{severity.ToString().ToUpperInvariant()}: [{(includeFullPath ? propertyName : Path.GetFileNameWithoutExtension(propertyName))}:{lineNumber}]: {message}");
 #if RELEASE
 		}
 #endif
 		Console.ForegroundColor = current;
 	}
 
-	public static Packet DeserializeRaw(byte[] data)
-	{
-		// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
-		//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
-		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
-		// the only difference being the type passed, wondering why one works and the other not...
-		return (Packet?)JsonSerializer.Deserialize(data, typeof(Packet), GenericConstants.packetSerialization) ?? throw new Exception("Deserialization returned null");
-	}
-
-	public static byte[] GeneratePayload(Packet data)
-	{
-		// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
-		//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
-		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
-		// the only difference being the type passed, wondering why one works and the other not...
-		byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(data, typeof(Packet), GenericConstants.packetSerialization);
-		return [.. BitConverter.GetBytes(bytes.Length), .. bytes];
-	}
-	public static byte[] ReadPacketBytes(NetworkStream stream)
-	{
-		byte[] buffer = new byte[4];
-		stream.ReadExactly(buffer);
-		uint length = BitConverter.ToUInt32(buffer);
-		buffer = new byte[length];
-		stream.ReadExactly(buffer);
-		return buffer;
-	}
-
-	public static Packet ReceiveRawPacket(NetworkStream stream)
-	{
-		// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
-		//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
-		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
-		// the only difference being the type passed, wondering why one works and the other not...
-		Packet packet = JsonSerializer.Deserialize<Packet>(ReadPacketBytes(stream), GenericConstants.packetSerialization) ?? throw new Exception("Deserialization returned null");
-		packet.EnsureCompatible();
-		return packet;
-	}
-	public static Packet? TryReceiveRawPacket(NetworkStream stream, long timeoutMs)
-	{
-		Stopwatch watch = Stopwatch.StartNew();
-		if(!stream.CanRead)
-		{
-			return null;
-		}
-		while(!stream.DataAvailable)
-		{
-			Thread.Sleep(10);
-			if(!stream.CanRead || (timeoutMs != -1 && watch.ElapsedMilliseconds > timeoutMs))
-			{
-				return null;
-			}
-		}
-		// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
-		//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
-		// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
-		// the only difference being the type passed, wondering why one works and the other not...
-		Packet? packet = JsonSerializer.Deserialize<Packet>(ReadPacketBytes(stream), GenericConstants.packetSerialization);
-		packet?.EnsureCompatible();
-		return packet;
-	}
-	public static T? TryReceivePacket<T>(NetworkStream stream, long timeoutMs) where T : Packet
-	{
-		Stopwatch watch = Stopwatch.StartNew();
-		if(!stream.CanRead)
-		{
-			return null;
-		}
-		while(!stream.DataAvailable)
-		{
-			Thread.Sleep(10);
-			if(!stream.CanRead || (timeoutMs != -1 && watch.ElapsedMilliseconds > timeoutMs))
-			{
-				return null;
-			}
-		}
-		Packet? packet;
-		do
-		{
-			// NOTE: IT IS OF UTMOST FUCKING IMPORTANCE THAT WE ALWAYS DE-/SERIALIZE Packet,
-			//		 NOT THE SPECIFIC TYPE SINCE IT WILL NOT INCLUDE THE $type ATTRIBUTE AND LOSE ALL TYPE INFO OTHERWISE
-			// This has cost approximately 2 hours of my life, staring at two seemingly identical pieces of code,
-			// the only difference being the type passed, wondering why one works and the other not...
-			packet = JsonSerializer.Deserialize<Packet>(ReadPacketBytes(stream), GenericConstants.packetSerialization);
-			packet?.EnsureCompatible();
-		}
-		while(packet is not T);
-
-		return (T?)packet;
-	}
-
-	public static T ReceivePacket<T>(NetworkStream stream) where T : Packet
-	{
-		Packet packet;
-		do
-		{
-			packet = ReceiveRawPacket(stream);
-		}
-		while(packet is not T);
-		return (T)packet;
-	}
-	public static void Send(Packet request, string address, int port)
-	{
-		using TcpClient client = new(address, port);
-		using NetworkStream stream = client.GetStream();
-		stream.Write(GeneratePayload(request));
-	}
-	public static R SendAndReceive<R>(Packet request, string address, int port) where R : Packet
-	{
-		using TcpClient client = new(address, port);
-		using NetworkStream stream = client.GetStream();
-		stream.Write(GeneratePayload(request));
-		return ReceivePacket<R>(stream);
-	}
-	public static R? TrySendAndReceive<R>(Packet request, string address, int port) where R : Packet
-	{
-		try
-		{
-			return SendAndReceive<R>(request, address, port);
-		}
-		catch(Exception e)
-		{
-			Log($"Could not send and receive to/from {address}:{port}. {e}", LogSeverity.Warning);
-			return null;
-		}
-	}
-
-	public static string ArtworkFiletypeToExtension(ServerPackets.ArtworkFiletype filetype)
+	public static string ArtworkFiletypeToExtension(Structs.Server.ArtworkFiletype filetype)
 	{
 		return filetype switch
 		{
-			ServerPackets.ArtworkFiletype.JPG => ".jpg",
-			ServerPackets.ArtworkFiletype.PNG => ".png",
+			Structs.Server.ArtworkFiletype.JPG => ".jpg",
+			Structs.Server.ArtworkFiletype.PNG => ".png",
 			_ => throw new NotImplementedException(),
 		};
 	}
 
-	public static bool IsInLocation(GameConstants.Location first, GameConstants.Location second)
+	public static bool IsInLocation(Location first, Location second)
 	{
-		return first == second || first == GameConstants.Location.Any || second == GameConstants.Location.Any;
+		return first == second || first == Location.Any || second == Location.Any;
 	}
 }
 
