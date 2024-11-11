@@ -46,18 +46,17 @@ public partial class ReplaysWindow : Window
 				((ReplaysViewModel)DataContext!).ActionList.Insert
 				(
 					0,
-					$"{(IsFieldUpdateForCurrentPlayer(action) ? "*" : "")}{actionIndex}: Player {action.player}: {(action.content is ReplayContent.ctos ? "<-" : "->")} {action.content.GetType()}"
+					$"{(IsFieldUpdateForCurrentPlayer(action) ? "*" : "")}{actionIndex}: Player {action.player}: {(action.content is ReplayContent.ctos ? "<-" : "->")} {(action.content is ReplayContent.ctos ctos ? ctos.value.GetType() : ((ReplayContent.stoc)action.content).value.GetType())}"
 				);
 			}
-			SToC_Broadcast_FieldUpdate lastAction = ((SToC_Content.field_update)((ReplayContent.stoc)replay.packets.FindLast(IsFieldUpdateForCurrentPlayer)!.content).value).value;
-			window.EnqueueFieldUpdate(lastAction);
+			EnqueueFieldUpdateOrInfo(((ReplayContent.stoc)replay.packets.FindLast(IsFieldUpdateForCurrentPlayer)!.content).value);
 			window.UpdateField();
 		}
 	}
 
 	private bool IsFieldUpdateForCurrentPlayer(ReplayPacket packet)
 	{
-		return packet.player == (((ReplaysViewModel)DataContext!).IsFirstPlayer ? 0 : 1) && packet.content is ReplayContent.stoc stoc && stoc.value is SToC_Content.field_update;
+		return packet.player == (((ReplaysViewModel)DataContext!).IsFirstPlayer ? 0 : 1) && packet.content is ReplayContent.stoc stoc && (stoc.value is SToC_Content.field_update || stoc.value is SToC_Content.show_info);
 	}
 
 	public void StartClick(object sender, RoutedEventArgs args)
@@ -89,7 +88,7 @@ public partial class ReplaysWindow : Window
 		ReplayPacket action = replay.packets[actionIndex];
 		while(!IsFieldUpdateForCurrentPlayer(action))
 		{
-			((ReplaysViewModel)DataContext!).ActionList.Insert(0, $"  {actionIndex}: Player {action.player}: {(action.content is ReplayContent.ctos ? "<-" : "->")} {action.content.GetType()}");
+			{ ((ReplaysViewModel)DataContext!).ActionList.Insert(0, $"  {actionIndex}: Player {action.player}: {(action.content is ReplayContent.ctos ? "<-" : "->")} {(action.content is ReplayContent.ctos ctos ? ctos.value.GetType() : ((ReplayContent.stoc)action.content).value.GetType())}"); }
 			actionIndex++;
 			if(actionIndex >= replay.packets.Count - 1)
 			{
@@ -97,8 +96,8 @@ public partial class ReplaysWindow : Window
 			}
 			action = replay.packets[actionIndex];
 		}
-		((ReplaysViewModel)DataContext!).ActionList.Insert(0, $"* {actionIndex}: Player {action.player}: {(action.content is ReplayContent.ctos ? "<-" : "->")} {action.content.GetType()}");
-		window.EnqueueFieldUpdate(((SToC_Content.field_update)((ReplayContent.stoc)action.content).value).value);
+		{ ((ReplaysViewModel)DataContext!).ActionList.Insert(0, $"* {actionIndex}: Player {action.player}: {(action.content is ReplayContent.ctos ? "<-" : "->")} {(action.content is ReplayContent.ctos ctos ? ctos.value.GetType() : ((ReplayContent.stoc)action.content).value.GetType())}"); }
+		EnqueueFieldUpdateOrInfo(((ReplayContent.stoc)action.content).value);
 		window.UpdateField();
 		actionIndex++;
 	}
@@ -129,7 +128,7 @@ public partial class ReplaysWindow : Window
 			}
 			action = replay.packets[actionIndex];
 		}
-		window.EnqueueFieldUpdate(((SToC_Content.field_update)((ReplayContent.stoc)action.content).value).value);
+		EnqueueFieldUpdateOrInfo(((ReplayContent.stoc)action.content).value);
 		window.UpdateField();
 		actionIndex++;
 	}
@@ -142,6 +141,19 @@ public partial class ReplaysWindow : Window
 	public void PrevClick(object sender, RoutedEventArgs args)
 	{
 		Prev();
+	}
+
+	public void EnqueueFieldUpdateOrInfo(SToC_Content content)
+	{
+		if(content is SToC_Content.field_update fieldUpdate)
+		{
+			window!.EnqueueFieldUpdateOrInfo(new DuelWindow.IFieldUpdateOrInfo.FieldUpdate(fieldUpdate.value));
+		}
+		else
+		{
+			window!.EnqueueFieldUpdateOrInfo(new DuelWindow.IFieldUpdateOrInfo.Info(((SToC_Content.show_info)content).value));
+		}
+
 	}
 }
 

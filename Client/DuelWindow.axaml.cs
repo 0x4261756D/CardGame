@@ -26,7 +26,7 @@ public partial class DuelWindow : Window
 	private readonly Mutex streamMutex;
 	private readonly Task networkingTask;
 	private readonly Flyout optionsFlyout = new();
-	private interface IFieldUpdateOrInfo
+	public interface IFieldUpdateOrInfo
 	{
 		public record FieldUpdate(SToC_Broadcast_FieldUpdate Value) : IFieldUpdateOrInfo;
 		public record Info(SToC_Broadcast_ShowInfo Value) : IFieldUpdateOrInfo;
@@ -193,12 +193,12 @@ public partial class DuelWindow : Window
 		{
 			case SToC_Content.field_update request:
 			{
-				EnqueueFieldUpdate(request.value);
+				EnqueueFieldUpdateOrInfo(new IFieldUpdateOrInfo.FieldUpdate(request.value));
 			}
 			break;
 			case SToC_Content.show_info request:
 			{
-				fieldUpdateQueue.Enqueue(new IFieldUpdateOrInfo.Info(request.value));
+				EnqueueFieldUpdateOrInfo(new IFieldUpdateOrInfo.Info(request.value));
 			}
 			break;
 			case SToC_Content.yes_no request:
@@ -371,9 +371,9 @@ public partial class DuelWindow : Window
 		)));
 	}
 
-	public void EnqueueFieldUpdate(SToC_Broadcast_FieldUpdate request)
+	public void EnqueueFieldUpdateOrInfo(IFieldUpdateOrInfo request)
 	{
-		fieldUpdateQueue.Enqueue(new IFieldUpdateOrInfo.FieldUpdate(request));
+		fieldUpdateQueue.Enqueue(request);
 	}
 
 	public void UpdateField()
