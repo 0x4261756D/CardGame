@@ -109,9 +109,9 @@ class Program
 	{
 		try
 		{
-			Task<CToS_Packet> task = Task.Run(() => CToS_Packet.Serialize(stream));
+			Task task = Task.Run(() => { while(!stream.DataAvailable) { } return; });
 			int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
-			return i == 0 ? task.Result.content : null;
+			return i == 0 ? CToS_Packet.Serialize(stream).content : null;
 		}
 		catch(Exception e)
 		{
@@ -175,6 +175,19 @@ class Program
 									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Your deck has the wrong size"))).Deserialize());
 									break;
 								}
+								if(request.decklist.ability is null)
+								{
+									Functions.Log("Deck has no ability", includeFullPath: true);
+									Functions.Log(string.Join(',', new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Your deck has no ability"))).Deserialize()));
+									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Your deck has no ability"))).Deserialize());
+									break;
+								}
+								if(request.decklist.quest is null)
+								{
+									Functions.Log("Deck has no quest", includeFullPath: true);
+									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Your deck has no quest"))).Deserialize());
+									break;
+								}
 								Functions.Log("Player: " + playerIndex, includeFullPath: true);
 								player.ready = true;
 								player.noshuffle = request.no_shuffle;
@@ -182,6 +195,7 @@ class Program
 								if(room.players[1 - playerIndex] == null)
 								{
 									Functions.Log("No opponent", includeFullPath: true);
+									Functions.Log(string.Join(',', new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("You have no opponent"))).Deserialize()));
 									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("You have no opponent"))).Deserialize());
 									break;
 								}
