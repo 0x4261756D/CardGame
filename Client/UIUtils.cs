@@ -11,6 +11,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using CardGameUtils;
 using CardGameUtils.Base;
+using System;
 
 namespace CardGameClient;
 
@@ -172,18 +173,26 @@ public class UIUtils
 		}
 		if(!ServersNotSupportingArtworks.Contains(Program.config.server_address))
 		{
-			List<CardGameUtils.Structs.Server.Artwork> response = ServerWindow.SendAndReceive<CardGameUtils.Structs.Server.SToC_Content.artworks>(new CardGameUtils.Structs.Server.CToS_Content.artworks(new([filename])), Program.config.server_address, GenericConstants.SERVER_PORT).value.artworks;
-			if(response.Count == 1)
+			try
 			{
-				CardGameUtils.Structs.Server.Artwork artwork = response[0];
-				if(Functions.CardnameToFilename(artwork.name) == filename)
+				List<CardGameUtils.Structs.Server.Artwork> response = ServerWindow.SendAndReceive<CardGameUtils.Structs.Server.SToC_Content.artworks>(new CardGameUtils.Structs.Server.CToS_Content.artworks(new([filename])), Program.config.server_address, GenericConstants.SERVER_PORT).value.artworks;
+				if(response.Count == 1)
 				{
-					string pathWithExtension = Path.Combine(Program.config.artwork_path, filename) + Functions.ArtworkFiletypeToExtension(artwork.filetype);
-					File.WriteAllBytes(pathWithExtension, [.. artwork.data]);
-					Bitmap ret = new(new MemoryStream([.. artwork.data]));
-					ArtworkCache[filename] = ret;
-					return ret;
+					CardGameUtils.Structs.Server.Artwork artwork = response[0];
+					if(Functions.CardnameToFilename(artwork.name) == filename)
+					{
+						string pathWithExtension = Path.Combine(Program.config.artwork_path, filename) + Functions.ArtworkFiletypeToExtension(artwork.filetype);
+						File.WriteAllBytes(pathWithExtension, [.. artwork.data]);
+						Bitmap ret = new(new MemoryStream([.. artwork.data]));
+						ArtworkCache[filename] = ret;
+						return ret;
+					}
 				}
+			}
+			catch(Exception e)
+			{
+				_ = ServersNotSupportingArtworks.Add(Program.config.server_address);
+				Functions.Log(e.Message);
 			}
 		}
 		if(DefaultArtwork == null && File.Exists(Path.Combine(Program.config.artwork_path, "default_artwork.png")))
