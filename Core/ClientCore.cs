@@ -8,7 +8,7 @@ using System.Text.RegularExpressions;
 using CardGameUtils;
 using static CardGameUtils.Functions;
 using CardGameUtils.Base;
-using CardGameUtils.GameConstants;
+using CardGameUtils.GameEnumsAndStructs;
 using System.Threading.Tasks;
 using CardGameUtils.Structs.Deck;
 

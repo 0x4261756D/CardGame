@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using CardGameUtils.GameConstants;
+using CardGameUtils.GameEnumsAndStructs;
 using CardGameUtils;
 
 namespace CardGameCore;

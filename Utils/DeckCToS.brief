@@ -36,6 +36,6 @@ table CToS_Request_DecklistDelete
 table CToS_Request_Search
 {
 	filter: str;
-	player_class: #CardGameUtils.GameConstants.PlayerClass;
+	player_class: #CardGameUtils.GameEnumsAndStructs.PlayerClass;
 	include_generic_cards: bool;
 }

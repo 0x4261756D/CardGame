@@ -1,7 +1,7 @@
 // Scripted by Dotlof
 using CardGameCore;
 using static CardGameCore.CardUtils;
-using CardGameUtils.GameConstants;
+using CardGameUtils.GameEnumsAndStructs;
 
 class DisposableWarrior : Creature
 {

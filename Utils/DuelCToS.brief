@@ -25,13 +25,13 @@ union CToS_Content
 
 table CToS_Request_GetActions
 {
-	location: #CardGameUtils.GameConstants.Location;
+	location: #CardGameUtils.GameEnumsAndStructs.Location;
 	uid: n32;
 }
 
 table CToS_Request_SelectOption
 {
-	location: #CardGameUtils.GameConstants.Location;
+	location: #CardGameUtils.GameEnumsAndStructs.Location;
 	uid: n32;
 	action: #CardGameUtils.Base.CardAction;
 }

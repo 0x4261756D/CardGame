@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
-using CardGameUtils.GameConstants;
+using CardGameUtils.GameEnumsAndStructs;
 using CardGameUtils.Base;
 
 namespace CardGameCore;

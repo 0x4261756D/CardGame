@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using CardGameUtils.GameConstants;
+using CardGameUtils.GameEnumsAndStructs;
 using CardGameUtils.Structs.Duel;
 
 namespace CardGameClient;

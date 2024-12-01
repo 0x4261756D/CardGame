@@ -1,8 +1,8 @@
 //Scripted by Dotlof
 using CardGameCore;
-using CardGameUtils.GameConstants;
+using CardGameUtils.GameEnumsAndStructs;
 using static CardGameCore.CardUtils;
-using static CardGameUtils.GameConstantsElectricBoogaloo;
+using static CardGameUtils.GameConstants;
 
 class Warsong : Spell
 {

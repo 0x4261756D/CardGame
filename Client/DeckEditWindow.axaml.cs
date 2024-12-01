@@ -12,7 +12,7 @@ using Avalonia.Media;
 using Avalonia.Reactive;
 using CardGameUtils;
 using CardGameUtils.Base;
-using CardGameUtils.GameConstants;
+using CardGameUtils.GameEnumsAndStructs;
 using CardGameUtils.Structs.Deck;
 
 namespace CardGameClient;
@@ -117,7 +117,7 @@ public partial class DeckEditWindow : Window
 		}
 		else
 		{
-			if(DecklistPanel.Children.Count >= GameConstantsElectricBoogaloo.DECK_SIZE)
+			if(DecklistPanel.Children.Count >= GameConstants.DECK_SIZE)
 			{
 				return;
 			}
@@ -127,7 +127,7 @@ public partial class DeckEditWindow : Window
 				if(((CardStruct)((Viewbox)((Button)c).Content!).DataContext!).name == card.name)
 				{
 					i++;
-					if(i >= GameConstantsElectricBoogaloo.MAX_CARD_MULTIPLICITY)
+					if(i >= GameConstants.MAX_CARD_MULTIPLICITY)
 					{
 						return;
 					}
@@ -167,7 +167,7 @@ public partial class DeckEditWindow : Window
 			Padding = new Thickness(0, 0, 0, 0),
 		};
 		double xAmount = 10;
-		double yAmount = Math.Ceiling(GameConstantsElectricBoogaloo.DECK_SIZE / xAmount);
+		double yAmount = Math.Ceiling(GameConstants.DECK_SIZE / xAmount);
 		_ = DecklistBorder.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>((a) =>
 		{
 			b.Width = (a.Width - DecklistBorder.BorderThickness.Left - DecklistBorder.BorderThickness.Right - 20) / xAmount - (b.BorderThickness.Left + b.BorderThickness.Right);

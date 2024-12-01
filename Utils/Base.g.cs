@@ -6,7 +6,7 @@ namespace CardGameUtils.Base;
 
 #nullable enable
 #pragma warning disable CS8981
-public record CardStruct(string name, string text, CardGameUtils.GameConstants.PlayerClass card_class, CardGameUtils.GameConstants.Location location, uint uid, int controller, int base_controller, TypeSpecifics type_specifics) : Common.PacketTable
+public record CardStruct(string name, string text, CardGameUtils.GameEnumsAndStructs.PlayerClass card_class, CardGameUtils.GameEnumsAndStructs.Location location, uint uid, int controller, int base_controller, TypeSpecifics type_specifics) : Common.PacketTable
 {
 	public byte[] Serialize()
 	{
@@ -161,12 +161,12 @@ public record CardStruct(string name, string text, CardGameUtils.GameConstants.P
 		}
 		string name = Common.Common.DeserializeStr(ref bytes);
 		string text = Common.Common.DeserializeStr(ref bytes);
-		CardGameUtils.GameConstants.PlayerClass card_class = (CardGameUtils.GameConstants.PlayerClass)Common.Common.DeserializeN8(ref bytes);
+		CardGameUtils.GameEnumsAndStructs.PlayerClass card_class = (CardGameUtils.GameEnumsAndStructs.PlayerClass)Common.Common.DeserializeN8(ref bytes);
 		if(!Common.Common.DeserializeName(ref bytes, Enum.GetName(card_class)!, len: 3))
 		{
 			throw new Exception($"Wrong enum name hash, got [{string.Join(',', Common.Common.SerializeName(Enum.GetName(card_class)!))}]");
 		}
-		CardGameUtils.GameConstants.Location location = (CardGameUtils.GameConstants.Location)Common.Common.DeserializeN8(ref bytes);
+		CardGameUtils.GameEnumsAndStructs.Location location = (CardGameUtils.GameEnumsAndStructs.Location)Common.Common.DeserializeN8(ref bytes);
 		if(!Common.Common.DeserializeName(ref bytes, Enum.GetName(location)!, len: 3))
 		{
 			throw new Exception($"Wrong enum name hash, got [{string.Join(',', Common.Common.SerializeName(Enum.GetName(location)!))}]");
@@ -677,7 +677,7 @@ public record CardAction(uint uid, string description) : Common.PacketTable
 		return bytes;
 	}
 }
-public record Deck(string name, List<CardStruct> cards, CardGameUtils.GameConstants.PlayerClass player_class, CardStruct? ability, CardStruct? quest) : Common.PacketTable
+public record Deck(string name, List<CardStruct> cards, CardGameUtils.GameEnumsAndStructs.PlayerClass player_class, CardStruct? ability, CardStruct? quest) : Common.PacketTable
 {
 	public static Deck DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -753,7 +753,7 @@ public record Deck(string name, List<CardStruct> cards, CardGameUtils.GameConsta
 		{
 			cards.Add(CardStruct.DeserializeInternal(ref bytes));
 		}
-		CardGameUtils.GameConstants.PlayerClass player_class = (CardGameUtils.GameConstants.PlayerClass)Common.Common.DeserializeN8(ref bytes);
+		CardGameUtils.GameEnumsAndStructs.PlayerClass player_class = (CardGameUtils.GameEnumsAndStructs.PlayerClass)Common.Common.DeserializeN8(ref bytes);
 		if(!Common.Common.DeserializeName(ref bytes, Enum.GetName(player_class)!, len: 3))
 		{
 			throw new Exception($"Wrong enum name hash, got [{string.Join(',', Common.Common.SerializeName(Enum.GetName(player_class)!))}]");

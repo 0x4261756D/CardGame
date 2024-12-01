@@ -73,11 +73,11 @@ public partial class DuelWindow : Window
 			return;
 		}
 		Panel panel = (Panel)sender;
-		for(int i = 0; i < GameConstantsElectricBoogaloo.FIELD_SIZE; i++)
+		for(int i = 0; i < GameConstants.FIELD_SIZE; i++)
 		{
 			panel.Children.Add(new Button
 			{
-				Width = (panel.Bounds.Width - 10) / GameConstantsElectricBoogaloo.FIELD_SIZE,
+				Width = (panel.Bounds.Width - 10) / GameConstants.FIELD_SIZE,
 				Height = panel.Bounds.Height - 10,
 			});
 		}
@@ -253,7 +253,7 @@ public partial class DuelWindow : Window
 
 	private void UpdateCardOptions(SToC_Response_GetActions response)
 	{
-		if(response.location == CardGameUtils.GameConstants.Location.Hand)
+		if(response.location == CardGameUtils.GameEnumsAndStructs.Location.Hand)
 		{
 			foreach(Control b in OwnHandPanel.Children)
 			{
@@ -282,7 +282,7 @@ public partial class DuelWindow : Window
 				}
 			}
 		}
-		else if(response.location == CardGameUtils.GameConstants.Location.Field)
+		else if(response.location == CardGameUtils.GameEnumsAndStructs.Location.Field)
 		{
 			foreach(Control b in OwnField.Children)
 			{
@@ -311,7 +311,7 @@ public partial class DuelWindow : Window
 				}
 			}
 		}
-		else if(response.location == CardGameUtils.GameConstants.Location.Quest)
+		else if(response.location == CardGameUtils.GameEnumsAndStructs.Location.Quest)
 		{
 			StackPanel p = new();
 			foreach(CardAction action in response.actions)
@@ -329,7 +329,7 @@ public partial class DuelWindow : Window
 			optionsFlyout.Content = p;
 			optionsFlyout.ShowAt(OwnQuestPanel, true);
 		}
-		else if(response.location == CardGameUtils.GameConstants.Location.Ability)
+		else if(response.location == CardGameUtils.GameEnumsAndStructs.Location.Ability)
 		{
 			StackPanel p = new();
 			foreach(CardAction action in response.actions)
@@ -361,7 +361,7 @@ public partial class DuelWindow : Window
 	{
 		TrySend(new CToS_Content.view_grave(new(for_opponent: false)));
 	}
-	private void SendCardOption(CardAction action, uint uid, CardGameUtils.GameConstants.Location location)
+	private void SendCardOption(CardAction action, uint uid, CardGameUtils.GameEnumsAndStructs.Location location)
 	{
 		TrySend(new CToS_Content.select_option(new
 		(
@@ -417,9 +417,9 @@ public partial class DuelWindow : Window
 				OppQuestPanel.Children.Add(CreateCardButton(request.opp_field.quest));
 				Avalonia.Thickness oppBorderThickness = new(2, 2, 2, 0);
 				PhaseBlock.Text = (request.marked_zone != null) ? "Battle Phase" : "Main Phase";
-				for(int i = 0; i < GameConstantsElectricBoogaloo.FIELD_SIZE; i++)
+				for(int i = 0; i < GameConstants.FIELD_SIZE; i++)
 				{
-					CardStruct? c = request.opp_field.field[GameConstantsElectricBoogaloo.FIELD_SIZE - i - 1];
+					CardStruct? c = request.opp_field.field[GameConstants.FIELD_SIZE - i - 1];
 					if(c != null)
 					{
 						Button b = CreateCardButton(c);
@@ -434,7 +434,7 @@ public partial class DuelWindow : Window
 					{
 						Button b = new()
 						{
-							Width = (OppField.Bounds.Width - 10) / GameConstantsElectricBoogaloo.FIELD_SIZE,
+							Width = (OppField.Bounds.Width - 10) / GameConstants.FIELD_SIZE,
 							Height = OppField.Bounds.Height - 10,
 						};
 						if(request.marked_zone != null && i == request.marked_zone)
@@ -463,7 +463,7 @@ public partial class DuelWindow : Window
 				OwnQuestPanel.Children.Clear();
 				OwnQuestPanel.Children.Add(CreateCardButton(request.own_field.quest));
 				Avalonia.Thickness ownBorderThickness = new(2, 0, 2, 2);
-				for(int i = 0; i < GameConstantsElectricBoogaloo.FIELD_SIZE; i++)
+				for(int i = 0; i < GameConstants.FIELD_SIZE; i++)
 				{
 					CardStruct? c = request.own_field.field[i];
 					if(c != null)
@@ -480,7 +480,7 @@ public partial class DuelWindow : Window
 					{
 						Button b = new()
 						{
-							Width = (OppField.Bounds.Width - 10) / GameConstantsElectricBoogaloo.FIELD_SIZE,
+							Width = (OppField.Bounds.Width - 10) / GameConstants.FIELD_SIZE,
 							Height = OppField.Bounds.Height - 10,
 						};
 						if(request.marked_zone != null && i == request.marked_zone)
@@ -597,13 +597,13 @@ public partial class DuelWindow : Window
 			DataContext = card,
 			Background = (card.type_specifics is TypeSpecifics.quest && card.text.Contains("REWARD CLAIMED")) ? Brushes.Green : null,
 		};
-		if(card.location != CardGameUtils.GameConstants.Location.Hand)
+		if(card.location != CardGameUtils.GameEnumsAndStructs.Location.Hand)
 		{
-			b.MinWidth = OwnField.Bounds.Width / GameConstantsElectricBoogaloo.FIELD_SIZE;
+			b.MinWidth = OwnField.Bounds.Width / GameConstants.FIELD_SIZE;
 		}
-		if(card.location == CardGameUtils.GameConstants.Location.Field)
+		if(card.location == CardGameUtils.GameEnumsAndStructs.Location.Field)
 		{
-			b.Width = (OwnField.Bounds.Width - 10) / GameConstantsElectricBoogaloo.FIELD_SIZE;
+			b.Width = (OwnField.Bounds.Width - 10) / GameConstants.FIELD_SIZE;
 		}
 		b.Height = OwnField.Bounds.Height - 10;
 		b.PointerEntered += (sender, args) =>
@@ -637,7 +637,7 @@ public partial class DuelWindow : Window
 		return b;
 	}
 
-	private void OptionsRequest(CardGameUtils.GameConstants.Location location, uint uid)
+	private void OptionsRequest(CardGameUtils.GameEnumsAndStructs.Location location, uint uid)
 	{
 		TrySend(new CToS_Content.get_actions(new(location: location, uid: uid)));
 	}

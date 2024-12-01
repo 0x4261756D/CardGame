@@ -320,7 +320,7 @@ public record CToS_Request_DecklistDelete(string name) : Common.PacketTable
 		return bytes;
 	}
 }
-public record CToS_Request_Search(string filter, CardGameUtils.GameConstants.PlayerClass player_class, bool include_generic_cards) : Common.PacketTable
+public record CToS_Request_Search(string filter, CardGameUtils.GameEnumsAndStructs.PlayerClass player_class, bool include_generic_cards) : Common.PacketTable
 {
 	public static CToS_Request_Search DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -361,7 +361,7 @@ public record CToS_Request_Search(string filter, CardGameUtils.GameConstants.Pla
 			}
 		}
 		string filter = Common.Common.DeserializeStr(ref bytes);
-		CardGameUtils.GameConstants.PlayerClass player_class = (CardGameUtils.GameConstants.PlayerClass)Common.Common.DeserializeN8(ref bytes);
+		CardGameUtils.GameEnumsAndStructs.PlayerClass player_class = (CardGameUtils.GameEnumsAndStructs.PlayerClass)Common.Common.DeserializeN8(ref bytes);
 		if(!Common.Common.DeserializeName(ref bytes, Enum.GetName(player_class)!, len: 3))
 		{
 			throw new Exception($"Wrong enum name hash, got [{string.Join(',', Common.Common.SerializeName(Enum.GetName(player_class)!))}]");

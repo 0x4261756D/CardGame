@@ -170,7 +170,7 @@ class Program
 							{
 								CToS_Request_Start request = r.value;
 								Functions.Log("----START REQUEST HANDLING----", includeFullPath: true);
-								if(request.decklist.cards.Count != GameConstantsElectricBoogaloo.DECK_SIZE)
+								if(request.decklist.cards.Count != GameConstants.DECK_SIZE)
 								{
 									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Your deck has the wrong size"))).Serialize());
 									break;

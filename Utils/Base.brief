@@ -1,4 +1,4 @@
-import "./GameConstants.brief";
+import "./GameEnumsAndStructs.brief";
 version 1;
 namespace CardGameUtils.Base;
 root CardStruct;
@@ -7,8 +7,8 @@ table CardStruct
 {
 	name: str;
 	text: str;
-	card_class: #CardGameUtils.GameConstants.PlayerClass;
-	location: #CardGameUtils.GameConstants.Location;
+	card_class: #CardGameUtils.GameEnumsAndStructs.PlayerClass;
+	location: #CardGameUtils.GameEnumsAndStructs.Location;
 	uid: n32;
 	controller: i32;
 	base_controller: i32;
@@ -59,7 +59,7 @@ table Deck
 {
 	name: str;
 	cards: [CardStruct];
-	player_class: #CardGameUtils.GameConstants.PlayerClass;
+	player_class: #CardGameUtils.GameEnumsAndStructs.PlayerClass;
 	ability: CardStruct?;
 	quest: CardStruct?;
 }

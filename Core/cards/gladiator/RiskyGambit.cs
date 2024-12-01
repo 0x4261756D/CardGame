@@ -1,7 +1,7 @@
 //Scripted by Dotlof
 using CardGameCore;
-using CardGameUtils.GameConstants;
-using static CardGameUtils.GameConstantsElectricBoogaloo;
+using CardGameUtils.GameEnumsAndStructs;
+using static CardGameUtils.GameConstants;
 
 class RiskyGambit : Spell
 {

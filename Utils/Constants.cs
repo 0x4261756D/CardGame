@@ -42,7 +42,7 @@ public class GenericConstants
 	};
 }
 
-public class GameConstantsElectricBoogaloo
+public class GameConstants
 {
 	public const int MAX_CARD_MULTIPLICITY = 2;
 	public const int DECK_SIZE = 40;

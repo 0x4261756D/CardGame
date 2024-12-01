@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using CardGameUtils;
-using CardGameUtils.GameConstants;
+using CardGameUtils.GameEnumsAndStructs;
 using CardGameUtils.Base;
 
 namespace CardGameCore;
 
 class Field
 {
-	private readonly Creature?[] cards = new Creature?[GameConstantsElectricBoogaloo.FIELD_SIZE];
+	private readonly Creature?[] cards = new Creature?[GameConstants.FIELD_SIZE];
 	public Field()
 	{
 
@@ -41,7 +41,7 @@ class Field
 
 	internal bool[] GetMovementOptions(int position, int momentum)
 	{
-		bool[] ret = new bool[GameConstantsElectricBoogaloo.FIELD_SIZE];
+		bool[] ret = new bool[GameConstants.FIELD_SIZE];
 		Creature? card = cards[position];
 		if(card == null)
 		{
@@ -56,8 +56,8 @@ class Field
 				ret[i] = true;
 			}
 		}
-		for(int i = Math.Min(GameConstantsElectricBoogaloo.FIELD_SIZE - 1, position + 1);
-			i <= Math.Min(GameConstantsElectricBoogaloo.FIELD_SIZE - 1, position + (momentum / movementCost)); i++)
+		for(int i = Math.Min(GameConstants.FIELD_SIZE - 1, position + 1);
+			i <= Math.Min(GameConstants.FIELD_SIZE - 1, position + (momentum / movementCost)); i++)
 		{
 			if(cards[i] == null)
 			{
@@ -124,8 +124,8 @@ class Field
 				return true;
 			}
 		}
-		for(int i = Math.Min(GameConstantsElectricBoogaloo.FIELD_SIZE - 1, position + 1);
-			i <= Math.Min(GameConstantsElectricBoogaloo.FIELD_SIZE - 1, position + (momentum / movementCost)); i++)
+		for(int i = Math.Min(GameConstants.FIELD_SIZE - 1, position + 1);
+			i <= Math.Min(GameConstants.FIELD_SIZE - 1, position + (momentum / movementCost)); i++)
 		{
 			if(cards[i] == null)
 			{
@@ -154,7 +154,7 @@ class Field
 	}
 	internal void Remove(Creature card)
 	{
-		for(int i = 0; i < GameConstantsElectricBoogaloo.FIELD_SIZE; i++)
+		for(int i = 0; i < GameConstants.FIELD_SIZE; i++)
 		{
 			if(cards[i] != null && cards[i] == card)
 			{

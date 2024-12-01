@@ -1,7 +1,7 @@
 // Scripted by 0x4261756D
 using CardGameCore;
-using CardGameUtils.GameConstants;
-using static CardGameUtils.GameConstantsElectricBoogaloo;
+using CardGameUtils.GameEnumsAndStructs;
+using static CardGameUtils.GameConstants;
 
 class Recycle : Spell
 {

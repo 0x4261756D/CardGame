@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading;
 using CardGameUtils;
 using CardGameUtils.Base;
-using CardGameUtils.GameConstants;
+using CardGameUtils.GameEnumsAndStructs;
 using CardGameUtils.Replay;
 using CardGameUtils.Structs.Duel;
 using static CardGameUtils.Functions;
@@ -17,8 +17,8 @@ namespace CardGameCore;
 
 class DuelCore : Core
 {
-	private static GameConstantsElectricBoogaloo.State _state = GameConstantsElectricBoogaloo.State.UNINITIALIZED;
-	public static GameConstantsElectricBoogaloo.State State
+	private static GameConstants.State _state = GameConstants.State.UNINITIALIZED;
+	public static GameConstants.State State
 	{
 		get => _state;
 		set
@@ -43,7 +43,7 @@ class DuelCore : Core
 	public int turnPlayer, initPlayer;
 	public int nextMomentumIncreaseIndex;
 	public int? markedZone;
-	public int momentumBase = GameConstantsElectricBoogaloo.START_MOMENTUM;
+	public int momentumBase = GameConstants.START_MOMENTUM;
 	public bool rewardClaimed;
 	public CoreConfig.DuelConfig config;
 
@@ -63,7 +63,7 @@ class DuelCore : Core
 	private readonly List<StateReachedTrigger> alwaysActiveStateReachedTriggers = [];
 	private readonly Dictionary<uint, LingeringEffectList> lingeringEffects = [];
 	private readonly Dictionary<uint, LingeringEffectList> locationTemporaryLingeringEffects = [];
-	private readonly Dictionary<GameConstantsElectricBoogaloo.State, LingeringEffectList> stateTemporaryLingeringEffects = [];
+	private readonly Dictionary<GameConstants.State, LingeringEffectList> stateTemporaryLingeringEffects = [];
 	private readonly LingeringEffectList alwaysActiveLingeringEffects;
 	private readonly Dictionary<uint, List<ActivatedEffectInfo>> activatedEffects = [];
 	private readonly Dictionary<uint, List<Trigger>> dealsDamageTriggers = [];
@@ -305,7 +305,7 @@ class DuelCore : Core
 
 	private void EvaluateLingeringEffects()
 	{
-		if(State == GameConstantsElectricBoogaloo.State.UNINITIALIZED)
+		if(State == GameConstants.State.UNINITIALIZED)
 		{
 			return;
 		}
@@ -458,7 +458,7 @@ class DuelCore : Core
 		}
 		foreach(Player player in players)
 		{
-			for(int i = 0; i < GameConstantsElectricBoogaloo.FIELD_SIZE; i++)
+			for(int i = 0; i < GameConstants.FIELD_SIZE; i++)
 			{
 				Creature? card = player.field.GetByPosition(i);
 				if(card != null && card.Life <= 0)
@@ -660,9 +660,9 @@ class DuelCore : Core
 	}
 	private bool HandleGameLogic()
 	{
-		while(!State.HasFlag(GameConstantsElectricBoogaloo.State.InitGained))
+		while(!State.HasFlag(GameConstants.State.InitGained))
 		{
-			if(State != GameConstantsElectricBoogaloo.State.UNINITIALIZED)
+			if(State != GameConstants.State.UNINITIALIZED)
 			{
 				EvaluateLingeringEffects();
 				for(int i = 0; i < players.Length; i++)
@@ -676,7 +676,7 @@ class DuelCore : Core
 			}
 			switch(State)
 			{
-				case GameConstantsElectricBoogaloo.State.UNINITIALIZED:
+				case GameConstants.State.UNINITIALIZED:
 				{
 					foreach(Player player in players)
 					{
@@ -684,9 +684,9 @@ class DuelCore : Core
 						{
 							player.deck.Shuffle();
 						}
-						player.Draw(GameConstantsElectricBoogaloo.START_HAND_SIZE);
+						player.Draw(GameConstants.START_HAND_SIZE);
 						player.momentum = momentumBase;
-						player.life = GameConstantsElectricBoogaloo.START_LIFE;
+						player.life = GameConstants.START_LIFE;
 						player.discardCounts.Add(0);
 						player.dealtDamages.Add(0);
 						player.dealtSpellDamages.Add(0);
@@ -714,10 +714,10 @@ class DuelCore : Core
 							SendFieldUpdates();
 						}
 					}
-					State = GameConstantsElectricBoogaloo.State.TurnStart;
+					State = GameConstants.State.TurnStart;
 				}
 				break;
-				case GameConstantsElectricBoogaloo.State.TurnStart:
+				case GameConstants.State.TurnStart:
 				{
 					foreach(Player player in players)
 					{
@@ -735,42 +735,42 @@ class DuelCore : Core
 					}
 					initPlayer = turnPlayer;
 					ProcessStateReachedTriggers();
-					State = GameConstantsElectricBoogaloo.State.MainInitGained;
+					State = GameConstants.State.MainInitGained;
 				}
 				break;
-				case GameConstantsElectricBoogaloo.State.MainInitGained:
+				case GameConstants.State.MainInitGained:
 					break;
-				case GameConstantsElectricBoogaloo.State.MainActionTaken:
+				case GameConstants.State.MainActionTaken:
 				{
 					initPlayer = 1 - initPlayer;
 					players[initPlayer].passed = false;
-					State = GameConstantsElectricBoogaloo.State.MainInitGained;
+					State = GameConstants.State.MainInitGained;
 				}
 				break;
-				case GameConstantsElectricBoogaloo.State.BattleStart:
+				case GameConstants.State.BattleStart:
 				{
 					// The marked zone is relative to the 0th player
 					// If player 1 is turnplayer it is FIELD_SIZE-1, the rightmost zone
-					markedZone = turnPlayer * (GameConstantsElectricBoogaloo.FIELD_SIZE - 1);
+					markedZone = turnPlayer * (GameConstants.FIELD_SIZE - 1);
 					initPlayer = turnPlayer;
 					foreach(Player player in players)
 					{
 						player.passed = false;
 					}
 					ProcessStateReachedTriggers();
-					State = GameConstantsElectricBoogaloo.State.BattleInitGained;
+					State = GameConstants.State.BattleInitGained;
 				}
 				break;
-				case GameConstantsElectricBoogaloo.State.BattleInitGained:
+				case GameConstants.State.BattleInitGained:
 					break;
-				case GameConstantsElectricBoogaloo.State.BattleActionTaken:
+				case GameConstants.State.BattleActionTaken:
 				{
 					initPlayer = 1 - initPlayer;
 					players[initPlayer].passed = false;
-					State = GameConstantsElectricBoogaloo.State.BattleInitGained;
+					State = GameConstants.State.BattleInitGained;
 				}
 				break;
-				case GameConstantsElectricBoogaloo.State.DamageCalc:
+				case GameConstants.State.DamageCalc:
 				{
 					if(markedZone != null)
 					{
@@ -859,11 +859,11 @@ class DuelCore : Core
 					MarkNextZoneOrContinue();
 				}
 				break;
-				case GameConstantsElectricBoogaloo.State.TurnEnd:
+				case GameConstants.State.TurnEnd:
 				{
 					foreach(Player player in players)
 					{
-						for(int i = 0; i < GameConstantsElectricBoogaloo.FIELD_SIZE; i++)
+						for(int i = 0; i < GameConstants.FIELD_SIZE; i++)
 						{
 							Creature? creature = player.field.GetByPosition(i);
 							if(creature != null)
@@ -892,7 +892,7 @@ class DuelCore : Core
 					for(int i = 0; i < players.Length; i++)
 					{
 						Player player = players[i];
-						int toDeckCount = player.hand.Count - GameConstantsElectricBoogaloo.MAX_HAND_SIZE;
+						int toDeckCount = player.hand.Count - GameConstants.MAX_HAND_SIZE;
 						if(toDeckCount > 0)
 						{
 							SendPacketToPlayer(new SToC_Content.select_cards(new
@@ -914,12 +914,12 @@ class DuelCore : Core
 					}
 					turnPlayer = 1 - turnPlayer;
 					turn++;
-					if(nextMomentumIncreaseIndex < GameConstantsElectricBoogaloo.MOMENTUM_INCREMENT_TURNS.Length && GameConstantsElectricBoogaloo.MOMENTUM_INCREMENT_TURNS[nextMomentumIncreaseIndex] == turn)
+					if(nextMomentumIncreaseIndex < GameConstants.MOMENTUM_INCREMENT_TURNS.Length && GameConstants.MOMENTUM_INCREMENT_TURNS[nextMomentumIncreaseIndex] == turn)
 					{
 						momentumBase++;
 						nextMomentumIncreaseIndex++;
 					}
-					State = GameConstantsElectricBoogaloo.State.TurnStart;
+					State = GameConstants.State.TurnStart;
 				}
 				break;
 				default:
@@ -1008,13 +1008,13 @@ class DuelCore : Core
 	{
 		if(markedZone == null)
 		{
-			State = GameConstantsElectricBoogaloo.State.TurnEnd;
+			State = GameConstants.State.TurnEnd;
 			return;
 		}
 		if(turnPlayer == 0)
 		{
 			markedZone++;
-			if(markedZone == GameConstantsElectricBoogaloo.FIELD_SIZE)
+			if(markedZone == GameConstants.FIELD_SIZE)
 			{
 				markedZone = null;
 			}
@@ -1028,7 +1028,7 @@ class DuelCore : Core
 			}
 		}
 		initPlayer = turnPlayer;
-		State = GameConstantsElectricBoogaloo.State.BattleInitGained;
+		State = GameConstants.State.BattleInitGained;
 	}
 	private int GetMarkedZoneForPlayer(int player)
 	{
@@ -1038,10 +1038,10 @@ class DuelCore : Core
 		}
 		else
 		{
-			return GameConstantsElectricBoogaloo.FIELD_SIZE - 1 - markedZone!.Value;
+			return GameConstants.FIELD_SIZE - 1 - markedZone!.Value;
 		}
 		// Equivalent but magic:
-		// return player * (GameConstants.FIELD_SIZE - 1 - 2 * markedZone!.Value) + markedZone!.Value;
+		// return player * (GameEnumsAndStructs.FIELD_SIZE - 1 - 2 * markedZone!.Value) + markedZone!.Value;
 	}
 
 	private bool HandlePlayerActions()
@@ -1107,42 +1107,42 @@ class DuelCore : Core
 				{
 					Log("Tried to use an option that is not present for that card", severity: LogSeverity.Warning);
 				}
-				State &= ~GameConstantsElectricBoogaloo.State.InitGained;
-				State |= GameConstantsElectricBoogaloo.State.ActionTaken;
+				State &= ~GameConstants.State.InitGained;
+				State |= GameConstants.State.ActionTaken;
 			}
 			break;
 			case CToS_Content.pass:
 			{
 				switch(State)
 				{
-					case GameConstantsElectricBoogaloo.State.MainInitGained:
+					case GameConstants.State.MainInitGained:
 					{
 						if(!players[player].passed)
 						{
 							if(players[1 - player].passed)
 							{
-								State = GameConstantsElectricBoogaloo.State.BattleStart;
+								State = GameConstants.State.BattleStart;
 							}
 							else
 							{
 								players[player].passed = true;
-								State = GameConstantsElectricBoogaloo.State.MainActionTaken;
+								State = GameConstants.State.MainActionTaken;
 							}
 						}
 					}
 					break;
-					case GameConstantsElectricBoogaloo.State.BattleInitGained:
+					case GameConstants.State.BattleInitGained:
 					{
 						if(!players[player].passed)
 						{
 							if(players[1 - player].passed)
 							{
-								State = GameConstantsElectricBoogaloo.State.DamageCalc;
+								State = GameConstants.State.DamageCalc;
 							}
 							else
 							{
 								players[player].passed = true;
-								State = GameConstantsElectricBoogaloo.State.BattleActionTaken;
+								State = GameConstants.State.BattleActionTaken;
 							}
 						}
 					}
@@ -1288,7 +1288,7 @@ class DuelCore : Core
 			{
 				Card card = players[player].hand.GetByUID(uid);
 				if(card.Cost <= players[player].momentum &&
-					!(State.HasFlag(GameConstantsElectricBoogaloo.State.BattleStart) && card is Creature))
+					!(State.HasFlag(GameConstants.State.BattleStart) && card is Creature))
 				{
 					bool canCast = true;
 					if(castTriggers.TryGetValue(card.uid, out List<Trigger>? matchingTriggers))
@@ -1372,9 +1372,9 @@ class DuelCore : Core
 		SendPacketToPlayer(new SToC_Content.field_update(new
 		(
 			turn: (uint)turn + 1,
-			has_initiative: State != GameConstantsElectricBoogaloo.State.UNINITIALIZED && initPlayer == player,
+			has_initiative: State != GameConstants.State.UNINITIALIZED && initPlayer == player,
 			is_battle_direction_left_to_right: player == turnPlayer,
-			marked_zone: player == 0 ? markedZone : (GameConstantsElectricBoogaloo.FIELD_SIZE - 1 - markedZone),
+			marked_zone: player == 0 ? markedZone : (GameConstants.FIELD_SIZE - 1 - markedZone),
 			own_field: new
 			(
 				ability: players[player].ability.ToStruct(),
@@ -1652,7 +1652,7 @@ class DuelCore : Core
 		locationTemporaryLingeringEffects[info.referrer.uid].Add(info);
 	}
 
-	private void RegisterStateTemporaryLingeringEffectImpl(LingeringEffectInfo info, GameConstantsElectricBoogaloo.State state)
+	private void RegisterStateTemporaryLingeringEffectImpl(LingeringEffectInfo info, GameConstants.State state)
 	{
 		_ = stateTemporaryLingeringEffects.TryAdd(state, new(this));
 		stateTemporaryLingeringEffects[state].Add(info);
@@ -2066,7 +2066,7 @@ class DuelCore : Core
 		int zone = ReceivePacketFromPlayer<CToS_Content.select_zone>(choosingPlayer).value.zone;
 		if(choosingPlayer != targetPlayer)
 		{
-			zone = GameConstantsElectricBoogaloo.FIELD_SIZE - zone - 1;
+			zone = GameConstants.FIELD_SIZE - zone - 1;
 		}
 		return zone;
 	}

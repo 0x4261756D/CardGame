@@ -1,5 +1,5 @@
 version 1;
-namespace CardGameUtils.GameConstants;
+namespace CardGameUtils.GameEnumsAndStructs;
 root foo;
 
 table foo

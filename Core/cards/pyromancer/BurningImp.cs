@@ -1,6 +1,6 @@
 // scripted by 0x4261756D
 using CardGameCore;
-using CardGameUtils.GameConstants;
+using CardGameUtils.GameEnumsAndStructs;
 
 class BurningImp : Creature
 {

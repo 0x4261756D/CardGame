@@ -1,6 +1,6 @@
 // Scripted by Dotlof
 using CardGameCore;
-using CardGameUtils.GameConstants;
+using CardGameUtils.GameEnumsAndStructs;
 using static CardGameCore.CardUtils;
 
 class LegionWarlord : Creature

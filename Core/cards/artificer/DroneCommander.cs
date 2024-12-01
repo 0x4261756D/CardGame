@@ -1,7 +1,7 @@
 // Scripted by 0x4261756D
 using CardGameCore;
 using static CardGameCore.CardUtils;
-using CardGameUtils.GameConstants;
+using CardGameUtils.GameEnumsAndStructs;
 
 class DroneCommander : Creature
 {

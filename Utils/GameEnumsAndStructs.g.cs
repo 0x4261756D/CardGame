@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 
-namespace CardGameUtils.GameConstants;
+namespace CardGameUtils.GameEnumsAndStructs;
 
 #nullable enable
 #pragma warning disable CS8981

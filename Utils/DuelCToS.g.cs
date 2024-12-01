@@ -351,7 +351,7 @@ public interface CToS_Content : Common.PacketUnion
 		}
 	}
 }
-public record CToS_Request_GetActions(CardGameUtils.GameConstants.Location location, uint uid) : Common.PacketTable
+public record CToS_Request_GetActions(CardGameUtils.GameEnumsAndStructs.Location location, uint uid) : Common.PacketTable
 {
 	public static CToS_Request_GetActions DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -379,7 +379,7 @@ public record CToS_Request_GetActions(CardGameUtils.GameConstants.Location locat
 				throw new Exception($"Wrong field type for CToS_Request_GetActions.uid, expected {(byte)(Common.TypeBytes.N32)}, got {type}");
 			}
 		}
-		CardGameUtils.GameConstants.Location location = (CardGameUtils.GameConstants.Location)Common.Common.DeserializeN8(ref bytes);
+		CardGameUtils.GameEnumsAndStructs.Location location = (CardGameUtils.GameEnumsAndStructs.Location)Common.Common.DeserializeN8(ref bytes);
 		if(!Common.Common.DeserializeName(ref bytes, Enum.GetName(location)!, len: 3))
 		{
 			throw new Exception($"Wrong enum name hash, got [{string.Join(',', Common.Common.SerializeName(Enum.GetName(location)!))}]");
@@ -405,7 +405,7 @@ public record CToS_Request_GetActions(CardGameUtils.GameConstants.Location locat
 		return bytes;
 	}
 }
-public record CToS_Request_SelectOption(CardGameUtils.GameConstants.Location location, uint uid, CardGameUtils.Base.CardAction action) : Common.PacketTable
+public record CToS_Request_SelectOption(CardGameUtils.GameEnumsAndStructs.Location location, uint uid, CardGameUtils.Base.CardAction action) : Common.PacketTable
 {
 	public static CToS_Request_SelectOption DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -445,7 +445,7 @@ public record CToS_Request_SelectOption(CardGameUtils.GameConstants.Location loc
 				throw new Exception($"Wrong field type for CToS_Request_SelectOption.action, expected {(byte)(Common.TypeBytes.Table)}, got {type}");
 			}
 		}
-		CardGameUtils.GameConstants.Location location = (CardGameUtils.GameConstants.Location)Common.Common.DeserializeN8(ref bytes);
+		CardGameUtils.GameEnumsAndStructs.Location location = (CardGameUtils.GameEnumsAndStructs.Location)Common.Common.DeserializeN8(ref bytes);
 		if(!Common.Common.DeserializeName(ref bytes, Enum.GetName(location)!, len: 3))
 		{
 			throw new Exception($"Wrong enum name hash, got [{string.Join(',', Common.Common.SerializeName(Enum.GetName(location)!))}]");

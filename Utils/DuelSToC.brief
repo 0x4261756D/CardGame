@@ -31,12 +31,12 @@ table SToC_Broadcast_ShowInfo
 
 table SToC_Broadcast_GameResult
 {
-	result: #CardGameUtils.GameConstants.GameResult;
+	result: #CardGameUtils.GameEnumsAndStructs.GameResult;
 }
 
 table SToC_Response_GetActions
 {
-	location: #CardGameUtils.GameConstants.Location;
+	location: #CardGameUtils.GameEnumsAndStructs.Location;
 	uid: n32;
 	actions: [#CardGameUtils.Base.CardAction];
 }

@@ -1,4 +1,4 @@
-import "./GameConstants.brief";
+import "./GameEnumsAndStructs.brief";
 import "./DuelCToS.brief";
 import "./DuelSToC.brief";
 version 1;

@@ -2,7 +2,7 @@
 using CardGameCore;
 using CardGameUtils;
 using static CardGameCore.CardUtils;
-using CardGameUtils.GameConstants;
+using CardGameUtils.GameEnumsAndStructs;
 
 class FlashingFire : Spell
 {
