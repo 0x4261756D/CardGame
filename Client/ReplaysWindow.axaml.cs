@@ -66,7 +66,7 @@ public partial class ReplaysWindow : Window
 			new ErrorPopup($"Replay {FilePathBox.Text} does not exist").Show();
 			return;
 		}
-		replay = Replay.Serialize(File.ReadAllBytes(FilePathBox.Text));
+		replay = Replay.Deserialize(File.ReadAllBytes(FilePathBox.Text));
 		if(replay is null)
 		{
 			new ErrorPopup($"Could not open replay {FilePathBox.Text}").Show();

@@ -158,7 +158,7 @@ class Program
 			string replayPath = Path.Combine(baseDir, "replays");
 			_ = Directory.CreateDirectory(replayPath);
 			string filePath = Path.Combine(replayPath, $"{DateTime.UtcNow:yyyyMMdd_HHmmss}_{UsernameToFilename(config.duel_config!.players[0].name)}_vs_{UsernameToFilename(config.duel_config!.players[1].name)}.replay");
-			File.WriteAllBytes(filePath, replay.Deserialize());
+			File.WriteAllBytes(filePath, replay.Serialize());
 			Log("Wrote replay to " + filePath);
 		}
 	}

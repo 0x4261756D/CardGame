@@ -67,7 +67,7 @@ public partial class RoomWindow : Window
 			{
 				Task task = Task.Run(() => { while(!stream.DataAvailable) { } return; });
 				int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
-				SToC_Content? ret = i == 0 ? SToC_Packet.Serialize(stream).content : null;
+				SToC_Content? ret = i == 0 ? SToC_Packet.Deserialize(stream).content : null;
 				clientMutex.ReleaseMutex();
 				return ret;
 			}
@@ -87,8 +87,8 @@ public partial class RoomWindow : Window
 		{
 			using TcpClient c = new(address, port);
 			using NetworkStream stream = c.GetStream();
-			stream.Write(new CToS_Packet(content).Deserialize());
-			return (T)SToC_Packet.Serialize(stream).content;
+			stream.Write(new CToS_Packet(content).Serialize());
+			return (T)SToC_Packet.Deserialize(stream).content;
 		}
 		catch(Exception ex)
 		{
@@ -176,7 +176,7 @@ public partial class RoomWindow : Window
 				NetworkStream stream = client.GetStream();
 				if(stream.Socket.Connected)
 				{
-					stream.Write(new CToS_Packet(new CToS_Content.leave()).Deserialize());
+					stream.Write(new CToS_Packet(new CToS_Content.leave()).Serialize());
 				}
 				clientMutex.ReleaseMutex();
 			}
@@ -213,9 +213,9 @@ public partial class RoomWindow : Window
 			(
 				decklist: deck,
 				no_shuffle: NoShuffleBox.IsChecked ?? false
-			))).Deserialize());
+			))).Serialize());
 			Functions.Log($"Written start packet after {watch.ElapsedMilliseconds} ms.");
-			SToC_Response_Start content = ((SToC_Content.start)SToC_Packet.Serialize(s).content).value;
+			SToC_Response_Start content = ((SToC_Content.start)SToC_Packet.Deserialize(s).content).value;
 			Functions.Log($"Received start response after {watch.ElapsedMilliseconds} ms.");
 			clientMutex.ReleaseMutex();
 			Functions.Log($"Exited mutex after {watch.ElapsedMilliseconds} ms.");

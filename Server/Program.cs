@@ -79,7 +79,7 @@ class Program
 				HandlePacketReturn decision = HandlePacketReturn.Continue;
 				try
 				{
-					CToS_Content content = CToS_Packet.Serialize(stream).content;
+					CToS_Content content = CToS_Packet.Deserialize(stream).content;
 					Functions.Log("Server received a request", includeFullPath: true);
 					decision = HandlePacket(content, stream);
 					if(decision == HandlePacketReturn.Break)
@@ -111,7 +111,7 @@ class Program
 		{
 			Task task = Task.Run(() => { while(!stream.DataAvailable) { } return; });
 			int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
-			return i == 0 ? CToS_Packet.Serialize(stream).content : null;
+			return i == 0 ? CToS_Packet.Deserialize(stream).content : null;
 		}
 		catch(Exception e)
 		{
@@ -156,7 +156,7 @@ class Program
 									{
 										try
 										{
-											room.players[1 - playerIndex]?.stream.Write(new SToC_Packet(new SToC_Content.opponent_changed(new(null))).Deserialize());
+											room.players[1 - playerIndex]?.stream.Write(new SToC_Packet(new SToC_Content.opponent_changed(new(null))).Serialize());
 										}
 										catch(IOException e)
 										{
@@ -172,20 +172,20 @@ class Program
 								Functions.Log("----START REQUEST HANDLING----", includeFullPath: true);
 								if(request.decklist.cards.Count != GameConstantsElectricBoogaloo.DECK_SIZE)
 								{
-									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Your deck has the wrong size"))).Deserialize());
+									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Your deck has the wrong size"))).Serialize());
 									break;
 								}
 								if(request.decklist.ability is null)
 								{
 									Functions.Log("Deck has no ability", includeFullPath: true);
-									Functions.Log(string.Join(',', new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Your deck has no ability"))).Deserialize()));
-									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Your deck has no ability"))).Deserialize());
+									Functions.Log(string.Join(',', new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Your deck has no ability"))).Serialize()));
+									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Your deck has no ability"))).Serialize());
 									break;
 								}
 								if(request.decklist.quest is null)
 								{
 									Functions.Log("Deck has no quest", includeFullPath: true);
-									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Your deck has no quest"))).Deserialize());
+									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Your deck has no quest"))).Serialize());
 									break;
 								}
 								Functions.Log("Player: " + playerIndex, includeFullPath: true);
@@ -195,8 +195,8 @@ class Program
 								if(room.players[1 - playerIndex] == null)
 								{
 									Functions.Log("No opponent", includeFullPath: true);
-									Functions.Log(string.Join(',', new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("You have no opponent"))).Deserialize()));
-									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("You have no opponent"))).Deserialize());
+									Functions.Log(string.Join(',', new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("You have no opponent"))).Serialize()));
+									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("You have no opponent"))).Serialize());
 									break;
 								}
 								Functions.Log("Opponent present", includeFullPath: true);
@@ -209,7 +209,7 @@ class Program
 										{
 											if(p != null && p.stream.Socket.Connected)
 											{
-												p.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.success_but_waiting())).Deserialize());
+												p.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.success_but_waiting())).Serialize());
 											}
 										}
 									}
@@ -220,7 +220,7 @@ class Program
 										{
 											if(p is not null && p.stream.Socket.Connected)
 											{
-												p.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Could not create the core"))).Deserialize());
+												p.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Could not create the core"))).Serialize());
 											}
 										}
 									}
@@ -228,7 +228,7 @@ class Program
 								else
 								{
 									Functions.Log("Opponent not ready", includeFullPath: true);
-									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Opponent not ready"))).Deserialize());
+									player.stream.Write(new SToC_Packet(new SToC_Content.start(new SToC_Response_Start.failure("Opponent not ready"))).Serialize());
 								}
 								Functions.Log("----END----", includeFullPath: true);
 							}
@@ -324,7 +324,7 @@ class Program
 						{
 							waitingList.Add(new Room(name, id, currentPort, stream));
 							reply = new SToC_Content.create(new(new ErrorOr.success()));
-							stream.Write(new SToC_Packet(reply).Deserialize());
+							stream.Write(new SToC_Packet(reply).Serialize());
 							return HandlePacketReturn.ContinueKeepStream;
 						}
 					}
@@ -361,9 +361,9 @@ class Program
 							reply = new SToC_Content.join(new(new ErrorOr.success()));
 							if(waitingList[index].players[1 - playerIndex]!.stream != null && waitingList[index].players[1 - playerIndex]!.stream.Socket.Connected)
 							{
-								waitingList[index].players[1 - playerIndex]!.stream.Write(new SToC_Packet(new SToC_Content.opponent_changed(new(request.value.own_name))).Deserialize());
+								waitingList[index].players[1 - playerIndex]!.stream.Write(new SToC_Packet(new SToC_Content.opponent_changed(new(request.value.own_name))).Serialize());
 							}
-							stream.Write(new SToC_Packet(reply).Deserialize());
+							stream.Write(new SToC_Packet(reply).Serialize());
 							return HandlePacketReturn.ContinueKeepStream;
 						}
 					}
@@ -386,7 +386,7 @@ class Program
 				LetCoreGenerateAdditionalCards(fullAdditionalCardsPath);
 				if(File.Exists(fullAdditionalCardsPath))
 				{
-					SToC_Content savedContent = SToC_Packet.Serialize(File.ReadAllBytes(fullAdditionalCardsPath)).content;
+					SToC_Content savedContent = SToC_Packet.Deserialize(File.ReadAllBytes(fullAdditionalCardsPath)).content;
 					if(savedContent is not SToC_Content.additional_cards)
 					{
 						Functions.Log($"Saved additional cards packet is of unexpected type {savedContent.GetType()}");
@@ -437,8 +437,8 @@ class Program
 		}
 
 		SToC_Packet p = new(reply);
-		Functions.Log(string.Join(',', p.Deserialize()), Functions.LogSeverity.Warning);
-		stream.Write(p.Deserialize());
+		Functions.Log(string.Join(',', p.Serialize()), Functions.LogSeverity.Warning);
+		stream.Write(p.Serialize());
 		return HandlePacketReturn.Continue;
 	}
 

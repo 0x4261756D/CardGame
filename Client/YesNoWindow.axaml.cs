@@ -26,14 +26,14 @@ public partial class YesNoWindow : Window
 
 	public void YesClick(object? sender, RoutedEventArgs args)
 	{
-		stream.Write(new CToS_Packet(new CToS_Content.yes_no(new(yes: true))).Deserialize());
+		stream.Write(new CToS_Packet(new CToS_Content.yes_no(new(yes: true))).Serialize());
 		shouldReallyClose = true;
 		Close();
 	}
 
 	public void NoClick(object? sender, RoutedEventArgs args)
 	{
-		stream.Write(new CToS_Packet(new CToS_Content.yes_no(new(yes: false))).Deserialize());
+		stream.Write(new CToS_Packet(new CToS_Content.yes_no(new(yes: false))).Serialize());
 		shouldReallyClose = true;
 		Close();
 	}

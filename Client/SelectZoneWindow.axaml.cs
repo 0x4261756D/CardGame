@@ -25,7 +25,7 @@ public partial class SelectZoneWindow : Window
 			b.Click += (sender, _) =>
 			{
 				int zone = (int)((Button)sender!).Content!;
-				stream.Write(new CToS_Packet(new CToS_Content.select_zone(new(zone: zone))).Deserialize());
+				stream.Write(new CToS_Packet(new CToS_Content.select_zone(new(zone: zone))).Serialize());
 				shouldReallyClose = true;
 				Close();
 			};

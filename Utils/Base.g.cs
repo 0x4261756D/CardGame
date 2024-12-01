@@ -6,55 +6,54 @@ namespace CardGameUtils.Base;
 
 #nullable enable
 #pragma warning disable CS8981
-
 public record CardStruct(string name, string text, CardGameUtils.GameConstants.PlayerClass card_class, CardGameUtils.GameConstants.Location location, uint uid, int controller, int base_controller, TypeSpecifics type_specifics) : Common.PacketTable
 {
-	public byte[] Deserialize()
+	public byte[] Serialize()
 	{
-		List<byte> dataBytes = DeserializeInternal();
-		return [.. Common.Common.DeserializeN32((uint)dataBytes.Count + 8) /* Size */,
-			.. Common.Common.DeserializeN16(2) /* ProtoVersion */,
-			.. Common.Common.DeserializeN16(1) /* SchemaVersion */,
-			.. Common.Common.DeserializeName("CardStruct") /* Name */,
+		List<byte> dataBytes = SerializeInternal();
+		return [.. Common.Common.SerializeN32((uint)dataBytes.Count + 8) /* Size */,
+			.. Common.Common.SerializeN16(2) /* ProtoVersion */,
+			.. Common.Common.SerializeN16(1) /* SchemaVersion */,
+			.. Common.Common.SerializeName("CardStruct") /* Name */,
 			.. dataBytes /* Root */];
 	}
 
-	public static CardStruct Serialize(byte[] packet)
+	public static CardStruct Deserialize(byte[] packet)
 	{
 		Span<byte> bytes = packet;
-		uint size = Common.Common.SerializeN32(ref bytes);
+		uint size = Common.Common.DeserializeN32(ref bytes);
 		if(size != bytes.Length)
 		{
 			throw new Exception($"Incorrect size, expected {size}, got {bytes.Length}");
 		}
-		return SerializeImpl(ref bytes);
+		return DeserializeImpl(ref bytes);
 	}
-	public static CardStruct Serialize(Stream stream)
+	public static CardStruct Deserialize(Stream stream)
 	{
 		Span<byte> sizeSpan = new byte[4];
 		stream.ReadExactly(sizeSpan);
-		uint size = Common.Common.SerializeN32(ref sizeSpan);
+		uint size = Common.Common.DeserializeN32(ref sizeSpan);
 		Span<byte> bytes = new byte[size];
 		stream.ReadExactly(bytes);
-		return SerializeImpl(ref bytes);
+		return DeserializeImpl(ref bytes);
 	}
-	private static CardStruct SerializeImpl(ref Span<byte> bytes)
+	private static CardStruct DeserializeImpl(ref Span<byte> bytes)
 	{
-		ushort protoVersion = Common.Common.SerializeN16(ref bytes);
+		ushort protoVersion = Common.Common.DeserializeN16(ref bytes);
 		if(protoVersion != 2)
 		{
 			throw new Exception($"Wrong proto version, expected 2, got {protoVersion}");
 		}
-		ushort schemaVersion = Common.Common.SerializeN16(ref bytes);
+		ushort schemaVersion = Common.Common.DeserializeN16(ref bytes);
 		if(schemaVersion != 1)
 		{
 			throw new Exception($"Wrong schema version, expected 1, got {schemaVersion}");
 		}
-		if(!Common.Common.SerializeName(ref bytes, "CardStruct"))
+		if(!Common.Common.DeserializeName(ref bytes, "CardStruct"))
 		{
 			throw new Exception($"Packet name hash mismatch");
 		}
-		CardStruct ret = SerializeInternal(ref bytes);
+		CardStruct ret = DeserializeInternal(ref bytes);
 		if(bytes.Length != 0)
 		{
 			throw new Exception($"Internal error, after successfully serializing the packet there are still {bytes.Length} bytes left: [{string.Join(',', bytes.ToArray())}]");
@@ -62,15 +61,15 @@ public record CardStruct(string name, string text, CardGameUtils.GameConstants.P
 		return ret;
 	}
 
-	public static CardStruct SerializeInternal(ref Span<byte> bytes)
+	public static CardStruct DeserializeInternal(ref Span<byte> bytes)
 	{
 		/* Field Header name */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "name")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "name")) /* Name */
 			{
 				throw new Exception("Field Header CardStruct.name hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Str))
 			{
 				throw new Exception($"Wrong field type for CardStruct.name, expected {(byte)(Common.TypeBytes.Str)}, got {type}");
@@ -78,11 +77,11 @@ public record CardStruct(string name, string text, CardGameUtils.GameConstants.P
 		}
 		/* Field Header text */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "text")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "text")) /* Name */
 			{
 				throw new Exception("Field Header CardStruct.text hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Str))
 			{
 				throw new Exception($"Wrong field type for CardStruct.text, expected {(byte)(Common.TypeBytes.Str)}, got {type}");
@@ -90,11 +89,11 @@ public record CardStruct(string name, string text, CardGameUtils.GameConstants.P
 		}
 		/* Field Header card_class */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "card_class")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "card_class")) /* Name */
 			{
 				throw new Exception("Field Header CardStruct.card_class hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Enum))
 			{
 				throw new Exception($"Wrong field type for CardStruct.card_class, expected {(byte)(Common.TypeBytes.Enum)}, got {type}");
@@ -102,11 +101,11 @@ public record CardStruct(string name, string text, CardGameUtils.GameConstants.P
 		}
 		/* Field Header location */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "location")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "location")) /* Name */
 			{
 				throw new Exception("Field Header CardStruct.location hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Enum))
 			{
 				throw new Exception($"Wrong field type for CardStruct.location, expected {(byte)(Common.TypeBytes.Enum)}, got {type}");
@@ -114,11 +113,11 @@ public record CardStruct(string name, string text, CardGameUtils.GameConstants.P
 		}
 		/* Field Header uid */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "uid")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "uid")) /* Name */
 			{
 				throw new Exception("Field Header CardStruct.uid hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.N32))
 			{
 				throw new Exception($"Wrong field type for CardStruct.uid, expected {(byte)(Common.TypeBytes.N32)}, got {type}");
@@ -126,11 +125,11 @@ public record CardStruct(string name, string text, CardGameUtils.GameConstants.P
 		}
 		/* Field Header controller */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "controller")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "controller")) /* Name */
 			{
 				throw new Exception("Field Header CardStruct.controller hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.I32))
 			{
 				throw new Exception($"Wrong field type for CardStruct.controller, expected {(byte)(Common.TypeBytes.I32)}, got {type}");
@@ -138,11 +137,11 @@ public record CardStruct(string name, string text, CardGameUtils.GameConstants.P
 		}
 		/* Field Header base_controller */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "base_controller")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "base_controller")) /* Name */
 			{
 				throw new Exception("Field Header CardStruct.base_controller hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.I32))
 			{
 				throw new Exception($"Wrong field type for CardStruct.base_controller, expected {(byte)(Common.TypeBytes.I32)}, got {type}");
@@ -150,104 +149,104 @@ public record CardStruct(string name, string text, CardGameUtils.GameConstants.P
 		}
 		/* Field Header type_specifics */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "type_specifics")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "type_specifics")) /* Name */
 			{
 				throw new Exception("Field Header CardStruct.type_specifics hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Union))
 			{
 				throw new Exception($"Wrong field type for CardStruct.type_specifics, expected {(byte)(Common.TypeBytes.Union)}, got {type}");
 			}
 		}
-		string name = Common.Common.SerializeStr(ref bytes);
-		string text = Common.Common.SerializeStr(ref bytes);
-		CardGameUtils.GameConstants.PlayerClass card_class = (CardGameUtils.GameConstants.PlayerClass)Common.Common.SerializeN8(ref bytes);
-		if(!Common.Common.SerializeName(ref bytes, Enum.GetName(card_class)!, len: 3))
+		string name = Common.Common.DeserializeStr(ref bytes);
+		string text = Common.Common.DeserializeStr(ref bytes);
+		CardGameUtils.GameConstants.PlayerClass card_class = (CardGameUtils.GameConstants.PlayerClass)Common.Common.DeserializeN8(ref bytes);
+		if(!Common.Common.DeserializeName(ref bytes, Enum.GetName(card_class)!, len: 3))
 		{
-			throw new Exception($"Wrong enum name hash, got [{string.Join(',', Common.Common.DeserializeName(Enum.GetName(card_class)!))}]");
+			throw new Exception($"Wrong enum name hash, got [{string.Join(',', Common.Common.SerializeName(Enum.GetName(card_class)!))}]");
 		}
-		CardGameUtils.GameConstants.Location location = (CardGameUtils.GameConstants.Location)Common.Common.SerializeN8(ref bytes);
-		if(!Common.Common.SerializeName(ref bytes, Enum.GetName(location)!, len: 3))
+		CardGameUtils.GameConstants.Location location = (CardGameUtils.GameConstants.Location)Common.Common.DeserializeN8(ref bytes);
+		if(!Common.Common.DeserializeName(ref bytes, Enum.GetName(location)!, len: 3))
 		{
-			throw new Exception($"Wrong enum name hash, got [{string.Join(',', Common.Common.DeserializeName(Enum.GetName(location)!))}]");
+			throw new Exception($"Wrong enum name hash, got [{string.Join(',', Common.Common.SerializeName(Enum.GetName(location)!))}]");
 		}
-		uint uid = Common.Common.SerializeN32(ref bytes);
-		int controller = Common.Common.SerializeI32(ref bytes);
-		int base_controller = Common.Common.SerializeI32(ref bytes);
-		TypeSpecifics type_specifics = TypeSpecifics.SerializeInternal(ref bytes);
+		uint uid = Common.Common.DeserializeN32(ref bytes);
+		int controller = Common.Common.DeserializeI32(ref bytes);
+		int base_controller = Common.Common.DeserializeI32(ref bytes);
+		TypeSpecifics type_specifics = TypeSpecifics.DeserializeInternal(ref bytes);
 		return new(name, text, card_class, location, uid, controller, base_controller, type_specifics);
 	}
 
-	public List<byte> DeserializeInternal()
+	public List<byte> SerializeInternal()
 	{
 		List<byte> bytes = [];
 		/* Field Header name */
-		bytes.AddRange(Common.Common.DeserializeName("name")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("name")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Str)); /* Type */
 		/* Field Header text */
-		bytes.AddRange(Common.Common.DeserializeName("text")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("text")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Str)); /* Type */
 		/* Field Header card_class */
-		bytes.AddRange(Common.Common.DeserializeName("card_class")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("card_class")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Enum)); /* Type */
 		/* Field Header location */
-		bytes.AddRange(Common.Common.DeserializeName("location")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("location")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Enum)); /* Type */
 		/* Field Header uid */
-		bytes.AddRange(Common.Common.DeserializeName("uid")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("uid")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.N32)); /* Type */
 		/* Field Header controller */
-		bytes.AddRange(Common.Common.DeserializeName("controller")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("controller")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.I32)); /* Type */
 		/* Field Header base_controller */
-		bytes.AddRange(Common.Common.DeserializeName("base_controller")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("base_controller")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.I32)); /* Type */
 		/* Field Header type_specifics */
-		bytes.AddRange(Common.Common.DeserializeName("type_specifics")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("type_specifics")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Union)); /* Type */
 		/* Data name */
-		bytes.AddRange(Common.Common.DeserializeStr(name));
+		bytes.AddRange(Common.Common.SerializeStr(name));
 		/* Data text */
-		bytes.AddRange(Common.Common.DeserializeStr(text));
+		bytes.AddRange(Common.Common.SerializeStr(text));
 		/* Data card_class */
-		bytes.AddRange(Common.Common.DeserializeN8((byte)card_class));
-		bytes.AddRange(Common.Common.DeserializeName(Enum.GetName(card_class)!, len: 3));
+		bytes.AddRange(Common.Common.SerializeN8((byte)card_class));
+		bytes.AddRange(Common.Common.SerializeName(Enum.GetName(card_class)!, len: 3));
 		/* Data location */
-		bytes.AddRange(Common.Common.DeserializeN8((byte)location));
-		bytes.AddRange(Common.Common.DeserializeName(Enum.GetName(location)!, len: 3));
+		bytes.AddRange(Common.Common.SerializeN8((byte)location));
+		bytes.AddRange(Common.Common.SerializeName(Enum.GetName(location)!, len: 3));
 		/* Data uid */
-		bytes.AddRange(Common.Common.DeserializeN32(uid));
+		bytes.AddRange(Common.Common.SerializeN32(uid));
 		/* Data controller */
-		bytes.AddRange(Common.Common.DeserializeI32(controller));
+		bytes.AddRange(Common.Common.SerializeI32(controller));
 		/* Data base_controller */
-		bytes.AddRange(Common.Common.DeserializeI32(base_controller));
+		bytes.AddRange(Common.Common.SerializeI32(base_controller));
 		/* Data type_specifics */
-		bytes.AddRange(type_specifics.DeserializeInternal());
+		bytes.AddRange(type_specifics.SerializeInternal());
 		return bytes;
 	}
 }
 public interface TypeSpecifics : Common.PacketUnion
 {
-	public static TypeSpecifics SerializeInternal(ref Span<byte> bytes)
+	public static TypeSpecifics DeserializeInternal(ref Span<byte> bytes)
 	{
 		Span<byte> nameSpan = bytes[..4];
 		bytes = bytes[4..];
-		if(nameSpan.SequenceEqual(Common.Common.DeserializeName("creature")))
+		if(nameSpan.SequenceEqual(Common.Common.SerializeName("creature")))
 		{
-			return creature.SerializeInternal(ref bytes);
+			return creature.DeserializeInternal(ref bytes);
 		}
-		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("spell")))
+		else if(nameSpan.SequenceEqual(Common.Common.SerializeName("spell")))
 		{
-			return spell.SerializeInternal(ref bytes);
+			return spell.DeserializeInternal(ref bytes);
 		}
-		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("quest")))
+		else if(nameSpan.SequenceEqual(Common.Common.SerializeName("quest")))
 		{
-			return quest.SerializeInternal(ref bytes);
+			return quest.DeserializeInternal(ref bytes);
 		}
-		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("unknown")))
+		else if(nameSpan.SequenceEqual(Common.Common.SerializeName("unknown")))
 		{
-			return unknown.SerializeInternal(ref bytes);
+			return unknown.DeserializeInternal(ref bytes);
 		}
 		else 
 		{
@@ -257,98 +256,98 @@ public interface TypeSpecifics : Common.PacketUnion
 
 	public record creature(CreatureSpecifics value) : TypeSpecifics
 	{
-		public List<byte> DeserializeInternal()
+		public List<byte> SerializeInternal()
 		{
 			List<byte> bytes = [];
-			bytes.AddRange(Common.Common.DeserializeName("creature")); /* Name */
+			bytes.AddRange(Common.Common.SerializeName("creature")); /* Name */
 			bytes.Add((byte)(Common.TypeBytes.Table)); /* Type */
-			bytes.AddRange(value.DeserializeInternal());
+			bytes.AddRange(value.SerializeInternal());
 			return bytes;
 		}
 
-		public static creature SerializeInternal(ref Span<byte> bytes)
+		public static creature DeserializeInternal(ref Span<byte> bytes)
 		{
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Table))
 			{
 				throw new Exception($"Wrong field type for TypeSpecifics/creature, expected `{(byte)(Common.TypeBytes.Table)}`, got `{type}`");
 			}
-			CreatureSpecifics value = CreatureSpecifics.SerializeInternal(ref bytes);
+			CreatureSpecifics value = CreatureSpecifics.DeserializeInternal(ref bytes);
 			return new(value);
 		}
 	}
 	public record spell(SpellSpecifics value) : TypeSpecifics
 	{
-		public List<byte> DeserializeInternal()
+		public List<byte> SerializeInternal()
 		{
 			List<byte> bytes = [];
-			bytes.AddRange(Common.Common.DeserializeName("spell")); /* Name */
+			bytes.AddRange(Common.Common.SerializeName("spell")); /* Name */
 			bytes.Add((byte)(Common.TypeBytes.Table)); /* Type */
-			bytes.AddRange(value.DeserializeInternal());
+			bytes.AddRange(value.SerializeInternal());
 			return bytes;
 		}
 
-		public static spell SerializeInternal(ref Span<byte> bytes)
+		public static spell DeserializeInternal(ref Span<byte> bytes)
 		{
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Table))
 			{
 				throw new Exception($"Wrong field type for TypeSpecifics/spell, expected `{(byte)(Common.TypeBytes.Table)}`, got `{type}`");
 			}
-			SpellSpecifics value = SpellSpecifics.SerializeInternal(ref bytes);
+			SpellSpecifics value = SpellSpecifics.DeserializeInternal(ref bytes);
 			return new(value);
 		}
 	}
 	public record quest(QuestSpecifics value) : TypeSpecifics
 	{
-		public List<byte> DeserializeInternal()
+		public List<byte> SerializeInternal()
 		{
 			List<byte> bytes = [];
-			bytes.AddRange(Common.Common.DeserializeName("quest")); /* Name */
+			bytes.AddRange(Common.Common.SerializeName("quest")); /* Name */
 			bytes.Add((byte)(Common.TypeBytes.Table)); /* Type */
-			bytes.AddRange(value.DeserializeInternal());
+			bytes.AddRange(value.SerializeInternal());
 			return bytes;
 		}
 
-		public static quest SerializeInternal(ref Span<byte> bytes)
+		public static quest DeserializeInternal(ref Span<byte> bytes)
 		{
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Table))
 			{
 				throw new Exception($"Wrong field type for TypeSpecifics/quest, expected `{(byte)(Common.TypeBytes.Table)}`, got `{type}`");
 			}
-			QuestSpecifics value = QuestSpecifics.SerializeInternal(ref bytes);
+			QuestSpecifics value = QuestSpecifics.DeserializeInternal(ref bytes);
 			return new(value);
 		}
 	}
 	public record unknown() : TypeSpecifics
 	{
-		public static unknown SerializeInternal(ref Span<byte> bytes)
+		public static unknown DeserializeInternal(ref Span<byte> bytes)
 		{
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)Common.TypeBytes.Void)
 			{
 				throw new Exception("Wrong field type for TypeSpecifics/unknown, expected `{(byte)Common.TypeBytes.Void}`, got `type`");
 			}
 			return new();
 		}
-		public List<byte> DeserializeInternal()
+		public List<byte> SerializeInternal()
 		{
-			return [.. Common.Common.DeserializeName("unknown"), (byte)Common.TypeBytes.Void];
+			return [.. Common.Common.SerializeName("unknown"), (byte)Common.TypeBytes.Void];
 		}
 	}
 }
 public record CreatureSpecifics(int base_cost, int cost, int base_life, int life, int base_power, int power, int position, int damage_cap) : Common.PacketTable
 {
-	public static CreatureSpecifics SerializeInternal(ref Span<byte> bytes)
+	public static CreatureSpecifics DeserializeInternal(ref Span<byte> bytes)
 	{
 		/* Field Header base_cost */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "base_cost")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "base_cost")) /* Name */
 			{
 				throw new Exception("Field Header CreatureSpecifics.base_cost hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.I32))
 			{
 				throw new Exception($"Wrong field type for CreatureSpecifics.base_cost, expected {(byte)(Common.TypeBytes.I32)}, got {type}");
@@ -356,11 +355,11 @@ public record CreatureSpecifics(int base_cost, int cost, int base_life, int life
 		}
 		/* Field Header cost */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "cost")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "cost")) /* Name */
 			{
 				throw new Exception("Field Header CreatureSpecifics.cost hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.I32))
 			{
 				throw new Exception($"Wrong field type for CreatureSpecifics.cost, expected {(byte)(Common.TypeBytes.I32)}, got {type}");
@@ -368,11 +367,11 @@ public record CreatureSpecifics(int base_cost, int cost, int base_life, int life
 		}
 		/* Field Header base_life */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "base_life")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "base_life")) /* Name */
 			{
 				throw new Exception("Field Header CreatureSpecifics.base_life hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.I32))
 			{
 				throw new Exception($"Wrong field type for CreatureSpecifics.base_life, expected {(byte)(Common.TypeBytes.I32)}, got {type}");
@@ -380,11 +379,11 @@ public record CreatureSpecifics(int base_cost, int cost, int base_life, int life
 		}
 		/* Field Header life */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "life")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "life")) /* Name */
 			{
 				throw new Exception("Field Header CreatureSpecifics.life hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.I32))
 			{
 				throw new Exception($"Wrong field type for CreatureSpecifics.life, expected {(byte)(Common.TypeBytes.I32)}, got {type}");
@@ -392,11 +391,11 @@ public record CreatureSpecifics(int base_cost, int cost, int base_life, int life
 		}
 		/* Field Header base_power */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "base_power")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "base_power")) /* Name */
 			{
 				throw new Exception("Field Header CreatureSpecifics.base_power hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.I32))
 			{
 				throw new Exception($"Wrong field type for CreatureSpecifics.base_power, expected {(byte)(Common.TypeBytes.I32)}, got {type}");
@@ -404,11 +403,11 @@ public record CreatureSpecifics(int base_cost, int cost, int base_life, int life
 		}
 		/* Field Header power */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "power")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "power")) /* Name */
 			{
 				throw new Exception("Field Header CreatureSpecifics.power hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.I32))
 			{
 				throw new Exception($"Wrong field type for CreatureSpecifics.power, expected {(byte)(Common.TypeBytes.I32)}, got {type}");
@@ -416,11 +415,11 @@ public record CreatureSpecifics(int base_cost, int cost, int base_life, int life
 		}
 		/* Field Header position */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "position")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "position")) /* Name */
 			{
 				throw new Exception("Field Header CreatureSpecifics.position hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.I32))
 			{
 				throw new Exception($"Wrong field type for CreatureSpecifics.position, expected {(byte)(Common.TypeBytes.I32)}, got {type}");
@@ -428,84 +427,84 @@ public record CreatureSpecifics(int base_cost, int cost, int base_life, int life
 		}
 		/* Field Header damage_cap */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "damage_cap")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "damage_cap")) /* Name */
 			{
 				throw new Exception("Field Header CreatureSpecifics.damage_cap hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.I32))
 			{
 				throw new Exception($"Wrong field type for CreatureSpecifics.damage_cap, expected {(byte)(Common.TypeBytes.I32)}, got {type}");
 			}
 		}
-		int base_cost = Common.Common.SerializeI32(ref bytes);
-		int cost = Common.Common.SerializeI32(ref bytes);
-		int base_life = Common.Common.SerializeI32(ref bytes);
-		int life = Common.Common.SerializeI32(ref bytes);
-		int base_power = Common.Common.SerializeI32(ref bytes);
-		int power = Common.Common.SerializeI32(ref bytes);
-		int position = Common.Common.SerializeI32(ref bytes);
-		int damage_cap = Common.Common.SerializeI32(ref bytes);
+		int base_cost = Common.Common.DeserializeI32(ref bytes);
+		int cost = Common.Common.DeserializeI32(ref bytes);
+		int base_life = Common.Common.DeserializeI32(ref bytes);
+		int life = Common.Common.DeserializeI32(ref bytes);
+		int base_power = Common.Common.DeserializeI32(ref bytes);
+		int power = Common.Common.DeserializeI32(ref bytes);
+		int position = Common.Common.DeserializeI32(ref bytes);
+		int damage_cap = Common.Common.DeserializeI32(ref bytes);
 		return new(base_cost, cost, base_life, life, base_power, power, position, damage_cap);
 	}
 
-	public List<byte> DeserializeInternal()
+	public List<byte> SerializeInternal()
 	{
 		List<byte> bytes = [];
 		/* Field Header base_cost */
-		bytes.AddRange(Common.Common.DeserializeName("base_cost")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("base_cost")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.I32)); /* Type */
 		/* Field Header cost */
-		bytes.AddRange(Common.Common.DeserializeName("cost")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("cost")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.I32)); /* Type */
 		/* Field Header base_life */
-		bytes.AddRange(Common.Common.DeserializeName("base_life")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("base_life")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.I32)); /* Type */
 		/* Field Header life */
-		bytes.AddRange(Common.Common.DeserializeName("life")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("life")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.I32)); /* Type */
 		/* Field Header base_power */
-		bytes.AddRange(Common.Common.DeserializeName("base_power")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("base_power")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.I32)); /* Type */
 		/* Field Header power */
-		bytes.AddRange(Common.Common.DeserializeName("power")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("power")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.I32)); /* Type */
 		/* Field Header position */
-		bytes.AddRange(Common.Common.DeserializeName("position")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("position")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.I32)); /* Type */
 		/* Field Header damage_cap */
-		bytes.AddRange(Common.Common.DeserializeName("damage_cap")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("damage_cap")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.I32)); /* Type */
 		/* Data base_cost */
-		bytes.AddRange(Common.Common.DeserializeI32(base_cost));
+		bytes.AddRange(Common.Common.SerializeI32(base_cost));
 		/* Data cost */
-		bytes.AddRange(Common.Common.DeserializeI32(cost));
+		bytes.AddRange(Common.Common.SerializeI32(cost));
 		/* Data base_life */
-		bytes.AddRange(Common.Common.DeserializeI32(base_life));
+		bytes.AddRange(Common.Common.SerializeI32(base_life));
 		/* Data life */
-		bytes.AddRange(Common.Common.DeserializeI32(life));
+		bytes.AddRange(Common.Common.SerializeI32(life));
 		/* Data base_power */
-		bytes.AddRange(Common.Common.DeserializeI32(base_power));
+		bytes.AddRange(Common.Common.SerializeI32(base_power));
 		/* Data power */
-		bytes.AddRange(Common.Common.DeserializeI32(power));
+		bytes.AddRange(Common.Common.SerializeI32(power));
 		/* Data position */
-		bytes.AddRange(Common.Common.DeserializeI32(position));
+		bytes.AddRange(Common.Common.SerializeI32(position));
 		/* Data damage_cap */
-		bytes.AddRange(Common.Common.DeserializeI32(damage_cap));
+		bytes.AddRange(Common.Common.SerializeI32(damage_cap));
 		return bytes;
 	}
 }
 public record SpellSpecifics(int base_cost, int cost, bool is_class_ability, bool can_be_class_ability) : Common.PacketTable
 {
-	public static SpellSpecifics SerializeInternal(ref Span<byte> bytes)
+	public static SpellSpecifics DeserializeInternal(ref Span<byte> bytes)
 	{
 		/* Field Header base_cost */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "base_cost")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "base_cost")) /* Name */
 			{
 				throw new Exception("Field Header SpellSpecifics.base_cost hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.I32))
 			{
 				throw new Exception($"Wrong field type for SpellSpecifics.base_cost, expected {(byte)(Common.TypeBytes.I32)}, got {type}");
@@ -513,11 +512,11 @@ public record SpellSpecifics(int base_cost, int cost, bool is_class_ability, boo
 		}
 		/* Field Header cost */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "cost")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "cost")) /* Name */
 			{
 				throw new Exception("Field Header SpellSpecifics.cost hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.I32))
 			{
 				throw new Exception($"Wrong field type for SpellSpecifics.cost, expected {(byte)(Common.TypeBytes.I32)}, got {type}");
@@ -525,11 +524,11 @@ public record SpellSpecifics(int base_cost, int cost, bool is_class_ability, boo
 		}
 		/* Field Header is_class_ability */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "is_class_ability")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "is_class_ability")) /* Name */
 			{
 				throw new Exception("Field Header SpellSpecifics.is_class_ability hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Bool))
 			{
 				throw new Exception($"Wrong field type for SpellSpecifics.is_class_ability, expected {(byte)(Common.TypeBytes.Bool)}, got {type}");
@@ -537,60 +536,60 @@ public record SpellSpecifics(int base_cost, int cost, bool is_class_ability, boo
 		}
 		/* Field Header can_be_class_ability */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "can_be_class_ability")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "can_be_class_ability")) /* Name */
 			{
 				throw new Exception("Field Header SpellSpecifics.can_be_class_ability hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Bool))
 			{
 				throw new Exception($"Wrong field type for SpellSpecifics.can_be_class_ability, expected {(byte)(Common.TypeBytes.Bool)}, got {type}");
 			}
 		}
-		int base_cost = Common.Common.SerializeI32(ref bytes);
-		int cost = Common.Common.SerializeI32(ref bytes);
-		bool is_class_ability = Common.Common.SerializeBool(ref bytes);
-		bool can_be_class_ability = Common.Common.SerializeBool(ref bytes);
+		int base_cost = Common.Common.DeserializeI32(ref bytes);
+		int cost = Common.Common.DeserializeI32(ref bytes);
+		bool is_class_ability = Common.Common.DeserializeBool(ref bytes);
+		bool can_be_class_ability = Common.Common.DeserializeBool(ref bytes);
 		return new(base_cost, cost, is_class_ability, can_be_class_ability);
 	}
 
-	public List<byte> DeserializeInternal()
+	public List<byte> SerializeInternal()
 	{
 		List<byte> bytes = [];
 		/* Field Header base_cost */
-		bytes.AddRange(Common.Common.DeserializeName("base_cost")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("base_cost")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.I32)); /* Type */
 		/* Field Header cost */
-		bytes.AddRange(Common.Common.DeserializeName("cost")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("cost")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.I32)); /* Type */
 		/* Field Header is_class_ability */
-		bytes.AddRange(Common.Common.DeserializeName("is_class_ability")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("is_class_ability")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Bool)); /* Type */
 		/* Field Header can_be_class_ability */
-		bytes.AddRange(Common.Common.DeserializeName("can_be_class_ability")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("can_be_class_ability")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Bool)); /* Type */
 		/* Data base_cost */
-		bytes.AddRange(Common.Common.DeserializeI32(base_cost));
+		bytes.AddRange(Common.Common.SerializeI32(base_cost));
 		/* Data cost */
-		bytes.AddRange(Common.Common.DeserializeI32(cost));
+		bytes.AddRange(Common.Common.SerializeI32(cost));
 		/* Data is_class_ability */
-		bytes.AddRange(Common.Common.DeserializeBool(is_class_ability));
+		bytes.AddRange(Common.Common.SerializeBool(is_class_ability));
 		/* Data can_be_class_ability */
-		bytes.AddRange(Common.Common.DeserializeBool(can_be_class_ability));
+		bytes.AddRange(Common.Common.SerializeBool(can_be_class_ability));
 		return bytes;
 	}
 }
 public record QuestSpecifics(int progress, int goal) : Common.PacketTable
 {
-	public static QuestSpecifics SerializeInternal(ref Span<byte> bytes)
+	public static QuestSpecifics DeserializeInternal(ref Span<byte> bytes)
 	{
 		/* Field Header progress */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "progress")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "progress")) /* Name */
 			{
 				throw new Exception("Field Header QuestSpecifics.progress hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.I32))
 			{
 				throw new Exception($"Wrong field type for QuestSpecifics.progress, expected {(byte)(Common.TypeBytes.I32)}, got {type}");
@@ -598,48 +597,48 @@ public record QuestSpecifics(int progress, int goal) : Common.PacketTable
 		}
 		/* Field Header goal */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "goal")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "goal")) /* Name */
 			{
 				throw new Exception("Field Header QuestSpecifics.goal hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.I32))
 			{
 				throw new Exception($"Wrong field type for QuestSpecifics.goal, expected {(byte)(Common.TypeBytes.I32)}, got {type}");
 			}
 		}
-		int progress = Common.Common.SerializeI32(ref bytes);
-		int goal = Common.Common.SerializeI32(ref bytes);
+		int progress = Common.Common.DeserializeI32(ref bytes);
+		int goal = Common.Common.DeserializeI32(ref bytes);
 		return new(progress, goal);
 	}
 
-	public List<byte> DeserializeInternal()
+	public List<byte> SerializeInternal()
 	{
 		List<byte> bytes = [];
 		/* Field Header progress */
-		bytes.AddRange(Common.Common.DeserializeName("progress")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("progress")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.I32)); /* Type */
 		/* Field Header goal */
-		bytes.AddRange(Common.Common.DeserializeName("goal")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("goal")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.I32)); /* Type */
 		/* Data progress */
-		bytes.AddRange(Common.Common.DeserializeI32(progress));
+		bytes.AddRange(Common.Common.SerializeI32(progress));
 		/* Data goal */
-		bytes.AddRange(Common.Common.DeserializeI32(goal));
+		bytes.AddRange(Common.Common.SerializeI32(goal));
 		return bytes;
 	}
 }
 public record CardAction(uint uid, string description) : Common.PacketTable
 {
-	public static CardAction SerializeInternal(ref Span<byte> bytes)
+	public static CardAction DeserializeInternal(ref Span<byte> bytes)
 	{
 		/* Field Header uid */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "uid")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "uid")) /* Name */
 			{
 				throw new Exception("Field Header CardAction.uid hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.N32))
 			{
 				throw new Exception($"Wrong field type for CardAction.uid, expected {(byte)(Common.TypeBytes.N32)}, got {type}");
@@ -647,48 +646,48 @@ public record CardAction(uint uid, string description) : Common.PacketTable
 		}
 		/* Field Header description */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "description")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "description")) /* Name */
 			{
 				throw new Exception("Field Header CardAction.description hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Str))
 			{
 				throw new Exception($"Wrong field type for CardAction.description, expected {(byte)(Common.TypeBytes.Str)}, got {type}");
 			}
 		}
-		uint uid = Common.Common.SerializeN32(ref bytes);
-		string description = Common.Common.SerializeStr(ref bytes);
+		uint uid = Common.Common.DeserializeN32(ref bytes);
+		string description = Common.Common.DeserializeStr(ref bytes);
 		return new(uid, description);
 	}
 
-	public List<byte> DeserializeInternal()
+	public List<byte> SerializeInternal()
 	{
 		List<byte> bytes = [];
 		/* Field Header uid */
-		bytes.AddRange(Common.Common.DeserializeName("uid")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("uid")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.N32)); /* Type */
 		/* Field Header description */
-		bytes.AddRange(Common.Common.DeserializeName("description")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("description")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Str)); /* Type */
 		/* Data uid */
-		bytes.AddRange(Common.Common.DeserializeN32(uid));
+		bytes.AddRange(Common.Common.SerializeN32(uid));
 		/* Data description */
-		bytes.AddRange(Common.Common.DeserializeStr(description));
+		bytes.AddRange(Common.Common.SerializeStr(description));
 		return bytes;
 	}
 }
 public record Deck(string name, List<CardStruct> cards, CardGameUtils.GameConstants.PlayerClass player_class, CardStruct? ability, CardStruct? quest) : Common.PacketTable
 {
-	public static Deck SerializeInternal(ref Span<byte> bytes)
+	public static Deck DeserializeInternal(ref Span<byte> bytes)
 	{
 		/* Field Header name */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "name")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "name")) /* Name */
 			{
 				throw new Exception("Field Header Deck.name hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Str))
 			{
 				throw new Exception($"Wrong field type for Deck.name, expected {(byte)(Common.TypeBytes.Str)}, got {type}");
@@ -696,11 +695,11 @@ public record Deck(string name, List<CardStruct> cards, CardGameUtils.GameConsta
 		}
 		/* Field Header cards */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "cards")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "cards")) /* Name */
 			{
 				throw new Exception("Field Header Deck.cards hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Table | Common.TypeBytes.ListFlag))
 			{
 				throw new Exception($"Wrong field type for Deck.cards, expected {(byte)(Common.TypeBytes.Table | Common.TypeBytes.ListFlag)}, got {type}");
@@ -708,11 +707,11 @@ public record Deck(string name, List<CardStruct> cards, CardGameUtils.GameConsta
 		}
 		/* Field Header player_class */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "player_class")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "player_class")) /* Name */
 			{
 				throw new Exception("Field Header Deck.player_class hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Enum))
 			{
 				throw new Exception($"Wrong field type for Deck.player_class, expected {(byte)(Common.TypeBytes.Enum)}, got {type}");
@@ -720,11 +719,11 @@ public record Deck(string name, List<CardStruct> cards, CardGameUtils.GameConsta
 		}
 		/* Field Header ability */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "ability")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "ability")) /* Name */
 			{
 				throw new Exception("Field Header Deck.ability hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Table | Common.TypeBytes.OptionalFlag))
 			{
 				throw new Exception($"Wrong field type for Deck.ability, expected {(byte)(Common.TypeBytes.Table | Common.TypeBytes.OptionalFlag)}, got {type}");
@@ -732,77 +731,77 @@ public record Deck(string name, List<CardStruct> cards, CardGameUtils.GameConsta
 		}
 		/* Field Header quest */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "quest")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "quest")) /* Name */
 			{
 				throw new Exception("Field Header Deck.quest hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Table | Common.TypeBytes.OptionalFlag))
 			{
 				throw new Exception($"Wrong field type for Deck.quest, expected {(byte)(Common.TypeBytes.Table | Common.TypeBytes.OptionalFlag)}, got {type}");
 			}
 		}
-		string name = Common.Common.SerializeStr(ref bytes);
-		byte cardsNestingLevel = Common.Common.SerializeN8(ref bytes);
+		string name = Common.Common.DeserializeStr(ref bytes);
+		byte cardsNestingLevel = Common.Common.DeserializeN8(ref bytes);
 		if(cardsNestingLevel != 0)
 		{
 			throw new Exception("Wrong nesting level for cards, expected 0, got {cardsNestingLevel}");
 		}
-		uint cardsCount = Common.Common.SerializeN32(ref bytes);
+		uint cardsCount = Common.Common.DeserializeN32(ref bytes);
 		List<CardStruct> cards = new((int)cardsCount);
 		for(int cards_ = 0; cards_ < cards.Capacity; cards_++)
 		{
-			cards.Add(CardStruct.SerializeInternal(ref bytes));
+			cards.Add(CardStruct.DeserializeInternal(ref bytes));
 		}
-		CardGameUtils.GameConstants.PlayerClass player_class = (CardGameUtils.GameConstants.PlayerClass)Common.Common.SerializeN8(ref bytes);
-		if(!Common.Common.SerializeName(ref bytes, Enum.GetName(player_class)!, len: 3))
+		CardGameUtils.GameConstants.PlayerClass player_class = (CardGameUtils.GameConstants.PlayerClass)Common.Common.DeserializeN8(ref bytes);
+		if(!Common.Common.DeserializeName(ref bytes, Enum.GetName(player_class)!, len: 3))
 		{
-			throw new Exception($"Wrong enum name hash, got [{string.Join(',', Common.Common.DeserializeName(Enum.GetName(player_class)!))}]");
+			throw new Exception($"Wrong enum name hash, got [{string.Join(',', Common.Common.SerializeName(Enum.GetName(player_class)!))}]");
 		}
 		CardStruct? ability = null;
-		if(Common.Common.SerializeBool(ref bytes))
+		if(Common.Common.DeserializeBool(ref bytes))
 		{
-			ability = CardStruct.SerializeInternal(ref bytes);
+			ability = CardStruct.DeserializeInternal(ref bytes);
 		}
 		CardStruct? quest = null;
-		if(Common.Common.SerializeBool(ref bytes))
+		if(Common.Common.DeserializeBool(ref bytes))
 		{
-			quest = CardStruct.SerializeInternal(ref bytes);
+			quest = CardStruct.DeserializeInternal(ref bytes);
 		}
 		return new(name, cards, player_class, ability, quest);
 	}
 
-	public List<byte> DeserializeInternal()
+	public List<byte> SerializeInternal()
 	{
 		List<byte> bytes = [];
 		/* Field Header name */
-		bytes.AddRange(Common.Common.DeserializeName("name")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("name")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Str)); /* Type */
 		/* Field Header cards */
-		bytes.AddRange(Common.Common.DeserializeName("cards")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("cards")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Table | Common.TypeBytes.ListFlag)); /* Type */
 		/* Field Header player_class */
-		bytes.AddRange(Common.Common.DeserializeName("player_class")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("player_class")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Enum)); /* Type */
 		/* Field Header ability */
-		bytes.AddRange(Common.Common.DeserializeName("ability")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("ability")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Table | Common.TypeBytes.OptionalFlag)); /* Type */
 		/* Field Header quest */
-		bytes.AddRange(Common.Common.DeserializeName("quest")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("quest")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Table | Common.TypeBytes.OptionalFlag)); /* Type */
 		/* Data name */
-		bytes.AddRange(Common.Common.DeserializeStr(name));
+		bytes.AddRange(Common.Common.SerializeStr(name));
 		/* Data cards */
 		bytes.Add(0); /* Nesting level */
-		bytes.AddRange(Common.Common.DeserializeN32((uint)cards.Count)); /* Count */
+		bytes.AddRange(Common.Common.SerializeN32((uint)cards.Count)); /* Count */
 		/* Nesting Counts */
 		foreach(var cards_ in cards)
 		{
-			bytes.AddRange(cards_.DeserializeInternal());
+			bytes.AddRange(cards_.SerializeInternal());
 		}
 		/* Data player_class */
-		bytes.AddRange(Common.Common.DeserializeN8((byte)player_class));
-		bytes.AddRange(Common.Common.DeserializeName(Enum.GetName(player_class)!, len: 3));
+		bytes.AddRange(Common.Common.SerializeN8((byte)player_class));
+		bytes.AddRange(Common.Common.SerializeName(Enum.GetName(player_class)!, len: 3));
 		/* Data ability */
 		if(ability is null)
 		{
@@ -811,7 +810,7 @@ public record Deck(string name, List<CardStruct> cards, CardGameUtils.GameConsta
 		else
 		{
 			bytes.Add(1); /* IsSet */
-			bytes.AddRange(ability.DeserializeInternal());
+			bytes.AddRange(ability.SerializeInternal());
 		}
 		/* Data quest */
 		if(quest is null)
@@ -821,24 +820,24 @@ public record Deck(string name, List<CardStruct> cards, CardGameUtils.GameConsta
 		else
 		{
 			bytes.Add(1); /* IsSet */
-			bytes.AddRange(quest.DeserializeInternal());
+			bytes.AddRange(quest.SerializeInternal());
 		}
 		return bytes;
 	}
 }
 public interface ErrorOr : Common.PacketUnion
 {
-	public static ErrorOr SerializeInternal(ref Span<byte> bytes)
+	public static ErrorOr DeserializeInternal(ref Span<byte> bytes)
 	{
 		Span<byte> nameSpan = bytes[..4];
 		bytes = bytes[4..];
-		if(nameSpan.SequenceEqual(Common.Common.DeserializeName("success")))
+		if(nameSpan.SequenceEqual(Common.Common.SerializeName("success")))
 		{
-			return success.SerializeInternal(ref bytes);
+			return success.DeserializeInternal(ref bytes);
 		}
-		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("error")))
+		else if(nameSpan.SequenceEqual(Common.Common.SerializeName("error")))
 		{
-			return error.SerializeInternal(ref bytes);
+			return error.DeserializeInternal(ref bytes);
 		}
 		else 
 		{
@@ -848,39 +847,39 @@ public interface ErrorOr : Common.PacketUnion
 
 	public record success() : ErrorOr
 	{
-		public static success SerializeInternal(ref Span<byte> bytes)
+		public static success DeserializeInternal(ref Span<byte> bytes)
 		{
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)Common.TypeBytes.Void)
 			{
 				throw new Exception("Wrong field type for ErrorOr/success, expected `{(byte)Common.TypeBytes.Void}`, got `type`");
 			}
 			return new();
 		}
-		public List<byte> DeserializeInternal()
+		public List<byte> SerializeInternal()
 		{
-			return [.. Common.Common.DeserializeName("success"), (byte)Common.TypeBytes.Void];
+			return [.. Common.Common.SerializeName("success"), (byte)Common.TypeBytes.Void];
 		}
 	}
 	public record error(string value) : ErrorOr
 	{
-		public List<byte> DeserializeInternal()
+		public List<byte> SerializeInternal()
 		{
 			List<byte> bytes = [];
-			bytes.AddRange(Common.Common.DeserializeName("error")); /* Name */
+			bytes.AddRange(Common.Common.SerializeName("error")); /* Name */
 			bytes.Add((byte)(Common.TypeBytes.Str)); /* Type */
-			bytes.AddRange(Common.Common.DeserializeStr(value));
+			bytes.AddRange(Common.Common.SerializeStr(value));
 			return bytes;
 		}
 
-		public static error SerializeInternal(ref Span<byte> bytes)
+		public static error DeserializeInternal(ref Span<byte> bytes)
 		{
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Str))
 			{
 				throw new Exception($"Wrong field type for ErrorOr/error, expected `{(byte)(Common.TypeBytes.Str)}`, got `{type}`");
 			}
-			string value = Common.Common.SerializeStr(ref bytes);
+			string value = Common.Common.DeserializeStr(ref bytes);
 			return new(value);
 		}
 	}

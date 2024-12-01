@@ -89,7 +89,7 @@ public partial class SelectCardsWindow : Window
 
 	public void ConfirmClick(object? sender, RoutedEventArgs args)
 	{
-		stream.Write(new CToS_Packet(new CToS_Content.select_cards(new(uids: UIUtils.CardListBoxSelectionToUID(CardSelectionList)))).Deserialize());
+		stream.Write(new CToS_Packet(new CToS_Content.select_cards(new(uids: UIUtils.CardListBoxSelectionToUID(CardSelectionList)))).Serialize());
 		shouldReallyClose = true;
 		Close();
 	}

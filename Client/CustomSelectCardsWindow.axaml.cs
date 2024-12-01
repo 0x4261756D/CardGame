@@ -69,20 +69,20 @@ public partial class CustomSelectCardsWindow : Window
 
 	public void ConfirmClick(object? sender, RoutedEventArgs args)
 	{
-		stream.Write(new CToS_Packet(new CToS_Content.select_cards_custom(new(uids: UIUtils.CardListBoxSelectionToUID(CardSelectionList)))).Deserialize());
+		stream.Write(new CToS_Packet(new CToS_Content.select_cards_custom(new(uids: UIUtils.CardListBoxSelectionToUID(CardSelectionList)))).Serialize());
 		shouldReallyClose = true;
 		Close();
 	}
 
 	public void CardSelectionChanged(object sender, SelectionChangedEventArgs args)
 	{
-		stream.Write(new CToS_Packet(new CToS_Content.select_cards_custom_intermediate(new(uids: UIUtils.CardListBoxSelectionToUID((ListBox)sender)))).Deserialize());
+		stream.Write(new CToS_Packet(new CToS_Content.select_cards_custom_intermediate(new(uids: UIUtils.CardListBoxSelectionToUID((ListBox)sender)))).Serialize());
 		((CustomSelectCardViewModel)DataContext!).CanConfirm = ReceivePacket<SToC_Content.select_cards_custom_intermediate>((NetworkStream)stream)!.value.is_valid;
 	}
 
 	public static T ReceivePacket<T>(NetworkStream stream) where T : SToC_Content
 	{
-		return (T)SToC_Packet.Serialize(stream).content;
+		return (T)SToC_Packet.Deserialize(stream).content;
 	}
 }
 public class CustomSelectCardViewModel : INotifyPropertyChanged

@@ -102,7 +102,7 @@ partial class Room
 			(
 				id: player.ID,
 				port: port
-			)))).Deserialize());
+			)))).Serialize());
 			player.stream.Close();
 			player.stream.Dispose();
 		}

@@ -6,55 +6,54 @@ namespace CardGameUtils.Structs.Server;
 
 #nullable enable
 #pragma warning disable CS8981
-
 public record CToS_Packet(CToS_Content content) : Common.PacketTable
 {
-	public byte[] Deserialize()
+	public byte[] Serialize()
 	{
-		List<byte> dataBytes = DeserializeInternal();
-		return [.. Common.Common.DeserializeN32((uint)dataBytes.Count + 8) /* Size */,
-			.. Common.Common.DeserializeN16(2) /* ProtoVersion */,
-			.. Common.Common.DeserializeN16(1) /* SchemaVersion */,
-			.. Common.Common.DeserializeName("CToS_Packet") /* Name */,
+		List<byte> dataBytes = SerializeInternal();
+		return [.. Common.Common.SerializeN32((uint)dataBytes.Count + 8) /* Size */,
+			.. Common.Common.SerializeN16(2) /* ProtoVersion */,
+			.. Common.Common.SerializeN16(1) /* SchemaVersion */,
+			.. Common.Common.SerializeName("CToS_Packet") /* Name */,
 			.. dataBytes /* Root */];
 	}
 
-	public static CToS_Packet Serialize(byte[] packet)
+	public static CToS_Packet Deserialize(byte[] packet)
 	{
 		Span<byte> bytes = packet;
-		uint size = Common.Common.SerializeN32(ref bytes);
+		uint size = Common.Common.DeserializeN32(ref bytes);
 		if(size != bytes.Length)
 		{
 			throw new Exception($"Incorrect size, expected {size}, got {bytes.Length}");
 		}
-		return SerializeImpl(ref bytes);
+		return DeserializeImpl(ref bytes);
 	}
-	public static CToS_Packet Serialize(Stream stream)
+	public static CToS_Packet Deserialize(Stream stream)
 	{
 		Span<byte> sizeSpan = new byte[4];
 		stream.ReadExactly(sizeSpan);
-		uint size = Common.Common.SerializeN32(ref sizeSpan);
+		uint size = Common.Common.DeserializeN32(ref sizeSpan);
 		Span<byte> bytes = new byte[size];
 		stream.ReadExactly(bytes);
-		return SerializeImpl(ref bytes);
+		return DeserializeImpl(ref bytes);
 	}
-	private static CToS_Packet SerializeImpl(ref Span<byte> bytes)
+	private static CToS_Packet DeserializeImpl(ref Span<byte> bytes)
 	{
-		ushort protoVersion = Common.Common.SerializeN16(ref bytes);
+		ushort protoVersion = Common.Common.DeserializeN16(ref bytes);
 		if(protoVersion != 2)
 		{
 			throw new Exception($"Wrong proto version, expected 2, got {protoVersion}");
 		}
-		ushort schemaVersion = Common.Common.SerializeN16(ref bytes);
+		ushort schemaVersion = Common.Common.DeserializeN16(ref bytes);
 		if(schemaVersion != 1)
 		{
 			throw new Exception($"Wrong schema version, expected 1, got {schemaVersion}");
 		}
-		if(!Common.Common.SerializeName(ref bytes, "CToS_Packet"))
+		if(!Common.Common.DeserializeName(ref bytes, "CToS_Packet"))
 		{
 			throw new Exception($"Packet name hash mismatch");
 		}
-		CToS_Packet ret = SerializeInternal(ref bytes);
+		CToS_Packet ret = DeserializeInternal(ref bytes);
 		if(bytes.Length != 0)
 		{
 			throw new Exception($"Internal error, after successfully serializing the packet there are still {bytes.Length} bytes left: [{string.Join(',', bytes.ToArray())}]");
@@ -62,68 +61,68 @@ public record CToS_Packet(CToS_Content content) : Common.PacketTable
 		return ret;
 	}
 
-	public static CToS_Packet SerializeInternal(ref Span<byte> bytes)
+	public static CToS_Packet DeserializeInternal(ref Span<byte> bytes)
 	{
 		/* Field Header content */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "content")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "content")) /* Name */
 			{
 				throw new Exception("Field Header CToS_Packet.content hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Union))
 			{
 				throw new Exception($"Wrong field type for CToS_Packet.content, expected {(byte)(Common.TypeBytes.Union)}, got {type}");
 			}
 		}
-		CToS_Content content = CToS_Content.SerializeInternal(ref bytes);
+		CToS_Content content = CToS_Content.DeserializeInternal(ref bytes);
 		return new(content);
 	}
 
-	public List<byte> DeserializeInternal()
+	public List<byte> SerializeInternal()
 	{
 		List<byte> bytes = [];
 		/* Field Header content */
-		bytes.AddRange(Common.Common.DeserializeName("content")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("content")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Union)); /* Type */
 		/* Data content */
-		bytes.AddRange(content.DeserializeInternal());
+		bytes.AddRange(content.SerializeInternal());
 		return bytes;
 	}
 }
 public interface CToS_Content : Common.PacketUnion
 {
-	public static CToS_Content SerializeInternal(ref Span<byte> bytes)
+	public static CToS_Content DeserializeInternal(ref Span<byte> bytes)
 	{
 		Span<byte> nameSpan = bytes[..4];
 		bytes = bytes[4..];
-		if(nameSpan.SequenceEqual(Common.Common.DeserializeName("additional_cards")))
+		if(nameSpan.SequenceEqual(Common.Common.SerializeName("additional_cards")))
 		{
-			return additional_cards.SerializeInternal(ref bytes);
+			return additional_cards.DeserializeInternal(ref bytes);
 		}
-		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("artworks")))
+		else if(nameSpan.SequenceEqual(Common.Common.SerializeName("artworks")))
 		{
-			return artworks.SerializeInternal(ref bytes);
+			return artworks.DeserializeInternal(ref bytes);
 		}
-		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("create")))
+		else if(nameSpan.SequenceEqual(Common.Common.SerializeName("create")))
 		{
-			return create.SerializeInternal(ref bytes);
+			return create.DeserializeInternal(ref bytes);
 		}
-		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("join")))
+		else if(nameSpan.SequenceEqual(Common.Common.SerializeName("join")))
 		{
-			return join.SerializeInternal(ref bytes);
+			return join.DeserializeInternal(ref bytes);
 		}
-		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("leave")))
+		else if(nameSpan.SequenceEqual(Common.Common.SerializeName("leave")))
 		{
-			return leave.SerializeInternal(ref bytes);
+			return leave.DeserializeInternal(ref bytes);
 		}
-		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("rooms")))
+		else if(nameSpan.SequenceEqual(Common.Common.SerializeName("rooms")))
 		{
-			return rooms.SerializeInternal(ref bytes);
+			return rooms.DeserializeInternal(ref bytes);
 		}
-		else if(nameSpan.SequenceEqual(Common.Common.DeserializeName("start")))
+		else if(nameSpan.SequenceEqual(Common.Common.SerializeName("start")))
 		{
-			return start.SerializeInternal(ref bytes);
+			return start.DeserializeInternal(ref bytes);
 		}
 		else 
 		{
@@ -133,230 +132,230 @@ public interface CToS_Content : Common.PacketUnion
 
 	public record additional_cards() : CToS_Content
 	{
-		public static additional_cards SerializeInternal(ref Span<byte> bytes)
+		public static additional_cards DeserializeInternal(ref Span<byte> bytes)
 		{
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)Common.TypeBytes.Void)
 			{
 				throw new Exception("Wrong field type for CToS_Content/additional_cards, expected `{(byte)Common.TypeBytes.Void}`, got `type`");
 			}
 			return new();
 		}
-		public List<byte> DeserializeInternal()
+		public List<byte> SerializeInternal()
 		{
-			return [.. Common.Common.DeserializeName("additional_cards"), (byte)Common.TypeBytes.Void];
+			return [.. Common.Common.SerializeName("additional_cards"), (byte)Common.TypeBytes.Void];
 		}
 	}
 	public record artworks(CToS_Request_Artworks value) : CToS_Content
 	{
-		public List<byte> DeserializeInternal()
+		public List<byte> SerializeInternal()
 		{
 			List<byte> bytes = [];
-			bytes.AddRange(Common.Common.DeserializeName("artworks")); /* Name */
+			bytes.AddRange(Common.Common.SerializeName("artworks")); /* Name */
 			bytes.Add((byte)(Common.TypeBytes.Table)); /* Type */
-			bytes.AddRange(value.DeserializeInternal());
+			bytes.AddRange(value.SerializeInternal());
 			return bytes;
 		}
 
-		public static artworks SerializeInternal(ref Span<byte> bytes)
+		public static artworks DeserializeInternal(ref Span<byte> bytes)
 		{
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Table))
 			{
 				throw new Exception($"Wrong field type for CToS_Content/artworks, expected `{(byte)(Common.TypeBytes.Table)}`, got `{type}`");
 			}
-			CToS_Request_Artworks value = CToS_Request_Artworks.SerializeInternal(ref bytes);
+			CToS_Request_Artworks value = CToS_Request_Artworks.DeserializeInternal(ref bytes);
 			return new(value);
 		}
 	}
 	public record create(CToS_Request_Create value) : CToS_Content
 	{
-		public List<byte> DeserializeInternal()
+		public List<byte> SerializeInternal()
 		{
 			List<byte> bytes = [];
-			bytes.AddRange(Common.Common.DeserializeName("create")); /* Name */
+			bytes.AddRange(Common.Common.SerializeName("create")); /* Name */
 			bytes.Add((byte)(Common.TypeBytes.Table)); /* Type */
-			bytes.AddRange(value.DeserializeInternal());
+			bytes.AddRange(value.SerializeInternal());
 			return bytes;
 		}
 
-		public static create SerializeInternal(ref Span<byte> bytes)
+		public static create DeserializeInternal(ref Span<byte> bytes)
 		{
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Table))
 			{
 				throw new Exception($"Wrong field type for CToS_Content/create, expected `{(byte)(Common.TypeBytes.Table)}`, got `{type}`");
 			}
-			CToS_Request_Create value = CToS_Request_Create.SerializeInternal(ref bytes);
+			CToS_Request_Create value = CToS_Request_Create.DeserializeInternal(ref bytes);
 			return new(value);
 		}
 	}
 	public record join(CToS_Request_Join value) : CToS_Content
 	{
-		public List<byte> DeserializeInternal()
+		public List<byte> SerializeInternal()
 		{
 			List<byte> bytes = [];
-			bytes.AddRange(Common.Common.DeserializeName("join")); /* Name */
+			bytes.AddRange(Common.Common.SerializeName("join")); /* Name */
 			bytes.Add((byte)(Common.TypeBytes.Table)); /* Type */
-			bytes.AddRange(value.DeserializeInternal());
+			bytes.AddRange(value.SerializeInternal());
 			return bytes;
 		}
 
-		public static join SerializeInternal(ref Span<byte> bytes)
+		public static join DeserializeInternal(ref Span<byte> bytes)
 		{
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Table))
 			{
 				throw new Exception($"Wrong field type for CToS_Content/join, expected `{(byte)(Common.TypeBytes.Table)}`, got `{type}`");
 			}
-			CToS_Request_Join value = CToS_Request_Join.SerializeInternal(ref bytes);
+			CToS_Request_Join value = CToS_Request_Join.DeserializeInternal(ref bytes);
 			return new(value);
 		}
 	}
 	public record leave() : CToS_Content
 	{
-		public static leave SerializeInternal(ref Span<byte> bytes)
+		public static leave DeserializeInternal(ref Span<byte> bytes)
 		{
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)Common.TypeBytes.Void)
 			{
 				throw new Exception("Wrong field type for CToS_Content/leave, expected `{(byte)Common.TypeBytes.Void}`, got `type`");
 			}
 			return new();
 		}
-		public List<byte> DeserializeInternal()
+		public List<byte> SerializeInternal()
 		{
-			return [.. Common.Common.DeserializeName("leave"), (byte)Common.TypeBytes.Void];
+			return [.. Common.Common.SerializeName("leave"), (byte)Common.TypeBytes.Void];
 		}
 	}
 	public record rooms() : CToS_Content
 	{
-		public static rooms SerializeInternal(ref Span<byte> bytes)
+		public static rooms DeserializeInternal(ref Span<byte> bytes)
 		{
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)Common.TypeBytes.Void)
 			{
 				throw new Exception("Wrong field type for CToS_Content/rooms, expected `{(byte)Common.TypeBytes.Void}`, got `type`");
 			}
 			return new();
 		}
-		public List<byte> DeserializeInternal()
+		public List<byte> SerializeInternal()
 		{
-			return [.. Common.Common.DeserializeName("rooms"), (byte)Common.TypeBytes.Void];
+			return [.. Common.Common.SerializeName("rooms"), (byte)Common.TypeBytes.Void];
 		}
 	}
 	public record start(CToS_Request_Start value) : CToS_Content
 	{
-		public List<byte> DeserializeInternal()
+		public List<byte> SerializeInternal()
 		{
 			List<byte> bytes = [];
-			bytes.AddRange(Common.Common.DeserializeName("start")); /* Name */
+			bytes.AddRange(Common.Common.SerializeName("start")); /* Name */
 			bytes.Add((byte)(Common.TypeBytes.Table)); /* Type */
-			bytes.AddRange(value.DeserializeInternal());
+			bytes.AddRange(value.SerializeInternal());
 			return bytes;
 		}
 
-		public static start SerializeInternal(ref Span<byte> bytes)
+		public static start DeserializeInternal(ref Span<byte> bytes)
 		{
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Table))
 			{
 				throw new Exception($"Wrong field type for CToS_Content/start, expected `{(byte)(Common.TypeBytes.Table)}`, got `{type}`");
 			}
-			CToS_Request_Start value = CToS_Request_Start.SerializeInternal(ref bytes);
+			CToS_Request_Start value = CToS_Request_Start.DeserializeInternal(ref bytes);
 			return new(value);
 		}
 	}
 }
 public record CToS_Request_Artworks(List<string> names) : Common.PacketTable
 {
-	public static CToS_Request_Artworks SerializeInternal(ref Span<byte> bytes)
+	public static CToS_Request_Artworks DeserializeInternal(ref Span<byte> bytes)
 	{
 		/* Field Header names */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "names")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "names")) /* Name */
 			{
 				throw new Exception("Field Header CToS_Request_Artworks.names hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Str | Common.TypeBytes.ListFlag))
 			{
 				throw new Exception($"Wrong field type for CToS_Request_Artworks.names, expected {(byte)(Common.TypeBytes.Str | Common.TypeBytes.ListFlag)}, got {type}");
 			}
 		}
-		byte namesNestingLevel = Common.Common.SerializeN8(ref bytes);
+		byte namesNestingLevel = Common.Common.DeserializeN8(ref bytes);
 		if(namesNestingLevel != 0)
 		{
 			throw new Exception("Wrong nesting level for names, expected 0, got {namesNestingLevel}");
 		}
-		uint namesCount = Common.Common.SerializeN32(ref bytes);
+		uint namesCount = Common.Common.DeserializeN32(ref bytes);
 		List<string> names = new((int)namesCount);
 		for(int names_ = 0; names_ < names.Capacity; names_++)
 		{
-			names.Add(Common.Common.SerializeStr(ref bytes));
+			names.Add(Common.Common.DeserializeStr(ref bytes));
 		}
 		return new(names);
 	}
 
-	public List<byte> DeserializeInternal()
+	public List<byte> SerializeInternal()
 	{
 		List<byte> bytes = [];
 		/* Field Header names */
-		bytes.AddRange(Common.Common.DeserializeName("names")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("names")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Str | Common.TypeBytes.ListFlag)); /* Type */
 		/* Data names */
 		bytes.Add(0); /* Nesting level */
-		bytes.AddRange(Common.Common.DeserializeN32((uint)names.Count)); /* Count */
+		bytes.AddRange(Common.Common.SerializeN32((uint)names.Count)); /* Count */
 		/* Nesting Counts */
 		foreach(var names_ in names)
 		{
-			bytes.AddRange(Common.Common.DeserializeStr(names_));
+			bytes.AddRange(Common.Common.SerializeStr(names_));
 		}
 		return bytes;
 	}
 }
 public record CToS_Request_Create(string name) : Common.PacketTable
 {
-	public static CToS_Request_Create SerializeInternal(ref Span<byte> bytes)
+	public static CToS_Request_Create DeserializeInternal(ref Span<byte> bytes)
 	{
 		/* Field Header name */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "name")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "name")) /* Name */
 			{
 				throw new Exception("Field Header CToS_Request_Create.name hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Str))
 			{
 				throw new Exception($"Wrong field type for CToS_Request_Create.name, expected {(byte)(Common.TypeBytes.Str)}, got {type}");
 			}
 		}
-		string name = Common.Common.SerializeStr(ref bytes);
+		string name = Common.Common.DeserializeStr(ref bytes);
 		return new(name);
 	}
 
-	public List<byte> DeserializeInternal()
+	public List<byte> SerializeInternal()
 	{
 		List<byte> bytes = [];
 		/* Field Header name */
-		bytes.AddRange(Common.Common.DeserializeName("name")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("name")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Str)); /* Type */
 		/* Data name */
-		bytes.AddRange(Common.Common.DeserializeStr(name));
+		bytes.AddRange(Common.Common.SerializeStr(name));
 		return bytes;
 	}
 }
 public record CToS_Request_Join(string own_name, string opp_name) : Common.PacketTable
 {
-	public static CToS_Request_Join SerializeInternal(ref Span<byte> bytes)
+	public static CToS_Request_Join DeserializeInternal(ref Span<byte> bytes)
 	{
 		/* Field Header own_name */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "own_name")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "own_name")) /* Name */
 			{
 				throw new Exception("Field Header CToS_Request_Join.own_name hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Str))
 			{
 				throw new Exception($"Wrong field type for CToS_Request_Join.own_name, expected {(byte)(Common.TypeBytes.Str)}, got {type}");
@@ -364,48 +363,48 @@ public record CToS_Request_Join(string own_name, string opp_name) : Common.Packe
 		}
 		/* Field Header opp_name */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "opp_name")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "opp_name")) /* Name */
 			{
 				throw new Exception("Field Header CToS_Request_Join.opp_name hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Str))
 			{
 				throw new Exception($"Wrong field type for CToS_Request_Join.opp_name, expected {(byte)(Common.TypeBytes.Str)}, got {type}");
 			}
 		}
-		string own_name = Common.Common.SerializeStr(ref bytes);
-		string opp_name = Common.Common.SerializeStr(ref bytes);
+		string own_name = Common.Common.DeserializeStr(ref bytes);
+		string opp_name = Common.Common.DeserializeStr(ref bytes);
 		return new(own_name, opp_name);
 	}
 
-	public List<byte> DeserializeInternal()
+	public List<byte> SerializeInternal()
 	{
 		List<byte> bytes = [];
 		/* Field Header own_name */
-		bytes.AddRange(Common.Common.DeserializeName("own_name")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("own_name")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Str)); /* Type */
 		/* Field Header opp_name */
-		bytes.AddRange(Common.Common.DeserializeName("opp_name")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("opp_name")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Str)); /* Type */
 		/* Data own_name */
-		bytes.AddRange(Common.Common.DeserializeStr(own_name));
+		bytes.AddRange(Common.Common.SerializeStr(own_name));
 		/* Data opp_name */
-		bytes.AddRange(Common.Common.DeserializeStr(opp_name));
+		bytes.AddRange(Common.Common.SerializeStr(opp_name));
 		return bytes;
 	}
 }
 public record CToS_Request_Start(CardGameUtils.Base.Deck decklist, bool no_shuffle) : Common.PacketTable
 {
-	public static CToS_Request_Start SerializeInternal(ref Span<byte> bytes)
+	public static CToS_Request_Start DeserializeInternal(ref Span<byte> bytes)
 	{
 		/* Field Header decklist */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "decklist")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "decklist")) /* Name */
 			{
 				throw new Exception("Field Header CToS_Request_Start.decklist hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Table))
 			{
 				throw new Exception($"Wrong field type for CToS_Request_Start.decklist, expected {(byte)(Common.TypeBytes.Table)}, got {type}");
@@ -413,34 +412,34 @@ public record CToS_Request_Start(CardGameUtils.Base.Deck decklist, bool no_shuff
 		}
 		/* Field Header no_shuffle */
 		{
-			if(!Common.Common.SerializeName(ref bytes, "no_shuffle")) /* Name */
+			if(!Common.Common.DeserializeName(ref bytes, "no_shuffle")) /* Name */
 			{
 				throw new Exception("Field Header CToS_Request_Start.no_shuffle hash mismatch");
 			}
-			byte type = Common.Common.SerializeN8(ref bytes);
+			byte type = Common.Common.DeserializeN8(ref bytes);
 			if(type != (byte)(Common.TypeBytes.Bool))
 			{
 				throw new Exception($"Wrong field type for CToS_Request_Start.no_shuffle, expected {(byte)(Common.TypeBytes.Bool)}, got {type}");
 			}
 		}
-		CardGameUtils.Base.Deck decklist = CardGameUtils.Base.Deck.SerializeInternal(ref bytes);
-		bool no_shuffle = Common.Common.SerializeBool(ref bytes);
+		CardGameUtils.Base.Deck decklist = CardGameUtils.Base.Deck.DeserializeInternal(ref bytes);
+		bool no_shuffle = Common.Common.DeserializeBool(ref bytes);
 		return new(decklist, no_shuffle);
 	}
 
-	public List<byte> DeserializeInternal()
+	public List<byte> SerializeInternal()
 	{
 		List<byte> bytes = [];
 		/* Field Header decklist */
-		bytes.AddRange(Common.Common.DeserializeName("decklist")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("decklist")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Table)); /* Type */
 		/* Field Header no_shuffle */
-		bytes.AddRange(Common.Common.DeserializeName("no_shuffle")); /* Name */
+		bytes.AddRange(Common.Common.SerializeName("no_shuffle")); /* Name */
 		bytes.Add((byte)(Common.TypeBytes.Bool)); /* Type */
 		/* Data decklist */
-		bytes.AddRange(decklist.DeserializeInternal());
+		bytes.AddRange(decklist.SerializeInternal());
 		/* Data no_shuffle */
-		bytes.AddRange(Common.Common.DeserializeBool(no_shuffle));
+		bytes.AddRange(Common.Common.SerializeBool(no_shuffle));
 		return bytes;
 	}
 }

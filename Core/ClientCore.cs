@@ -99,7 +99,7 @@ partial class ClientCore : Core
 		{
 			Task task = Task.Run(() => { while(!stream.DataAvailable) { } return; });
 			int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
-			return i == 0 ? CardGameUtils.Structs.Server.SToC_Packet.Serialize(stream).content : null;
+			return i == 0 ? CardGameUtils.Structs.Server.SToC_Packet.Deserialize(stream).content : null;
 		}
 		catch(Exception e)
 		{
@@ -113,7 +113,7 @@ partial class ClientCore : Core
 		{
 			using TcpClient client = new(config.additional_cards_url.address, config.additional_cards_url.port);
 			using NetworkStream stream = client.GetStream();
-			stream.Write(new CardGameUtils.Structs.Server.CToS_Packet(new CardGameUtils.Structs.Server.CToS_Content.additional_cards()).Deserialize());
+			stream.Write(new CardGameUtils.Structs.Server.CToS_Packet(new CardGameUtils.Structs.Server.CToS_Content.additional_cards()).Serialize());
 			CardGameUtils.Structs.Server.SToC_Content? data = TryReceiveServerPacket(stream, 1000);
 			if(data is null)
 			{
@@ -146,7 +146,7 @@ partial class ClientCore : Core
 			Log("Waiting for a connection");
 			using TcpClient client = listener.AcceptTcpClient();
 			using NetworkStream stream = client.GetStream();
-			CToS_Content packet = CToS_Packet.Serialize(stream).content;
+			CToS_Content packet = CToS_Packet.Deserialize(stream).content;
 			Log("Received a request");
 			if(HandlePacket(packet, stream))
 			{
@@ -167,17 +167,17 @@ partial class ClientCore : Core
 		{
 			case CToS_Content.decklists:
 			{
-				payload = new SToC_Packet(new SToC_Content.decklists(new(decks.ConvertAll(x => x.name)))).Deserialize();
+				payload = new SToC_Packet(new SToC_Content.decklists(new(decks.ConvertAll(x => x.name)))).Serialize();
 			}
 			break;
 			case CToS_Content.decklist request:
 			{
-				payload = new SToC_Packet(new SToC_Content.decklist(new(FindDeckByName(request.value.name)))).Deserialize();
+				payload = new SToC_Packet(new SToC_Content.decklist(new(FindDeckByName(request.value.name)))).Serialize();
 			}
 			break;
 			case CToS_Content.search request:
 			{
-				payload = new SToC_Packet(new SToC_Content.search(new(FilterCards(cards, request.value.filter, request.value.player_class, request.value.include_generic_cards)))).Deserialize();
+				payload = new SToC_Packet(new SToC_Content.search(new(FilterCards(cards, request.value.filter, request.value.player_class, request.value.include_generic_cards)))).Serialize();
 			}
 			break;
 			case CToS_Content.decklist_update request:

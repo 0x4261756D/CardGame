@@ -1050,7 +1050,7 @@ class DuelCore : Core
 		{
 			if(playerStreams[i]!.DataAvailable)
 			{
-				CToS_Content content = CToS_Packet.Serialize(playerStreams[i]!).content;
+				CToS_Content content = CToS_Packet.Deserialize(playerStreams[i]!).content;
 				Program.replay?.packets.Add(new(i, new ReplayContent.ctos(content)));
 				if(HandlePacket(content, i))
 				{
@@ -1414,7 +1414,7 @@ class DuelCore : Core
 		Log("request sent");
 		while(true)
 		{
-			CToS_Content packet = CToS_Packet.Serialize(playerStreams[player]!).content;
+			CToS_Content packet = CToS_Packet.Deserialize(playerStreams[player]!).content;
 			Log("request received");
 			Program.replay?.packets.Add(new(player, new ReplayContent.ctos(packet)));
 			if(packet is CToS_Content.select_cards_custom response)
@@ -1433,7 +1433,7 @@ class DuelCore : Core
 				Log($"Ignoring packet of type {packet.GetType()} during SelectCustom");
 				continue;
 			}
-			Log("deserialized packet");
+			Log("Serialized packet");
 			SendPacketToPlayer(new SToC_Content.select_cards_custom_intermediate(new
 			(
 				is_valid: isValidSelection([.. ((CToS_Content.select_cards_custom_intermediate)packet).value.uids.ConvertAll(x => Array.Find(cards, y => y.uid == x)!)])
@@ -2119,13 +2119,13 @@ class DuelCore : Core
 
 	public static T ReceivePacketFromPlayer<T>(int player) where T : CToS_Content
 	{
-		CToS_Content packet = CToS_Packet.Serialize(playerStreams[player]!).content;
+		CToS_Content packet = CToS_Packet.Deserialize(playerStreams[player]!).content;
 		Program.replay?.packets.Add(new(player, new ReplayContent.ctos(packet)));
 		return (T)packet;
 	}
 	public static void SendPacketToPlayer(SToC_Content content, int player)
 	{
-		byte[] payload = new SToC_Packet(content).Deserialize();
+		byte[] payload = new SToC_Packet(content).Serialize();
 		Program.replay?.packets.Add(new(player, new ReplayContent.stoc(content)));
 		playerStreams[player]!.Write(payload);
 	}

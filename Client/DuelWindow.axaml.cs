@@ -95,7 +95,7 @@ public partial class DuelWindow : Window
 		if(client.Connected)
 		{
 			_ = streamMutex.WaitOne();
-			stream.Write(new CToS_Packet(content).Deserialize());
+			stream.Write(new CToS_Packet(content).Serialize());
 			streamMutex.ReleaseMutex();
 		}
 		else
@@ -111,7 +111,7 @@ public partial class DuelWindow : Window
 			{
 				Task task = Task.Run(() => { while(!stream.DataAvailable) { } });
 				int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
-				SToC_Content? ret = i == 0 ? SToC_Packet.Serialize(stream).content : null;
+				SToC_Content? ret = i == 0 ? SToC_Packet.Deserialize(stream).content : null;
 				streamMutex.ReleaseMutex();
 				return ret;
 			}
@@ -654,7 +654,7 @@ public partial class DuelWindow : Window
 			try
 			{
 				_ = streamMutex.WaitOne();
-				stream.Write(new CToS_Packet(new CToS_Content.surrender()).Deserialize());
+				stream.Write(new CToS_Packet(new CToS_Content.surrender()).Serialize());
 				streamMutex.ReleaseMutex();
 			}
 			catch(Exception e)

@@ -39,7 +39,7 @@ public partial class ServerWindow : Window
 		{
 			using TcpClient updateClient = new(ServerAddressBox.Text, GenericConstants.SERVER_PORT);
 			using NetworkStream updateStream = updateClient.GetStream();
-			updateStream.Write(new CToS_Packet(new CToS_Content.rooms()).Deserialize());
+			updateStream.Write(new CToS_Packet(new CToS_Content.rooms()).Serialize());
 			((ServerWindowViewModel)DataContext!).ServerRooms = [.. ReceivePacket<SToC_Content.rooms>(updateStream).value.rooms];
 		}
 		catch(Exception ex)
@@ -71,7 +71,7 @@ public partial class ServerWindow : Window
 			}
 			return;
 		}
-		client.GetStream().Write(new CToS_Packet(new CToS_Content.create(new(name: playerName))).Deserialize());
+		client.GetStream().Write(new CToS_Packet(new CToS_Content.create(new(name: playerName))).Serialize());
 		ErrorOr response = ReceivePacket<SToC_Content.create>(client.GetStream()).value.success;
 		switch(response)
 		{
@@ -113,7 +113,7 @@ public partial class ServerWindow : Window
 		(
 			own_name: PlayerNameBox.Text,
 			opp_name: targetNameText
-		))).Deserialize());
+		))).Serialize());
 		ErrorOr response = ReceivePacket<SToC_Content.join>(client.GetStream()).value.success;
 		switch(response)
 		{
@@ -149,12 +149,12 @@ public partial class ServerWindow : Window
 	{
 		using TcpClient client = new(address, port);
 		using NetworkStream stream = client.GetStream();
-		stream.Write(new CToS_Packet(content).Deserialize());
-		return (T)SToC_Packet.Serialize(stream).content;
+		stream.Write(new CToS_Packet(content).Serialize());
+		return (T)SToC_Packet.Deserialize(stream).content;
 	}
 	public static T ReceivePacket<T>(NetworkStream stream) where T : SToC_Content
 	{
-		return (T)SToC_Packet.Serialize(stream).content;
+		return (T)SToC_Packet.Deserialize(stream).content;
 	}
 	public static SToC_Content? TryReceivePacket(NetworkStream stream, int timeoutInMs)
 	{
@@ -162,7 +162,7 @@ public partial class ServerWindow : Window
 		{
 			Task task = Task.Run(() => { while(!stream.DataAvailable) { } return; });
 			int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
-			return i == 0 ? SToC_Packet.Serialize(stream).content : null;
+			return i == 0 ? SToC_Packet.Deserialize(stream).content : null;
 		}
 		catch(Exception e)
 		{

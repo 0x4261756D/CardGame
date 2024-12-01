@@ -440,14 +440,14 @@ public partial class DeckEditWindow : Window
 	{
 		using TcpClient client = new(address, port);
 		using NetworkStream stream = client.GetStream();
-		stream.Write(new CToS_Packet(content).Deserialize());
-		return (T)SToC_Packet.Serialize(stream).content;
+		stream.Write(new CToS_Packet(content).Serialize());
+		return (T)SToC_Packet.Deserialize(stream).content;
 	}
 	private static void Send(CToS_Content content, string address, int port)
 	{
 		using TcpClient client = new(address, port);
 		using NetworkStream stream = client.GetStream();
-		stream.Write(new CToS_Packet(content).Deserialize());
+		stream.Write(new CToS_Packet(content).Serialize());
 	}
 }
 
