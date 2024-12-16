@@ -9,7 +9,7 @@ using CardGameUtils.Structs.Duel;
 
 namespace CardGameClient;
 
-public partial class ReplaysWindow : Window
+internal partial class ReplaysWindow : Window
 {
 	private DuelWindow? window;
 	private Replay? replay;
@@ -157,7 +157,7 @@ public partial class ReplaysWindow : Window
 	}
 }
 
-public class ReplaysViewModel : INotifyPropertyChanged
+internal class ReplaysViewModel : INotifyPropertyChanged
 {
 	public event PropertyChangedEventHandler? PropertyChanged;
 

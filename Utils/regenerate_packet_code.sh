@@ -2,9 +2,9 @@
 
 set -Eeuo pipefail
 
-if [ $# -lt 1 ]
+if [ $# -lt 2 ]
 then
-	echo "Usage: $0 <path to brief>"
+	echo "Usage: $0 <path to brief> <path to Common.cs>"
 	exit 1
 fi
 
@@ -18,3 +18,5 @@ do
 	echo "$1 ./$packet ./"
 	$1 "./$packet" ./
 done
+
+cp "$2" ./

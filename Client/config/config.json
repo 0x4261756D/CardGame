@@ -8,7 +8,7 @@
 		"height": 720,
 		"should_spawn_core": true,
 		"core_info": {
-			"FileName": "../../../../Core/bin/Debug/net8.0/CardGameCore.exe",
+			"FileName": "../../../../Core/bin/Debug/net9.0/CardGameCore.exe",
 			"Arguments": "--mode=client --config=../../../config/config.json",
 			"CreateNoWindow": false,
 			"Domain": null,
@@ -33,7 +33,7 @@
 		"height": 720,
 		"should_spawn_core": true,
 		"core_info": {
-			"FileName": "../../../../Core/bin/Debug/net8.0/CardGameCore",
+			"FileName": "../../../../Core/bin/Debug/net9.0/CardGameCore",
 			"Arguments": "--mode=client --config=../../../config/config.json --additional_cards_url=h2871632.stratoserver.net",
 			"CreateNoWindow": false,
 			"Domain": null,
@@ -44,7 +44,7 @@
 		"player_name": null,
 		"should_save_player_name": false,
 		"server_address": "127.0.0.1",
-		"last_deck_name": "Titan_Control",
+		"last_deck_name": "Pyro_Combo",
 		"animation_delay_in_ms": 500,
 		"theme": 0,
 		"artwork_path": "./artworks"

@@ -1,35 +1,35 @@
 namespace CardGameUtils;
 
-public class URL(string address, int port)
+internal class URL(string address, int port)
 {
 	public string address = address;
 	public int port = port;
 }
 
-public class PlatformCoreConfig
+internal class PlatformCoreConfig
 {
 	public CoreConfig? windows, linux;
 }
 
-public class CoreConfig(int port, CoreConfig.CoreMode mode, CoreConfig.DuelConfig? duel_config = null, CoreConfig.DeckConfig? deck_config = null)
+internal class CoreConfig(int port, CoreConfig.CoreMode mode, CoreConfig.DuelConfig? duel_config = null, CoreConfig.DeckConfig? deck_config = null)
 {
-	public enum CoreMode
+	internal enum CoreMode
 	{
 		Duel,
 		Client,
 	}
-	public class DuelConfig(PlayerConfig[] players, bool noshuffle)
+	internal class DuelConfig(PlayerConfig[] players, bool noshuffle)
 	{
 		public PlayerConfig[] players = players;
 		public bool noshuffle = noshuffle;
 	}
-	public class PlayerConfig(string name, string[] decklist, string id)
+	internal class PlayerConfig(string name, string[] decklist, string id)
 	{
 		public string name = name;
 		public string[] decklist = decklist;
 		public string id = id;
 	}
-	public class DeckConfig(URL additional_cards_url, string deck_location, bool should_fetch_additional_cards)
+	internal class DeckConfig(URL additional_cards_url, string deck_location, bool should_fetch_additional_cards)
 	{
 		public string deck_location = deck_location;
 		public bool should_fetch_additional_cards = should_fetch_additional_cards;
@@ -42,15 +42,15 @@ public class CoreConfig(int port, CoreConfig.CoreMode mode, CoreConfig.DuelConfi
 	public DeckConfig? deck_config = deck_config;
 }
 
-public class PlatformClientConfig
+internal class PlatformClientConfig
 {
 	public ClientConfig? windows, linux;
 }
 
-public class ClientConfig(
+internal class ClientConfig(
 	URL deck_edit_url, int width, int height, CoreInfo core_info, bool should_save_player_name, bool should_spawn_core, string server_address, int animation_delay_in_ms, ClientConfig.ThemeVariant? theme, string? artwork_path)
 {
-	public enum ThemeVariant
+	internal enum ThemeVariant
 	{
 		Default,
 		Dark,
@@ -69,7 +69,7 @@ public class ClientConfig(
 	public ThemeVariant? theme = theme;
 	public string? artwork_path = artwork_path;
 }
-public struct CoreInfo
+internal struct CoreInfo
 {
 	public string FileName;
 	public string Arguments;
@@ -80,11 +80,11 @@ public struct CoreInfo
 	public string WorkingDirectory;
 }
 
-public struct PlatformServerConfig
+internal struct PlatformServerConfig
 {
 	public ServerConfig windows, linux;
 }
-public class ServerConfig(string additional_cards_path, string? artwork_path, int port, int room_min_port, int room_max_port, CoreInfo core_info)
+internal class ServerConfig(string additional_cards_path, string? artwork_path, int port, int room_min_port, int room_max_port, CoreInfo core_info)
 {
 	public CoreInfo core_info = core_info;
 	public int port = port;

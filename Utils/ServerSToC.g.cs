@@ -6,7 +6,7 @@ namespace CardGameUtils.Structs.Server;
 
 #nullable enable
 #pragma warning disable CS8981
-public record SToC_Packet(SToC_Content content) : Common.PacketTable
+internal record SToC_Packet(SToC_Content content) : Common.PacketTable
 {
 	public byte[] Serialize()
 	{
@@ -90,7 +90,7 @@ public record SToC_Packet(SToC_Content content) : Common.PacketTable
 		return bytes;
 	}
 }
-public interface SToC_Content : Common.PacketUnion
+internal interface SToC_Content : Common.PacketUnion
 {
 	public static SToC_Content DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -130,7 +130,7 @@ public interface SToC_Content : Common.PacketUnion
 		}
 	}
 
-	public record additional_cards(SToC_Response_AdditionalCards value) : SToC_Content
+	internal record additional_cards(SToC_Response_AdditionalCards value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -152,7 +152,7 @@ public interface SToC_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record artworks(SToC_Response_Artworks value) : SToC_Content
+	internal record artworks(SToC_Response_Artworks value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -174,7 +174,7 @@ public interface SToC_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record create(SToC_Response_Create value) : SToC_Content
+	internal record create(SToC_Response_Create value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -196,7 +196,7 @@ public interface SToC_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record join(SToC_Response_Join value) : SToC_Content
+	internal record join(SToC_Response_Join value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -218,7 +218,7 @@ public interface SToC_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record opponent_changed(SToC_Broadcast_OpponentChanged value) : SToC_Content
+	internal record opponent_changed(SToC_Broadcast_OpponentChanged value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -240,7 +240,7 @@ public interface SToC_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record rooms(SToC_Response_Rooms value) : SToC_Content
+	internal record rooms(SToC_Response_Rooms value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -262,7 +262,7 @@ public interface SToC_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record start(SToC_Response_Start value) : SToC_Content
+	internal record start(SToC_Response_Start value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -285,7 +285,7 @@ public interface SToC_Content : Common.PacketUnion
 		}
 	}
 }
-public record SToC_Response_AdditionalCards(ulong timestamp, List<CardGameUtils.Base.CardStruct> cards) : Common.PacketTable
+internal record SToC_Response_AdditionalCards(ulong timestamp, List<CardGameUtils.Base.CardStruct> cards) : Common.PacketTable
 {
 	public static SToC_Response_AdditionalCards DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -350,7 +350,7 @@ public record SToC_Response_AdditionalCards(ulong timestamp, List<CardGameUtils.
 		return bytes;
 	}
 }
-public record SToC_Response_Artworks(List<Artwork> artworks) : Common.PacketTable
+internal record SToC_Response_Artworks(List<Artwork> artworks) : Common.PacketTable
 {
 	public static SToC_Response_Artworks DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -397,7 +397,7 @@ public record SToC_Response_Artworks(List<Artwork> artworks) : Common.PacketTabl
 		return bytes;
 	}
 }
-public record Artwork(string name, ArtworkFiletype filetype, List<byte> data) : Common.PacketTable
+internal record Artwork(string name, ArtworkFiletype filetype, List<byte> data) : Common.PacketTable
 {
 	public static Artwork DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -485,12 +485,12 @@ public record Artwork(string name, ArtworkFiletype filetype, List<byte> data) : 
 		return bytes;
 	}
 }
-public enum ArtworkFiletype
+internal enum ArtworkFiletype
 {
 	JPG,
 	PNG,
 }
-public record SToC_Response_Create(CardGameUtils.Base.ErrorOr success) : Common.PacketTable
+internal record SToC_Response_Create(CardGameUtils.Base.ErrorOr success) : Common.PacketTable
 {
 	public static SToC_Response_Create DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -521,7 +521,7 @@ public record SToC_Response_Create(CardGameUtils.Base.ErrorOr success) : Common.
 		return bytes;
 	}
 }
-public record SToC_Response_Join(CardGameUtils.Base.ErrorOr success) : Common.PacketTable
+internal record SToC_Response_Join(CardGameUtils.Base.ErrorOr success) : Common.PacketTable
 {
 	public static SToC_Response_Join DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -552,7 +552,7 @@ public record SToC_Response_Join(CardGameUtils.Base.ErrorOr success) : Common.Pa
 		return bytes;
 	}
 }
-public record SToC_Broadcast_OpponentChanged(string? name) : Common.PacketTable
+internal record SToC_Broadcast_OpponentChanged(string? name) : Common.PacketTable
 {
 	public static SToC_Broadcast_OpponentChanged DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -595,7 +595,7 @@ public record SToC_Broadcast_OpponentChanged(string? name) : Common.PacketTable
 		return bytes;
 	}
 }
-public record SToC_Response_Rooms(List<string> rooms) : Common.PacketTable
+internal record SToC_Response_Rooms(List<string> rooms) : Common.PacketTable
 {
 	public static SToC_Response_Rooms DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -642,7 +642,7 @@ public record SToC_Response_Rooms(List<string> rooms) : Common.PacketTable
 		return bytes;
 	}
 }
-public interface SToC_Response_Start : Common.PacketUnion
+internal interface SToC_Response_Start : Common.PacketUnion
 {
 	public static SToC_Response_Start DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -666,7 +666,7 @@ public interface SToC_Response_Start : Common.PacketUnion
 		}
 	}
 
-	public record failure(string value) : SToC_Response_Start
+	internal record failure(string value) : SToC_Response_Start
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -688,7 +688,7 @@ public interface SToC_Response_Start : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record success(Success value) : SToC_Response_Start
+	internal record success(Success value) : SToC_Response_Start
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -710,7 +710,7 @@ public interface SToC_Response_Start : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record success_but_waiting() : SToC_Response_Start
+	internal record success_but_waiting() : SToC_Response_Start
 	{
 		public static success_but_waiting DeserializeInternal(ref Span<byte> bytes)
 		{
@@ -727,7 +727,7 @@ public interface SToC_Response_Start : Common.PacketUnion
 		}
 	}
 }
-public record Success(string id, int port) : Common.PacketTable
+internal record Success(string id, int port) : Common.PacketTable
 {
 	public static Success DeserializeInternal(ref Span<byte> bytes)
 	{

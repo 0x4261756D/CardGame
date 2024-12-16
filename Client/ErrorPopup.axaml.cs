@@ -3,7 +3,7 @@ using Avalonia.Interactivity;
 
 namespace CardGameClient;
 
-public partial class ErrorPopup : Window
+internal partial class ErrorPopup : Window
 {
 	public ErrorPopup(string msg)
 	{

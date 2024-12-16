@@ -6,7 +6,7 @@ namespace CardGameUtils.Base;
 
 #nullable enable
 #pragma warning disable CS8981
-public record CardStruct(string name, string text, CardGameUtils.GameEnumsAndStructs.PlayerClass card_class, CardGameUtils.GameEnumsAndStructs.Location location, uint uid, int controller, int base_controller, TypeSpecifics type_specifics) : Common.PacketTable
+internal record CardStruct(string name, string text, CardGameUtils.GameEnumsAndStructs.PlayerClass card_class, CardGameUtils.GameEnumsAndStructs.Location location, uint uid, int controller, int base_controller, TypeSpecifics type_specifics) : Common.PacketTable
 {
 	public byte[] Serialize()
 	{
@@ -226,7 +226,7 @@ public record CardStruct(string name, string text, CardGameUtils.GameEnumsAndStr
 		return bytes;
 	}
 }
-public interface TypeSpecifics : Common.PacketUnion
+internal interface TypeSpecifics : Common.PacketUnion
 {
 	public static TypeSpecifics DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -254,7 +254,7 @@ public interface TypeSpecifics : Common.PacketUnion
 		}
 	}
 
-	public record creature(CreatureSpecifics value) : TypeSpecifics
+	internal record creature(CreatureSpecifics value) : TypeSpecifics
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -276,7 +276,7 @@ public interface TypeSpecifics : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record spell(SpellSpecifics value) : TypeSpecifics
+	internal record spell(SpellSpecifics value) : TypeSpecifics
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -298,7 +298,7 @@ public interface TypeSpecifics : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record quest(QuestSpecifics value) : TypeSpecifics
+	internal record quest(QuestSpecifics value) : TypeSpecifics
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -320,7 +320,7 @@ public interface TypeSpecifics : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record unknown() : TypeSpecifics
+	internal record unknown() : TypeSpecifics
 	{
 		public static unknown DeserializeInternal(ref Span<byte> bytes)
 		{
@@ -337,7 +337,7 @@ public interface TypeSpecifics : Common.PacketUnion
 		}
 	}
 }
-public record CreatureSpecifics(int base_cost, int cost, int base_life, int life, int base_power, int power, int position, int damage_cap) : Common.PacketTable
+internal record CreatureSpecifics(int base_cost, int cost, int base_life, int life, int base_power, int power, int position, int damage_cap) : Common.PacketTable
 {
 	public static CreatureSpecifics DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -494,7 +494,7 @@ public record CreatureSpecifics(int base_cost, int cost, int base_life, int life
 		return bytes;
 	}
 }
-public record SpellSpecifics(int base_cost, int cost, bool is_class_ability, bool can_be_class_ability) : Common.PacketTable
+internal record SpellSpecifics(int base_cost, int cost, bool is_class_ability, bool can_be_class_ability) : Common.PacketTable
 {
 	public static SpellSpecifics DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -579,7 +579,7 @@ public record SpellSpecifics(int base_cost, int cost, bool is_class_ability, boo
 		return bytes;
 	}
 }
-public record QuestSpecifics(int progress, int goal) : Common.PacketTable
+internal record QuestSpecifics(int progress, int goal) : Common.PacketTable
 {
 	public static QuestSpecifics DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -628,7 +628,7 @@ public record QuestSpecifics(int progress, int goal) : Common.PacketTable
 		return bytes;
 	}
 }
-public record CardAction(uint uid, string description) : Common.PacketTable
+internal record CardAction(uint uid, string description) : Common.PacketTable
 {
 	public static CardAction DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -677,7 +677,7 @@ public record CardAction(uint uid, string description) : Common.PacketTable
 		return bytes;
 	}
 }
-public record Deck(string name, List<CardStruct> cards, CardGameUtils.GameEnumsAndStructs.PlayerClass player_class, CardStruct? ability, CardStruct? quest) : Common.PacketTable
+internal record Deck(string name, List<CardStruct> cards, CardGameUtils.GameEnumsAndStructs.PlayerClass player_class, CardStruct? ability, CardStruct? quest) : Common.PacketTable
 {
 	public static Deck DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -825,7 +825,7 @@ public record Deck(string name, List<CardStruct> cards, CardGameUtils.GameEnumsA
 		return bytes;
 	}
 }
-public interface ErrorOr : Common.PacketUnion
+internal interface ErrorOr : Common.PacketUnion
 {
 	public static ErrorOr DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -845,7 +845,7 @@ public interface ErrorOr : Common.PacketUnion
 		}
 	}
 
-	public record success() : ErrorOr
+	internal record success() : ErrorOr
 	{
 		public static success DeserializeInternal(ref Span<byte> bytes)
 		{
@@ -861,7 +861,7 @@ public interface ErrorOr : Common.PacketUnion
 			return [.. Common.Common.SerializeName("success"), (byte)Common.TypeBytes.Void];
 		}
 	}
-	public record error(string value) : ErrorOr
+	internal record error(string value) : ErrorOr
 	{
 		public List<byte> SerializeInternal()
 		{

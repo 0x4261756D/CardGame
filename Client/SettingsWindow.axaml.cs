@@ -9,7 +9,7 @@ using CardGameUtils;
 
 namespace CardGameClient;
 
-public partial class SettingsWindow : Window
+internal partial class SettingsWindow : Window
 {
 	public SettingsWindow()
 	{
@@ -50,7 +50,7 @@ public partial class SettingsWindow : Window
 		}
 	}
 }
-public class SettingsWindowViewModel : INotifyPropertyChanged
+internal class SettingsWindowViewModel : INotifyPropertyChanged
 {
 	public event PropertyChangedEventHandler? PropertyChanged;
 

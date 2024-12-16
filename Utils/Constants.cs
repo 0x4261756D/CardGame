@@ -18,7 +18,7 @@ internal partial class PlatformClientConfigSerializationContext : JsonSerializer
 [JsonSerializable(typeof(PlatformServerConfig))]
 internal partial class PlatformServerConfigSerializationContext : JsonSerializerContext { }
 
-public class GenericConstants
+internal class GenericConstants
 {
 	// public const uint PACKET_VERSION = 6;
 
@@ -42,7 +42,7 @@ public class GenericConstants
 	};
 }
 
-public class GameConstants
+internal class GameConstants
 {
 	public const int MAX_CARD_MULTIPLICITY = 2;
 	public const int DECK_SIZE = 40;
@@ -53,7 +53,7 @@ public class GameConstants
 	public static readonly int[] MOMENTUM_INCREMENT_TURNS = [2, 4, 6, 8];
 	public const int FIELD_SIZE = 6;
 
-	public enum State
+	internal enum State
 	{
 		UNINITIALIZED,
 		TurnStart,
@@ -70,7 +70,7 @@ public class GameConstants
 	}
 }
 
-public class ClientConstants
+internal class ClientConstants
 {
 	public static readonly Dictionary<string, string> KeywordDescriptions = new()
 	{

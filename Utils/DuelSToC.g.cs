@@ -6,7 +6,7 @@ namespace CardGameUtils.Structs.Duel;
 
 #nullable enable
 #pragma warning disable CS8981
-public record SToC_Packet(SToC_Content content) : Common.PacketTable
+internal record SToC_Packet(SToC_Content content) : Common.PacketTable
 {
 	public byte[] Serialize()
 	{
@@ -90,7 +90,7 @@ public record SToC_Packet(SToC_Content content) : Common.PacketTable
 		return bytes;
 	}
 }
-public interface SToC_Content : Common.PacketUnion
+internal interface SToC_Content : Common.PacketUnion
 {
 	public static SToC_Content DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -142,7 +142,7 @@ public interface SToC_Content : Common.PacketUnion
 		}
 	}
 
-	public record game_result(SToC_Broadcast_GameResult value) : SToC_Content
+	internal record game_result(SToC_Broadcast_GameResult value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -164,7 +164,7 @@ public interface SToC_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record get_actions(SToC_Response_GetActions value) : SToC_Content
+	internal record get_actions(SToC_Response_GetActions value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -186,7 +186,7 @@ public interface SToC_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record yes_no(SToC_Request_YesNo value) : SToC_Content
+	internal record yes_no(SToC_Request_YesNo value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -208,7 +208,7 @@ public interface SToC_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record select_cards(SToC_Request_SelectCards value) : SToC_Content
+	internal record select_cards(SToC_Request_SelectCards value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -230,7 +230,7 @@ public interface SToC_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record select_cards_custom(SToC_Request_SelectCardsCustom value) : SToC_Content
+	internal record select_cards_custom(SToC_Request_SelectCardsCustom value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -252,7 +252,7 @@ public interface SToC_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record select_cards_custom_intermediate(SToC_Response_SelectCardsCustomIntermediate value) : SToC_Content
+	internal record select_cards_custom_intermediate(SToC_Response_SelectCardsCustomIntermediate value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -274,7 +274,7 @@ public interface SToC_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record select_zone(SToC_Request_SelectZone value) : SToC_Content
+	internal record select_zone(SToC_Request_SelectZone value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -296,7 +296,7 @@ public interface SToC_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record field_update(SToC_Broadcast_FieldUpdate value) : SToC_Content
+	internal record field_update(SToC_Broadcast_FieldUpdate value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -318,7 +318,7 @@ public interface SToC_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record show_cards(SToC_Response_ShowCards value) : SToC_Content
+	internal record show_cards(SToC_Response_ShowCards value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -340,7 +340,7 @@ public interface SToC_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record show_info(SToC_Broadcast_ShowInfo value) : SToC_Content
+	internal record show_info(SToC_Broadcast_ShowInfo value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -363,7 +363,7 @@ public interface SToC_Content : Common.PacketUnion
 		}
 	}
 }
-public record SToC_Broadcast_ShowInfo(int player, ShownInfo? info) : Common.PacketTable
+internal record SToC_Broadcast_ShowInfo(int player, ShownInfo? info) : Common.PacketTable
 {
 	public static SToC_Broadcast_ShowInfo DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -424,7 +424,7 @@ public record SToC_Broadcast_ShowInfo(int player, ShownInfo? info) : Common.Pack
 		return bytes;
 	}
 }
-public record SToC_Broadcast_GameResult(CardGameUtils.GameEnumsAndStructs.GameResult result) : Common.PacketTable
+internal record SToC_Broadcast_GameResult(CardGameUtils.GameEnumsAndStructs.GameResult result) : Common.PacketTable
 {
 	public static SToC_Broadcast_GameResult DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -460,7 +460,7 @@ public record SToC_Broadcast_GameResult(CardGameUtils.GameEnumsAndStructs.GameRe
 		return bytes;
 	}
 }
-public record SToC_Response_GetActions(CardGameUtils.GameEnumsAndStructs.Location location, uint uid, List<CardGameUtils.Base.CardAction> actions) : Common.PacketTable
+internal record SToC_Response_GetActions(CardGameUtils.GameEnumsAndStructs.Location location, uint uid, List<CardGameUtils.Base.CardAction> actions) : Common.PacketTable
 {
 	public static SToC_Response_GetActions DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -548,7 +548,7 @@ public record SToC_Response_GetActions(CardGameUtils.GameEnumsAndStructs.Locatio
 		return bytes;
 	}
 }
-public record SToC_Request_YesNo(string question) : Common.PacketTable
+internal record SToC_Request_YesNo(string question) : Common.PacketTable
 {
 	public static SToC_Request_YesNo DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -579,7 +579,7 @@ public record SToC_Request_YesNo(string question) : Common.PacketTable
 		return bytes;
 	}
 }
-public record SToC_Request_SelectCards(List<CardGameUtils.Base.CardStruct> cards, string description, uint amount) : Common.PacketTable
+internal record SToC_Request_SelectCards(List<CardGameUtils.Base.CardStruct> cards, string description, uint amount) : Common.PacketTable
 {
 	public static SToC_Request_SelectCards DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -662,7 +662,7 @@ public record SToC_Request_SelectCards(List<CardGameUtils.Base.CardStruct> cards
 		return bytes;
 	}
 }
-public record SToC_Request_SelectCardsCustom(List<CardGameUtils.Base.CardStruct> cards, string description, bool initial_state) : Common.PacketTable
+internal record SToC_Request_SelectCardsCustom(List<CardGameUtils.Base.CardStruct> cards, string description, bool initial_state) : Common.PacketTable
 {
 	public static SToC_Request_SelectCardsCustom DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -745,7 +745,7 @@ public record SToC_Request_SelectCardsCustom(List<CardGameUtils.Base.CardStruct>
 		return bytes;
 	}
 }
-public record SToC_Response_SelectCardsCustomIntermediate(bool is_valid) : Common.PacketTable
+internal record SToC_Response_SelectCardsCustomIntermediate(bool is_valid) : Common.PacketTable
 {
 	public static SToC_Response_SelectCardsCustomIntermediate DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -776,7 +776,7 @@ public record SToC_Response_SelectCardsCustomIntermediate(bool is_valid) : Commo
 		return bytes;
 	}
 }
-public record SToC_Request_SelectZone(List<bool> options) : Common.PacketTable
+internal record SToC_Request_SelectZone(List<bool> options) : Common.PacketTable
 {
 	public static SToC_Request_SelectZone DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -823,7 +823,7 @@ public record SToC_Request_SelectZone(List<bool> options) : Common.PacketTable
 		return bytes;
 	}
 }
-public record SToC_Broadcast_FieldUpdate(FieldStruct own_field, FieldStruct opp_field, uint turn, bool has_initiative, bool is_battle_direction_left_to_right, int? marked_zone) : Common.PacketTable
+internal record SToC_Broadcast_FieldUpdate(FieldStruct own_field, FieldStruct opp_field, uint turn, bool has_initiative, bool is_battle_direction_left_to_right, int? marked_zone) : Common.PacketTable
 {
 	public static SToC_Broadcast_FieldUpdate DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -956,7 +956,7 @@ public record SToC_Broadcast_FieldUpdate(FieldStruct own_field, FieldStruct opp_
 		return bytes;
 	}
 }
-public record SToC_Response_ShowCards(List<CardGameUtils.Base.CardStruct> cards, string description) : Common.PacketTable
+internal record SToC_Response_ShowCards(List<CardGameUtils.Base.CardStruct> cards, string description) : Common.PacketTable
 {
 	public static SToC_Response_ShowCards DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -1021,7 +1021,7 @@ public record SToC_Response_ShowCards(List<CardGameUtils.Base.CardStruct> cards,
 		return bytes;
 	}
 }
-public record FieldStruct(int life, uint deck_size, uint grave_size, int momentum, List<CardGameUtils.Base.CardStruct> hand, List<CardGameUtils.Base.CardStruct?> field, string? name, CardGameUtils.Base.CardStruct ability, CardGameUtils.Base.CardStruct quest) : Common.PacketTable
+internal record FieldStruct(int life, uint deck_size, uint grave_size, int momentum, List<CardGameUtils.Base.CardStruct> hand, List<CardGameUtils.Base.CardStruct?> field, string? name, CardGameUtils.Base.CardStruct ability, CardGameUtils.Base.CardStruct quest) : Common.PacketTable
 {
 	public static FieldStruct DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -1252,7 +1252,7 @@ public record FieldStruct(int life, uint deck_size, uint grave_size, int momentu
 		return bytes;
 	}
 }
-public record ShownInfo(CardGameUtils.Base.CardStruct? card, string? description) : Common.PacketTable
+internal record ShownInfo(CardGameUtils.Base.CardStruct? card, string? description) : Common.PacketTable
 {
 	public static ShownInfo DeserializeInternal(ref Span<byte> bytes)
 	{

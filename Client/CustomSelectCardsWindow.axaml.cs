@@ -15,7 +15,7 @@ using CardGameUtils.Structs.Duel;
 
 namespace CardGameClient;
 
-public partial class CustomSelectCardsWindow : Window
+internal partial class CustomSelectCardsWindow : Window
 {
 	private readonly Stream stream;
 	private bool shouldReallyClose;
@@ -85,7 +85,7 @@ public partial class CustomSelectCardsWindow : Window
 		return (T)SToC_Packet.Deserialize(stream).content;
 	}
 }
-public class CustomSelectCardViewModel : INotifyPropertyChanged
+internal class CustomSelectCardViewModel : INotifyPropertyChanged
 {
 	public CustomSelectCardViewModel(string message, bool initialState)
 	{

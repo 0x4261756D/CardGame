@@ -101,7 +101,7 @@ partial class Functions
 		_ = builder.Append(separator).Append('-', 16).Append(separator, 2).Append(card.text).Append(separator);
 		return builder.ToString();
 	}
-	public enum LogSeverity
+	internal enum LogSeverity
 	{
 		Debug,
 		Warning,

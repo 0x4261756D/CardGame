@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace CardGameClient;
 
-public partial class SelectZoneWindow : Window
+internal partial class SelectZoneWindow : Window
 {
 	private bool shouldReallyClose;
 

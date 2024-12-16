@@ -14,7 +14,7 @@ using System.Threading;
 
 namespace CardGameClient;
 
-public partial class SelectCardsWindow : Window
+internal partial class SelectCardsWindow : Window
 {
 	private readonly Stream stream;
 	private bool shouldReallyClose;
@@ -95,7 +95,7 @@ public partial class SelectCardsWindow : Window
 	}
 }
 
-public class SelectedCardViewModel : INotifyPropertyChanged
+internal class SelectedCardViewModel : INotifyPropertyChanged
 {
 	public SelectedCardViewModel(uint amount)
 	{

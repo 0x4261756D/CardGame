@@ -3,7 +3,7 @@ using CardGameUtils.GameEnumsAndStructs;
 
 namespace CardGameCore;
 
-public enum Keyword
+internal enum Keyword
 {
 	Colossal,
 	Brittle,
@@ -13,7 +13,7 @@ public enum Keyword
 	Mighty,
 }
 
-public class Trigger
+internal class Trigger
 {
 	public TriggerCondition condition;
 	public Effect effect;
@@ -38,7 +38,7 @@ public class Trigger
 	}
 }
 
-public class LocationBasedTrigger
+internal class LocationBasedTrigger
 {
 	public TriggerCondition condition;
 	public Effect effect;
@@ -57,7 +57,7 @@ public class LocationBasedTrigger
 		this.condition = () => true;
 	}
 }
-public class StateReachedTrigger
+internal class StateReachedTrigger
 {
 	public Location influenceLocation;
 	public GameConstants.State state;
@@ -82,7 +82,7 @@ public class StateReachedTrigger
 		this.condition = () => true;
 	}
 }
-public class LocationBasedTargetingTrigger
+internal class LocationBasedTargetingTrigger
 {
 	public Location influenceLocation;
 	public TargetingCondition condition;
@@ -102,7 +102,7 @@ public class LocationBasedTargetingTrigger
 	}
 }
 
-public class TokenCreationTrigger
+internal class TokenCreationTrigger
 {
 	public Location influenceLocation;
 	public TokenCreationCondition condition;
@@ -122,7 +122,7 @@ public class TokenCreationTrigger
 	}
 }
 
-public class CreatureTargetingTrigger(CreatureTargetingEffect effect, CreatureTargetingCondition condition, Location influenceLocation)
+internal class CreatureTargetingTrigger(CreatureTargetingEffect effect, CreatureTargetingCondition condition, Location influenceLocation)
 {
 	public CreatureTargetingCondition condition = condition;
 	public CreatureTargetingEffect effect = effect;
@@ -131,7 +131,7 @@ public class CreatureTargetingTrigger(CreatureTargetingEffect effect, CreatureTa
 	public CreatureTargetingTrigger(CreatureTargetingEffect effect, Location influenceLocation) : this(effect, (_) => true, influenceLocation) { }
 }
 
-public class LingeringEffectInfo
+internal class LingeringEffectInfo
 {
 	public static int timestampCounter;
 	public int timestamp;
@@ -139,7 +139,7 @@ public class LingeringEffectInfo
 	public Card referrer;
 	public Location influenceLocation;
 
-	public delegate void SpecificTargetingEffect<T>(T target);
+	internal delegate void SpecificTargetingEffect<T>(T target);
 	public static LingeringEffectInfo Create<T>(SpecificTargetingEffect<T> effect, T referrer, Location influenceLocation = Location.Field) where T : Card
 	{
 		return new LingeringEffectInfo(effect: (target) => effect((T)target), referrer: referrer, influenceLocation: influenceLocation);
@@ -152,8 +152,8 @@ public class LingeringEffectInfo
 	}
 }
 
-public delegate bool ActivatedEffectCondition();
-public class ActivatedEffectInfo
+internal delegate bool ActivatedEffectCondition();
+internal class ActivatedEffectInfo
 {
 	public ActivatedEffectCondition condition;
 	public Effect effect;
@@ -186,56 +186,56 @@ public class ActivatedEffectInfo
 	}
 }
 
-public delegate bool TriggerCondition();
-public delegate void Effect();
-public delegate void TargetingEffect(Card target);
-public delegate bool TargetingCondition(Card target);
-public delegate bool CreatureTargetingCondition(Creature target);
-public delegate void CreatureTargetingEffect(Creature target);
-public delegate void TokenCreationEffect(Creature token, Card source);
-public delegate bool TokenCreationCondition(Creature token, Card source);
-public delegate void RemoveLingeringEffectDelegate(LingeringEffectInfo info);
-public delegate void RegisterLocationBasedTargetingTriggerDelegate(LocationBasedTargetingTrigger trigger, Card referrer);
-public delegate void RegisterTokenCreationTriggerDelegate(TokenCreationTrigger trigger, Card referrer);
-public delegate void RegisterTriggerDelegate(Trigger trigger, Card referrer);
-public delegate void RegisterLocationBasedTriggerDelegate(LocationBasedTrigger trigger, Card referrer);
-public delegate void RegisterStateReachedTriggerDelegate(StateReachedTrigger trigger, Card referrer);
-public delegate void RegisterCreatureTargetingTriggerDelegate(CreatureTargetingTrigger trigger, Card referrer);
-public delegate void RegisterLingeringEffectDelegate(LingeringEffectInfo info);
-public delegate void RegisterStateTemporaryLingeringEffectDelegate(LingeringEffectInfo info, GameConstants.State state);
-public delegate void RegisterActivatedEffectDelegate(ActivatedEffectInfo info);
-public delegate void CastDelegate(int player, Card card);
-public delegate void DrawDelegate(int player, int amount);
-public delegate void SetDamageMultiplierDelegate(int value);
-public delegate int GetDamageMultiplierDelegate();
-public delegate Card[] GetCardsInLocationDelegate(int player);
-public delegate Creature[] GetFieldUsedDelegate(int player);
-public delegate Creature?[] GetWholeFieldDelegate(int player);
-public delegate Card[] SelectCardsDelegate(int player, Card[] cards, uint amount, string description);
-public delegate void DiscardDelegate(Card card);
-public delegate void DiscardAmountDelegate(int player, uint amount);
-public delegate void CreateTokenOnFieldDelegate(int player, int power, int life, string name, Card source);
-public delegate Token CreateTokenDelegate(int player, int power, int life, string name);
-public delegate Creature CreateTokenCopyDelegate(int player, Creature card);
-public delegate void CreateTokenCopyOnFieldDelegate(int player, Creature card, Card source);
-public delegate int GetYXTurnsAgoDelegate(int player, int turns);
-public delegate void CreatureChangeStatDelegate(Creature target, int amount, Card source);
-public delegate void PlayerChangeLifeDelegate(int player, int amount, Card source);
-public delegate void PlayerChangeMomentumDelegate(int player, int amount);
-public delegate void DestroyDelegate(Creature card);
-public delegate bool AskYesNoDelegate(int player, string question);
-public delegate int GetIgniteDamageDelegate(int player);
-public delegate void ChangeIgniteDamageDelegate(int player, int amount);
-public delegate int GetTurnDelegate();
-public delegate int GetPlayerLifeDelegate(int player);
-public delegate void PayLifeDelegate(int player, int amount);
-public delegate Card GatherDelegate(int player, int amount);
-public delegate void MoveDelegate(Creature card, int zone);
-public delegate int SelectZoneDelegate(int choosingPlayer, int targetPlayer);
-public delegate void MoveToHandDelegate(int player, Card card);
-public delegate void MoveToFieldDelegate(int choosingPlayer, int targetPlayer, Creature card, Card source);
-public delegate int GetCastCountDelegate(int player, string name);
-public delegate void ReturnCardsToDeckDelegate(Card[] cards);
-public delegate void RevealDelegate(int player, int damage);
-public delegate Card[] GetDiscardableDelegate(int player, Card? ignore);
-public delegate void RefreshAbilityDelegate(int player);
+internal delegate bool TriggerCondition();
+internal delegate void Effect();
+internal delegate void TargetingEffect(Card target);
+internal delegate bool TargetingCondition(Card target);
+internal delegate bool CreatureTargetingCondition(Creature target);
+internal delegate void CreatureTargetingEffect(Creature target);
+internal delegate void TokenCreationEffect(Creature token, Card source);
+internal delegate bool TokenCreationCondition(Creature token, Card source);
+internal delegate void RemoveLingeringEffectDelegate(LingeringEffectInfo info);
+internal delegate void RegisterLocationBasedTargetingTriggerDelegate(LocationBasedTargetingTrigger trigger, Card referrer);
+internal delegate void RegisterTokenCreationTriggerDelegate(TokenCreationTrigger trigger, Card referrer);
+internal delegate void RegisterTriggerDelegate(Trigger trigger, Card referrer);
+internal delegate void RegisterLocationBasedTriggerDelegate(LocationBasedTrigger trigger, Card referrer);
+internal delegate void RegisterStateReachedTriggerDelegate(StateReachedTrigger trigger, Card referrer);
+internal delegate void RegisterCreatureTargetingTriggerDelegate(CreatureTargetingTrigger trigger, Card referrer);
+internal delegate void RegisterLingeringEffectDelegate(LingeringEffectInfo info);
+internal delegate void RegisterStateTemporaryLingeringEffectDelegate(LingeringEffectInfo info, GameConstants.State state);
+internal delegate void RegisterActivatedEffectDelegate(ActivatedEffectInfo info);
+internal delegate void CastDelegate(int player, Card card);
+internal delegate void DrawDelegate(int player, int amount);
+internal delegate void SetDamageMultiplierDelegate(int value);
+internal delegate int GetDamageMultiplierDelegate();
+internal delegate Card[] GetCardsInLocationDelegate(int player);
+internal delegate Creature[] GetFieldUsedDelegate(int player);
+internal delegate Creature?[] GetWholeFieldDelegate(int player);
+internal delegate Card[] SelectCardsDelegate(int player, Card[] cards, uint amount, string description);
+internal delegate void DiscardDelegate(Card card);
+internal delegate void DiscardAmountDelegate(int player, uint amount);
+internal delegate void CreateTokenOnFieldDelegate(int player, int power, int life, string name, Card source);
+internal delegate Token CreateTokenDelegate(int player, int power, int life, string name);
+internal delegate Creature CreateTokenCopyDelegate(int player, Creature card);
+internal delegate void CreateTokenCopyOnFieldDelegate(int player, Creature card, Card source);
+internal delegate int GetYXTurnsAgoDelegate(int player, int turns);
+internal delegate void CreatureChangeStatDelegate(Creature target, int amount, Card source);
+internal delegate void PlayerChangeLifeDelegate(int player, int amount, Card source);
+internal delegate void PlayerChangeMomentumDelegate(int player, int amount);
+internal delegate void DestroyDelegate(Creature card);
+internal delegate bool AskYesNoDelegate(int player, string question);
+internal delegate int GetIgniteDamageDelegate(int player);
+internal delegate void ChangeIgniteDamageDelegate(int player, int amount);
+internal delegate int GetTurnDelegate();
+internal delegate int GetPlayerLifeDelegate(int player);
+internal delegate void PayLifeDelegate(int player, int amount);
+internal delegate Card GatherDelegate(int player, int amount);
+internal delegate void MoveDelegate(Creature card, int zone);
+internal delegate int SelectZoneDelegate(int choosingPlayer, int targetPlayer);
+internal delegate void MoveToHandDelegate(int player, Card card);
+internal delegate void MoveToFieldDelegate(int choosingPlayer, int targetPlayer, Creature card, Card source);
+internal delegate int GetCastCountDelegate(int player, string name);
+internal delegate void ReturnCardsToDeckDelegate(Card[] cards);
+internal delegate void RevealDelegate(int player, int damage);
+internal delegate Card[] GetDiscardableDelegate(int player, Card? ignore);
+internal delegate void RefreshAbilityDelegate(int player);

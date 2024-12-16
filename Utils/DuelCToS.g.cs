@@ -6,7 +6,7 @@ namespace CardGameUtils.Structs.Duel;
 
 #nullable enable
 #pragma warning disable CS8981
-public record CToS_Packet(CToS_Content content) : Common.PacketTable
+internal record CToS_Packet(CToS_Content content) : Common.PacketTable
 {
 	public byte[] Serialize()
 	{
@@ -90,7 +90,7 @@ public record CToS_Packet(CToS_Content content) : Common.PacketTable
 		return bytes;
 	}
 }
-public interface CToS_Content : Common.PacketUnion
+internal interface CToS_Content : Common.PacketUnion
 {
 	public static CToS_Content DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -142,7 +142,7 @@ public interface CToS_Content : Common.PacketUnion
 		}
 	}
 
-	public record surrender() : CToS_Content
+	internal record surrender() : CToS_Content
 	{
 		public static surrender DeserializeInternal(ref Span<byte> bytes)
 		{
@@ -158,7 +158,7 @@ public interface CToS_Content : Common.PacketUnion
 			return [.. Common.Common.SerializeName("surrender"), (byte)Common.TypeBytes.Void];
 		}
 	}
-	public record get_actions(CToS_Request_GetActions value) : CToS_Content
+	internal record get_actions(CToS_Request_GetActions value) : CToS_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -180,7 +180,7 @@ public interface CToS_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record select_option(CToS_Request_SelectOption value) : CToS_Content
+	internal record select_option(CToS_Request_SelectOption value) : CToS_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -202,7 +202,7 @@ public interface CToS_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record yes_no(CToS_Response_YesNo value) : CToS_Content
+	internal record yes_no(CToS_Response_YesNo value) : CToS_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -224,7 +224,7 @@ public interface CToS_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record select_cards(CToS_Response_SelectCards value) : CToS_Content
+	internal record select_cards(CToS_Response_SelectCards value) : CToS_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -246,7 +246,7 @@ public interface CToS_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record select_cards_custom_intermediate(CToS_Request_SelectCardsCustomIntermediate value) : CToS_Content
+	internal record select_cards_custom_intermediate(CToS_Request_SelectCardsCustomIntermediate value) : CToS_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -268,7 +268,7 @@ public interface CToS_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record select_cards_custom(CToS_Response_SelectCardsCustom value) : CToS_Content
+	internal record select_cards_custom(CToS_Response_SelectCardsCustom value) : CToS_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -290,7 +290,7 @@ public interface CToS_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record select_zone(CToS_Response_SelectZone value) : CToS_Content
+	internal record select_zone(CToS_Response_SelectZone value) : CToS_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -312,7 +312,7 @@ public interface CToS_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record pass() : CToS_Content
+	internal record pass() : CToS_Content
 	{
 		public static pass DeserializeInternal(ref Span<byte> bytes)
 		{
@@ -328,7 +328,7 @@ public interface CToS_Content : Common.PacketUnion
 			return [.. Common.Common.SerializeName("pass"), (byte)Common.TypeBytes.Void];
 		}
 	}
-	public record view_grave(CToS_Request_ViewGrave value) : CToS_Content
+	internal record view_grave(CToS_Request_ViewGrave value) : CToS_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -351,7 +351,7 @@ public interface CToS_Content : Common.PacketUnion
 		}
 	}
 }
-public record CToS_Request_GetActions(CardGameUtils.GameEnumsAndStructs.Location location, uint uid) : Common.PacketTable
+internal record CToS_Request_GetActions(CardGameUtils.GameEnumsAndStructs.Location location, uint uid) : Common.PacketTable
 {
 	public static CToS_Request_GetActions DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -405,7 +405,7 @@ public record CToS_Request_GetActions(CardGameUtils.GameEnumsAndStructs.Location
 		return bytes;
 	}
 }
-public record CToS_Request_SelectOption(CardGameUtils.GameEnumsAndStructs.Location location, uint uid, CardGameUtils.Base.CardAction action) : Common.PacketTable
+internal record CToS_Request_SelectOption(CardGameUtils.GameEnumsAndStructs.Location location, uint uid, CardGameUtils.Base.CardAction action) : Common.PacketTable
 {
 	public static CToS_Request_SelectOption DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -477,7 +477,7 @@ public record CToS_Request_SelectOption(CardGameUtils.GameEnumsAndStructs.Locati
 		return bytes;
 	}
 }
-public record CToS_Response_YesNo(bool yes) : Common.PacketTable
+internal record CToS_Response_YesNo(bool yes) : Common.PacketTable
 {
 	public static CToS_Response_YesNo DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -508,7 +508,7 @@ public record CToS_Response_YesNo(bool yes) : Common.PacketTable
 		return bytes;
 	}
 }
-public record CToS_Response_SelectCards(List<uint> uids) : Common.PacketTable
+internal record CToS_Response_SelectCards(List<uint> uids) : Common.PacketTable
 {
 	public static CToS_Response_SelectCards DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -555,7 +555,7 @@ public record CToS_Response_SelectCards(List<uint> uids) : Common.PacketTable
 		return bytes;
 	}
 }
-public record CToS_Request_SelectCardsCustomIntermediate(List<uint> uids) : Common.PacketTable
+internal record CToS_Request_SelectCardsCustomIntermediate(List<uint> uids) : Common.PacketTable
 {
 	public static CToS_Request_SelectCardsCustomIntermediate DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -602,7 +602,7 @@ public record CToS_Request_SelectCardsCustomIntermediate(List<uint> uids) : Comm
 		return bytes;
 	}
 }
-public record CToS_Response_SelectCardsCustom(List<uint> uids) : Common.PacketTable
+internal record CToS_Response_SelectCardsCustom(List<uint> uids) : Common.PacketTable
 {
 	public static CToS_Response_SelectCardsCustom DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -649,7 +649,7 @@ public record CToS_Response_SelectCardsCustom(List<uint> uids) : Common.PacketTa
 		return bytes;
 	}
 }
-public record CToS_Response_SelectZone(int zone) : Common.PacketTable
+internal record CToS_Response_SelectZone(int zone) : Common.PacketTable
 {
 	public static CToS_Response_SelectZone DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -680,7 +680,7 @@ public record CToS_Response_SelectZone(int zone) : Common.PacketTable
 		return bytes;
 	}
 }
-public record CToS_Request_ViewGrave(bool for_opponent) : Common.PacketTable
+internal record CToS_Request_ViewGrave(bool for_opponent) : Common.PacketTable
 {
 	public static CToS_Request_ViewGrave DeserializeInternal(ref Span<byte> bytes)
 	{

@@ -7,7 +7,7 @@ using CardGameUtils.Base;
 
 namespace CardGameCore;
 
-public abstract class Card
+internal abstract class Card
 {
 	public bool isInitialized;
 	public string Name, Text;
@@ -60,67 +60,67 @@ public abstract class Card
 	}
 	#region ScriptingFunctions
 
-	public static RemoveLingeringEffectDelegate RemoveLingeringEffect = (_) => { };
-	public static GetDamageMultiplierDelegate GetDamageMultiplier = () => 1;
-	public static SetDamageMultiplierDelegate SetDamageMultiplier = (_) => { };
-	public static RegisterTriggerDelegate RegisterCastTrigger = (_, _) => { };
-	public static RegisterLocationBasedTargetingTriggerDelegate RegisterGenericCastTrigger = (_, _) => { };
-	public static RegisterTokenCreationTriggerDelegate RegisterTokenCreationTrigger = (_, _) => { };
-	public static RegisterLocationBasedTargetingTriggerDelegate RegisterGenericEntersFieldTrigger = (_, _) => { };
-	public static RegisterTriggerDelegate RegisterRevelationTrigger = (_, _) => { };
-	public static RegisterLocationBasedTriggerDelegate RegisterYouDiscardTrigger = (_, _) => { };
-	public static RegisterTriggerDelegate RegisterDiscardTrigger = (_, _) => { };
-	public static RegisterStateReachedTriggerDelegate RegisterStateReachedTrigger = (_, _) => { };
-	public static RegisterTriggerDelegate RegisterVictoriousTrigger = (_, _) => { };
-	public static RegisterCreatureTargetingTriggerDelegate RegisterAttackTrigger = (_, _) => { };
-	public static RegisterCreatureTargetingTriggerDelegate RegisterDeathTrigger = (_, _) => { };
-	public static RegisterCreatureTargetingTriggerDelegate RegisterGenericDeathTrigger = (_, _) => { };
-	public static RegisterCreatureTargetingTriggerDelegate RegisterGenericVictoriousTrigger = (_, _) => { };
-	public static RegisterTriggerDelegate RegisterDealsDamageTrigger = (_, _) => { };
-	public static RegisterLingeringEffectDelegate RegisterLingeringEffect = (_) => { };
-	public static RegisterLingeringEffectDelegate RegisterLocationTemporaryLingeringEffect = (_) => { };
-	public static RegisterStateTemporaryLingeringEffectDelegate RegisterStateTemporaryLingeringEffect = (_, _) => { };
-	public static RegisterActivatedEffectDelegate RegisterActivatedEffect = (_) => { };
-	public static GetCardsInLocationDelegate GetGrave = (_) => [];
-	public static GetWholeFieldDelegate GetField = (_) => [];
-	public static GetFieldUsedDelegate GetFieldUsed = (_) => [];
-	public static GetCardsInLocationDelegate GetHand = (_) => [];
-	public static SelectCardsDelegate SelectCards = (_, _, _, _) => [];
-	public static DiscardDelegate Discard = (_) => { };
-	public static DiscardAmountDelegate DiscardAmount = (_, _) => { };
-	public static CreateTokenDelegate CreateToken = (_, _, _, _) => new ClientCoreDummyToken();
-	public static CreateTokenOnFieldDelegate CreateTokenOnField = (_, _, _, _, _) => { };
-	public static CreateTokenCopyDelegate CreateTokenCopy = (_, _) => new ClientCoreDummyToken();
-	public static CreateTokenCopyOnFieldDelegate CreateTokenCopyOnField = (_, _, _) => { };
-	public static GetYXTurnsAgoDelegate GetDiscardCountXTurnsAgo = (_, _) => -1;
-	public static GetYXTurnsAgoDelegate GetDamageDealtXTurnsAgo = (_, _) => -1;
-	public static GetYXTurnsAgoDelegate GetSpellDamageDealtXTurnsAgo = (_, _) => -1;
-	public static GetYXTurnsAgoDelegate GetBrittleDeathCountXTurnsAgo = (_, _) => -1;
-	public static GetYXTurnsAgoDelegate GetDeathCountXTurnsAgo = (_, _) => -1;
-	public static PlayerChangeLifeDelegate PlayerChangeLife = (_, _, _) => { };
-	public static PlayerChangeMomentumDelegate PlayerChangeMomentum = (_, _) => { };
-	public static CastDelegate Cast = (_, _) => { };
-	public static DrawDelegate Draw = (_, _) => { };
-	public static DestroyDelegate Destroy = (_) => { };
-	public static AskYesNoDelegate AskYesNo = (_, _) => false;
-	public static GetIgniteDamageDelegate GetIgniteDamage = (_) => -1;
-	public static ChangeIgniteDamageDelegate ChangeIgniteDamage = (_, _) => { };
-	public static ChangeIgniteDamageDelegate ChangeIgniteDamageTemporary = (_, _) => { };
-	public static GetTurnDelegate GetTurn = () => -1;
-	public static GetPlayerLifeDelegate GetPlayerLife = (_) => -1;
-	public static PayLifeDelegate PayLife = (_, _) => { };
-	public static GatherDelegate Gather = (_, _) => new ClientCoreDummyCard();
-	public static MoveDelegate Move = (_, _) => { };
-	public static SelectZoneDelegate SelectZone = (_, _) => -1;
-	public static MoveToHandDelegate MoveToHand = (_, _) => { };
-	public static MoveToFieldDelegate MoveToField = (_, _, _, _) => { };
-	public static GetCastCountDelegate GetCastCount = (_, _) => -1;
-	public static ReturnCardsToDeckDelegate ReturnCardsToDeck = (_) => { };
-	public static RevealDelegate Reveal = (_, _) => { };
-	public static GetDiscardableDelegate GetDiscardable = (_, _) => [];
-	public static RefreshAbilityDelegate RefreshAbility = (_) => { };
-	public static CreatureChangeStatDelegate CreatureChangeLife = (_, _, _) => { };
-	public static CreatureChangeStatDelegate CreatureChangePower = (_, _, _) => { };
+	internal static RemoveLingeringEffectDelegate RemoveLingeringEffect = (_) => { };
+	internal static GetDamageMultiplierDelegate GetDamageMultiplier = () => 1;
+	internal static SetDamageMultiplierDelegate SetDamageMultiplier = (_) => { };
+	internal static RegisterTriggerDelegate RegisterCastTrigger = (_, _) => { };
+	internal static RegisterLocationBasedTargetingTriggerDelegate RegisterGenericCastTrigger = (_, _) => { };
+	internal static RegisterTokenCreationTriggerDelegate RegisterTokenCreationTrigger = (_, _) => { };
+	internal static RegisterLocationBasedTargetingTriggerDelegate RegisterGenericEntersFieldTrigger = (_, _) => { };
+	internal static RegisterTriggerDelegate RegisterRevelationTrigger = (_, _) => { };
+	internal static RegisterLocationBasedTriggerDelegate RegisterYouDiscardTrigger = (_, _) => { };
+	internal static RegisterTriggerDelegate RegisterDiscardTrigger = (_, _) => { };
+	internal static RegisterStateReachedTriggerDelegate RegisterStateReachedTrigger = (_, _) => { };
+	internal static RegisterTriggerDelegate RegisterVictoriousTrigger = (_, _) => { };
+	internal static RegisterCreatureTargetingTriggerDelegate RegisterAttackTrigger = (_, _) => { };
+	internal static RegisterCreatureTargetingTriggerDelegate RegisterDeathTrigger = (_, _) => { };
+	internal static RegisterCreatureTargetingTriggerDelegate RegisterGenericDeathTrigger = (_, _) => { };
+	internal static RegisterCreatureTargetingTriggerDelegate RegisterGenericVictoriousTrigger = (_, _) => { };
+	internal static RegisterTriggerDelegate RegisterDealsDamageTrigger = (_, _) => { };
+	internal static RegisterLingeringEffectDelegate RegisterLingeringEffect = (_) => { };
+	internal static RegisterLingeringEffectDelegate RegisterLocationTemporaryLingeringEffect = (_) => { };
+	internal static RegisterStateTemporaryLingeringEffectDelegate RegisterStateTemporaryLingeringEffect = (_, _) => { };
+	internal static RegisterActivatedEffectDelegate RegisterActivatedEffect = (_) => { };
+	internal static GetCardsInLocationDelegate GetGrave = (_) => [];
+	internal static GetWholeFieldDelegate GetField = (_) => [];
+	internal static GetFieldUsedDelegate GetFieldUsed = (_) => [];
+	internal static GetCardsInLocationDelegate GetHand = (_) => [];
+	internal static SelectCardsDelegate SelectCards = (_, _, _, _) => [];
+	internal static DiscardDelegate Discard = (_) => { };
+	internal static DiscardAmountDelegate DiscardAmount = (_, _) => { };
+	internal static CreateTokenDelegate CreateToken = (_, _, _, _) => new ClientCoreDummyToken();
+	internal static CreateTokenOnFieldDelegate CreateTokenOnField = (_, _, _, _, _) => { };
+	internal static CreateTokenCopyDelegate CreateTokenCopy = (_, _) => new ClientCoreDummyToken();
+	internal static CreateTokenCopyOnFieldDelegate CreateTokenCopyOnField = (_, _, _) => { };
+	internal static GetYXTurnsAgoDelegate GetDiscardCountXTurnsAgo = (_, _) => -1;
+	internal static GetYXTurnsAgoDelegate GetDamageDealtXTurnsAgo = (_, _) => -1;
+	internal static GetYXTurnsAgoDelegate GetSpellDamageDealtXTurnsAgo = (_, _) => -1;
+	internal static GetYXTurnsAgoDelegate GetBrittleDeathCountXTurnsAgo = (_, _) => -1;
+	internal static GetYXTurnsAgoDelegate GetDeathCountXTurnsAgo = (_, _) => -1;
+	internal static PlayerChangeLifeDelegate PlayerChangeLife = (_, _, _) => { };
+	internal static PlayerChangeMomentumDelegate PlayerChangeMomentum = (_, _) => { };
+	internal static CastDelegate Cast = (_, _) => { };
+	internal static DrawDelegate Draw = (_, _) => { };
+	internal static DestroyDelegate Destroy = (_) => { };
+	internal static AskYesNoDelegate AskYesNo = (_, _) => false;
+	internal static GetIgniteDamageDelegate GetIgniteDamage = (_) => -1;
+	internal static ChangeIgniteDamageDelegate ChangeIgniteDamage = (_, _) => { };
+	internal static ChangeIgniteDamageDelegate ChangeIgniteDamageTemporary = (_, _) => { };
+	internal static GetTurnDelegate GetTurn = () => -1;
+	internal static GetPlayerLifeDelegate GetPlayerLife = (_) => -1;
+	internal static PayLifeDelegate PayLife = (_, _) => { };
+	internal static GatherDelegate Gather = (_, _) => new ClientCoreDummyCard();
+	internal static MoveDelegate Move = (_, _) => { };
+	internal static SelectZoneDelegate SelectZone = (_, _) => -1;
+	internal static MoveToHandDelegate MoveToHand = (_, _) => { };
+	internal static MoveToFieldDelegate MoveToField = (_, _, _, _) => { };
+	internal static GetCastCountDelegate GetCastCount = (_, _) => -1;
+	internal static ReturnCardsToDeckDelegate ReturnCardsToDeck = (_) => { };
+	internal static RevealDelegate Reveal = (_, _) => { };
+	internal static GetDiscardableDelegate GetDiscardable = (_, _) => [];
+	internal static RefreshAbilityDelegate RefreshAbility = (_) => { };
+	internal static CreatureChangeStatDelegate CreatureChangeLife = (_, _, _) => { };
+	internal static CreatureChangeStatDelegate CreatureChangePower = (_, _, _) => { };
 	#endregion ScriptingFunctions
 	public virtual void ResetToBaseState()
 	{
@@ -177,7 +177,7 @@ public abstract class Card
 		return [.. Array.ConvertAll(cards, x => x.ToStruct())];
 	}
 }
-public class ClientCoreDummyCard : Card
+internal class ClientCoreDummyCard : Card
 {
 	public ClientCoreDummyCard() : base(PlayerClass.UNKNOWN, "UNINITIALIZED", "UNINITIALIZED")
 	{ }
@@ -190,7 +190,7 @@ public class ClientCoreDummyCard : Card
 		return new CardStruct("DUMMY", "DUMMY", PlayerClass.UNKNOWN, Location.UNKNOWN, uint.MaxValue, -1, -1, new TypeSpecifics.unknown());
 	}
 }
-public class ClientCoreDummyToken : Token
+internal class ClientCoreDummyToken : Token
 {
 	public ClientCoreDummyToken() : base("UNINITIALIZED", "UNINITIALIZED", -1, -1, -1, -1)
 	{ }
@@ -199,7 +199,7 @@ public class ClientCoreDummyToken : Token
 	}
 }
 
-public abstract partial class Creature : Card
+internal abstract partial class Creature : Card
 {
 	public readonly int BaseLife, BasePower;
 	public int damageCap = -1, baseDamageCap = -1;
@@ -312,7 +312,7 @@ public abstract partial class Creature : Card
 	private static partial Regex KeywordRegex();
 }
 
-public abstract class Spell(PlayerClass CardClass,
+internal abstract class Spell(PlayerClass CardClass,
 	string Name,
 	string Text,
 	int OriginalCost = 0,
@@ -340,7 +340,7 @@ public abstract class Spell(PlayerClass CardClass,
 	}
 }
 
-public abstract class Quest(string Name, string Text, int ProgressGoal, PlayerClass CardClass) : Card(
+internal abstract class Quest(string Name, string Text, int ProgressGoal, PlayerClass CardClass) : Card(
 	CardClass: CardClass,
 	Name: Name,
 	Text: Text)
@@ -367,7 +367,7 @@ public abstract class Quest(string Name, string Text, int ProgressGoal, PlayerCl
 	}
 }
 
-public class Token : Creature
+internal class Token : Creature
 {
 	public Token(string Name,
 		string Text,

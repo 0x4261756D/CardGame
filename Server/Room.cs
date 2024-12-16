@@ -14,7 +14,7 @@ namespace CardGameServer;
 
 partial class Room
 {
-	public class Player(string Name, string id, bool ready, bool noshuffle, NetworkStream stream)
+	internal class Player(string Name, string id, bool ready, bool noshuffle, NetworkStream stream)
 	{
 		public string Name = Name;
 		public Deck? Decklist;

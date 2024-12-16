@@ -6,7 +6,7 @@ namespace CardGameUtils.GameEnumsAndStructs;
 
 #nullable enable
 #pragma warning disable CS8981
-public record foo(byte dummy) : Common.PacketTable
+internal record foo(byte dummy) : Common.PacketTable
 {
 	public byte[] Serialize()
 	{
@@ -90,7 +90,7 @@ public record foo(byte dummy) : Common.PacketTable
 		return bytes;
 	}
 }
-public enum Location
+internal enum Location
 {
 	UNKNOWN,
 	Any,
@@ -101,7 +101,7 @@ public enum Location
 	Quest,
 	Ability,
 }
-public enum PlayerClass
+internal enum PlayerClass
 {
 	UNKNOWN,
 	All,
@@ -110,7 +110,7 @@ public enum PlayerClass
 	Artificer,
 	Gladiator,
 }
-public enum GameResult
+internal enum GameResult
 {
 	Won,
 	Lost,

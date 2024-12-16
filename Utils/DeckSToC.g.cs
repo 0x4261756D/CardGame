@@ -6,7 +6,7 @@ namespace CardGameUtils.Structs.Deck;
 
 #nullable enable
 #pragma warning disable CS8981
-public record SToC_Packet(SToC_Content content) : Common.PacketTable
+internal record SToC_Packet(SToC_Content content) : Common.PacketTable
 {
 	public byte[] Serialize()
 	{
@@ -90,7 +90,7 @@ public record SToC_Packet(SToC_Content content) : Common.PacketTable
 		return bytes;
 	}
 }
-public interface SToC_Content : Common.PacketUnion
+internal interface SToC_Content : Common.PacketUnion
 {
 	public static SToC_Content DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -114,7 +114,7 @@ public interface SToC_Content : Common.PacketUnion
 		}
 	}
 
-	public record decklists(SToC_Response_Decklists value) : SToC_Content
+	internal record decklists(SToC_Response_Decklists value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -136,7 +136,7 @@ public interface SToC_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record decklist(SToC_Response_Decklist value) : SToC_Content
+	internal record decklist(SToC_Response_Decklist value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -158,7 +158,7 @@ public interface SToC_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record search(SToC_Response_Search value) : SToC_Content
+	internal record search(SToC_Response_Search value) : SToC_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -181,7 +181,7 @@ public interface SToC_Content : Common.PacketUnion
 		}
 	}
 }
-public record SToC_Response_Decklists(List<string> names) : Common.PacketTable
+internal record SToC_Response_Decklists(List<string> names) : Common.PacketTable
 {
 	public static SToC_Response_Decklists DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -228,7 +228,7 @@ public record SToC_Response_Decklists(List<string> names) : Common.PacketTable
 		return bytes;
 	}
 }
-public record SToC_Response_Decklist(CardGameUtils.Base.Deck? deck) : Common.PacketTable
+internal record SToC_Response_Decklist(CardGameUtils.Base.Deck? deck) : Common.PacketTable
 {
 	public static SToC_Response_Decklist DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -271,7 +271,7 @@ public record SToC_Response_Decklist(CardGameUtils.Base.Deck? deck) : Common.Pac
 		return bytes;
 	}
 }
-public record SToC_Response_Search(List<CardGameUtils.Base.CardStruct> cards) : Common.PacketTable
+internal record SToC_Response_Search(List<CardGameUtils.Base.CardStruct> cards) : Common.PacketTable
 {
 	public static SToC_Response_Search DeserializeInternal(ref Span<byte> bytes)
 	{

@@ -8,7 +8,7 @@ using CardGameUtils.Base;
 
 namespace CardGameClient;
 
-public partial class ViewCardsWindow : Window
+internal partial class ViewCardsWindow : Window
 {
 	private readonly Action<CardStruct> showCardAction;
 

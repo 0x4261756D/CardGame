@@ -1,5 +1,7 @@
 set -e
 
+dotnet_version=net9.0
+
 if test "$#" -ne 1
 then
 	echo "No version number provided"
@@ -16,10 +18,10 @@ cp ../Client/artworks/default_artwork.png "$name/artworks"
 mkdir -p "$name/Core"
 cd ../Client/
 dotnet publish -c Release -r linux-x64 --sc true /p:PublishAot=true
-cp bin/Release/net8.0/linux-x64/publish/* "../Release/$name/"
+cp bin/Release/$dotnet_version/linux-x64/publish/* "../Release/$name/"
 cd ../Core/
 dotnet publish -c Release -r linux-x64 --sc true /p:PublishAot=true
-cp bin/Release/net8.0/linux-x64/publish/* "../Release/$name/Core"
+cp bin/Release/$dotnet_version/linux-x64/publish/* "../Release/$name/Core"
 cd ../Release
 rm $name/Core/*.dbg
 rm $name/*.dbg
@@ -35,11 +37,11 @@ cp ../Client/artworks/default_artwork.png "$name/artworks"
 mkdir "$name/Core"
 cd ../Client/
 dotnet publish -c Release -r linux-x64 --sc true /p:PublishSingleFile=true
-cp bin/Release/net8.0/linux-x64/publish/* "../Release/$name/"
+cp bin/Release/$dotnet_version/linux-x64/publish/* "../Release/$name/"
 rm ../Release/$name/*.dbg || true
 cd ../Core/
 dotnet publish -c Release -r linux-x64 --sc true /p:PublishSingleFile=true
-cp bin/Release/net8.0/linux-x64/publish/* "../Release/$name/Core"
+cp bin/Release/$dotnet_version/linux-x64/publish/* "../Release/$name/Core"
 rm ../Release/$name/Core/*.dbg || true
 cd ../Release
 tar -czf "$name.tar.gz" "$name/"
@@ -54,11 +56,11 @@ cp ../Client/artworks/default_artwork.png "$name/artworks"
 mkdir "$name/Core"
 cd ../Client/
 dotnet publish -c Release -r linux-x64 --sc false /p:PublishSingleFile=true
-cp bin/Release/net8.0/linux-x64/publish/* "../Release/$name/"
+cp bin/Release/$dotnet_version/linux-x64/publish/* "../Release/$name/"
 rm ../Release/$name/*.dbg || true
 cd ../Core/
 dotnet publish -c Release -r linux-x64 --sc false /p:PublishSingleFile=true
-cp bin/Release/net8.0/linux-x64/publish/* "../Release/$name/Core"
+cp bin/Release/$dotnet_version/linux-x64/publish/* "../Release/$name/Core"
 rm ../Release/$name/Core/*.dbg || true
 cd ../Release
 tar -czf "$name.tar.gz" "$name/"
@@ -73,10 +75,10 @@ cp ../Client/artworks/default_artwork.png "$name/artworks"
 mkdir "$name/Core"
 cd ../Client/
 dotnet publish -c Release -r win-x64 --sc true /p:PublishSingleFile=true
-cp bin/Release/net8.0/win-x64/publish/* "../Release/$name/"
+cp bin/Release/$dotnet_version/win-x64/publish/* "../Release/$name/"
 cd ../Core/
 dotnet publish -c Release -r win-x64 --sc true /p:PublishSingleFile=true
-cp bin/Release/net8.0/win-x64/publish/* "../Release/$name/Core"
+cp bin/Release/$dotnet_version/win-x64/publish/* "../Release/$name/Core"
 cd ../Release
 zip -r "$name.zip" "$name/"
 
@@ -90,10 +92,10 @@ cp ../Client/artworks/default_artwork.png "$name/artworks"
 mkdir "$name/Core"
 cd ../Client/
 dotnet publish -c Release -r win-x64 --sc false /p:PublishSingleFile=true
-cp bin/Release/net8.0/win-x64/publish/* "../Release/$name/"
+cp bin/Release/$dotnet_version/win-x64/publish/* "../Release/$name/"
 cd ../Core/
 dotnet publish -c Release -r win-x64 --sc false /p:PublishSingleFile=true
-cp bin/Release/net8.0/win-x64/publish/* "../Release/$name/Core"
+cp bin/Release/$dotnet_version/win-x64/publish/* "../Release/$name/Core"
 cd ../Release
 zip -r "$name.zip" "$name/"
 

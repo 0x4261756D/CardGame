@@ -12,7 +12,7 @@ using CardGameUtils.Structs.Server;
 
 namespace CardGameClient;
 
-public partial class ServerWindow : Window
+internal partial class ServerWindow : Window
 {
 	public ServerWindow()
 	{
@@ -171,7 +171,7 @@ public partial class ServerWindow : Window
 		}
 	}
 }
-public class ServerWindowViewModel : INotifyPropertyChanged
+internal class ServerWindowViewModel : INotifyPropertyChanged
 {
 	public ServerWindowViewModel()
 	{

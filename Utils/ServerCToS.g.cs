@@ -6,7 +6,7 @@ namespace CardGameUtils.Structs.Server;
 
 #nullable enable
 #pragma warning disable CS8981
-public record CToS_Packet(CToS_Content content) : Common.PacketTable
+internal record CToS_Packet(CToS_Content content) : Common.PacketTable
 {
 	public byte[] Serialize()
 	{
@@ -90,7 +90,7 @@ public record CToS_Packet(CToS_Content content) : Common.PacketTable
 		return bytes;
 	}
 }
-public interface CToS_Content : Common.PacketUnion
+internal interface CToS_Content : Common.PacketUnion
 {
 	public static CToS_Content DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -130,7 +130,7 @@ public interface CToS_Content : Common.PacketUnion
 		}
 	}
 
-	public record additional_cards() : CToS_Content
+	internal record additional_cards() : CToS_Content
 	{
 		public static additional_cards DeserializeInternal(ref Span<byte> bytes)
 		{
@@ -146,7 +146,7 @@ public interface CToS_Content : Common.PacketUnion
 			return [.. Common.Common.SerializeName("additional_cards"), (byte)Common.TypeBytes.Void];
 		}
 	}
-	public record artworks(CToS_Request_Artworks value) : CToS_Content
+	internal record artworks(CToS_Request_Artworks value) : CToS_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -168,7 +168,7 @@ public interface CToS_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record create(CToS_Request_Create value) : CToS_Content
+	internal record create(CToS_Request_Create value) : CToS_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -190,7 +190,7 @@ public interface CToS_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record join(CToS_Request_Join value) : CToS_Content
+	internal record join(CToS_Request_Join value) : CToS_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -212,7 +212,7 @@ public interface CToS_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record leave() : CToS_Content
+	internal record leave() : CToS_Content
 	{
 		public static leave DeserializeInternal(ref Span<byte> bytes)
 		{
@@ -228,7 +228,7 @@ public interface CToS_Content : Common.PacketUnion
 			return [.. Common.Common.SerializeName("leave"), (byte)Common.TypeBytes.Void];
 		}
 	}
-	public record rooms() : CToS_Content
+	internal record rooms() : CToS_Content
 	{
 		public static rooms DeserializeInternal(ref Span<byte> bytes)
 		{
@@ -244,7 +244,7 @@ public interface CToS_Content : Common.PacketUnion
 			return [.. Common.Common.SerializeName("rooms"), (byte)Common.TypeBytes.Void];
 		}
 	}
-	public record start(CToS_Request_Start value) : CToS_Content
+	internal record start(CToS_Request_Start value) : CToS_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -267,7 +267,7 @@ public interface CToS_Content : Common.PacketUnion
 		}
 	}
 }
-public record CToS_Request_Artworks(List<string> names) : Common.PacketTable
+internal record CToS_Request_Artworks(List<string> names) : Common.PacketTable
 {
 	public static CToS_Request_Artworks DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -314,7 +314,7 @@ public record CToS_Request_Artworks(List<string> names) : Common.PacketTable
 		return bytes;
 	}
 }
-public record CToS_Request_Create(string name) : Common.PacketTable
+internal record CToS_Request_Create(string name) : Common.PacketTable
 {
 	public static CToS_Request_Create DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -345,7 +345,7 @@ public record CToS_Request_Create(string name) : Common.PacketTable
 		return bytes;
 	}
 }
-public record CToS_Request_Join(string own_name, string opp_name) : Common.PacketTable
+internal record CToS_Request_Join(string own_name, string opp_name) : Common.PacketTable
 {
 	public static CToS_Request_Join DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -394,7 +394,7 @@ public record CToS_Request_Join(string own_name, string opp_name) : Common.Packe
 		return bytes;
 	}
 }
-public record CToS_Request_Start(CardGameUtils.Base.Deck decklist, bool no_shuffle) : Common.PacketTable
+internal record CToS_Request_Start(CardGameUtils.Base.Deck decklist, bool no_shuffle) : Common.PacketTable
 {
 	public static CToS_Request_Start DeserializeInternal(ref Span<byte> bytes)
 	{

@@ -5,7 +5,7 @@ using CardGameUtils.Structs.Duel;
 
 namespace CardGameClient;
 
-public partial class GameResultWindow : Window
+internal partial class GameResultWindow : Window
 {
 	readonly Window parent;
 

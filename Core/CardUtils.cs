@@ -1,7 +1,7 @@
 using System;
 
 namespace CardGameCore;
-public class CardUtils
+internal class CardUtils
 {
 	public static bool HasEmpty(Card?[] cards)
 	{
@@ -22,7 +22,7 @@ public class CardUtils
 		return [.. Card.GetField(0), .. Card.GetField(1)];
 	}
 
-	public delegate bool IsValid<T>(T card);
+	internal delegate bool IsValid<T>(T card);
 	public static bool ContainsValid<T>(T[] cards, IsValid<T> isValid) where T : Card
 	{
 		return Array.Exists(cards, card => isValid(card));

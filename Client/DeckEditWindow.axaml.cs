@@ -17,7 +17,7 @@ using CardGameUtils.Structs.Deck;
 
 namespace CardGameClient;
 
-public partial class DeckEditWindow : Window
+internal partial class DeckEditWindow : Window
 {
 	private readonly Flyout moveFlyout = new();
 	private List<CardStruct> cardpool = [];
@@ -452,7 +452,7 @@ public partial class DeckEditWindow : Window
 }
 
 
-public class DeckEditWindowViewModel : INotifyPropertyChanged
+internal class DeckEditWindowViewModel : INotifyPropertyChanged
 {
 	public DeckEditWindowViewModel()
 	{

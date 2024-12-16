@@ -15,7 +15,7 @@ using System;
 
 namespace CardGameClient;
 
-public class UIUtils
+internal class UIUtils
 {
 	public static ThemeVariant ConvertThemeVariant(ClientConfig.ThemeVariant? theme)
 	{

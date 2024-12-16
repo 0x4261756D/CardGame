@@ -18,7 +18,7 @@ using static CardGameUtils.Functions;
 
 namespace CardGameClient;
 
-public partial class DuelWindow : Window
+internal partial class DuelWindow : Window
 {
 	private readonly int playerIndex;
 	private readonly TcpClient client;
@@ -26,10 +26,10 @@ public partial class DuelWindow : Window
 	private readonly Mutex streamMutex;
 	private readonly Task networkingTask;
 	private readonly Flyout optionsFlyout = new();
-	public interface IFieldUpdateOrInfo
+	internal interface IFieldUpdateOrInfo
 	{
-		public record FieldUpdate(SToC_Broadcast_FieldUpdate Value) : IFieldUpdateOrInfo;
-		public record Info(SToC_Broadcast_ShowInfo Value) : IFieldUpdateOrInfo;
+		internal record FieldUpdate(SToC_Broadcast_FieldUpdate Value) : IFieldUpdateOrInfo;
+		internal record Info(SToC_Broadcast_ShowInfo Value) : IFieldUpdateOrInfo;
 	}
 	readonly Queue<IFieldUpdateOrInfo> fieldUpdateQueue = new();
 	private Task? fieldUpdateTask;

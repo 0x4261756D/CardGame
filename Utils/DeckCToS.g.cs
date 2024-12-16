@@ -6,7 +6,7 @@ namespace CardGameUtils.Structs.Deck;
 
 #nullable enable
 #pragma warning disable CS8981
-public record CToS_Packet(CToS_Content content) : Common.PacketTable
+internal record CToS_Packet(CToS_Content content) : Common.PacketTable
 {
 	public byte[] Serialize()
 	{
@@ -90,7 +90,7 @@ public record CToS_Packet(CToS_Content content) : Common.PacketTable
 		return bytes;
 	}
 }
-public interface CToS_Content : Common.PacketUnion
+internal interface CToS_Content : Common.PacketUnion
 {
 	public static CToS_Content DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -122,7 +122,7 @@ public interface CToS_Content : Common.PacketUnion
 		}
 	}
 
-	public record decklists() : CToS_Content
+	internal record decklists() : CToS_Content
 	{
 		public static decklists DeserializeInternal(ref Span<byte> bytes)
 		{
@@ -138,7 +138,7 @@ public interface CToS_Content : Common.PacketUnion
 			return [.. Common.Common.SerializeName("decklists"), (byte)Common.TypeBytes.Void];
 		}
 	}
-	public record decklist(CToS_Request_Decklist value) : CToS_Content
+	internal record decklist(CToS_Request_Decklist value) : CToS_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -160,7 +160,7 @@ public interface CToS_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record decklist_update(CToS_Request_DecklistUpdate value) : CToS_Content
+	internal record decklist_update(CToS_Request_DecklistUpdate value) : CToS_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -182,7 +182,7 @@ public interface CToS_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record decklist_delete(CToS_Request_DecklistDelete value) : CToS_Content
+	internal record decklist_delete(CToS_Request_DecklistDelete value) : CToS_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -204,7 +204,7 @@ public interface CToS_Content : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record search(CToS_Request_Search value) : CToS_Content
+	internal record search(CToS_Request_Search value) : CToS_Content
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -227,7 +227,7 @@ public interface CToS_Content : Common.PacketUnion
 		}
 	}
 }
-public record CToS_Request_Decklist(string name) : Common.PacketTable
+internal record CToS_Request_Decklist(string name) : Common.PacketTable
 {
 	public static CToS_Request_Decklist DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -258,7 +258,7 @@ public record CToS_Request_Decklist(string name) : Common.PacketTable
 		return bytes;
 	}
 }
-public record CToS_Request_DecklistUpdate(CardGameUtils.Base.Deck deck) : Common.PacketTable
+internal record CToS_Request_DecklistUpdate(CardGameUtils.Base.Deck deck) : Common.PacketTable
 {
 	public static CToS_Request_DecklistUpdate DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -289,7 +289,7 @@ public record CToS_Request_DecklistUpdate(CardGameUtils.Base.Deck deck) : Common
 		return bytes;
 	}
 }
-public record CToS_Request_DecklistDelete(string name) : Common.PacketTable
+internal record CToS_Request_DecklistDelete(string name) : Common.PacketTable
 {
 	public static CToS_Request_DecklistDelete DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -320,7 +320,7 @@ public record CToS_Request_DecklistDelete(string name) : Common.PacketTable
 		return bytes;
 	}
 }
-public record CToS_Request_Search(string filter, CardGameUtils.GameEnumsAndStructs.PlayerClass player_class, bool include_generic_cards) : Common.PacketTable
+internal record CToS_Request_Search(string filter, CardGameUtils.GameEnumsAndStructs.PlayerClass player_class, bool include_generic_cards) : Common.PacketTable
 {
 	public static CToS_Request_Search DeserializeInternal(ref Span<byte> bytes)
 	{

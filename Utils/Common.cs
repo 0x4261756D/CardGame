@@ -5,7 +5,7 @@ using System;
 
 namespace Common;
 
-public enum TypeBytes : byte
+internal enum TypeBytes : byte
 {
 	ListFlag = 0b0010_0000,
 	OptionalFlag = 0b0001_0000,
@@ -25,7 +25,7 @@ public enum TypeBytes : byte
 	Void = 0b1000_0000,
 }
 
-public class Common
+internal class Common
 {
 	public static byte[] SerializeI64(long s)
 	{
@@ -213,9 +213,9 @@ public class Common
 	}
 }
 
-public interface PacketType
+internal interface PacketType
 {
 	public List<byte> SerializeInternal();
 }
-public interface PacketUnion : PacketType { }
-public interface PacketTable : PacketType { }
+internal interface PacketUnion : PacketType { }
+internal interface PacketTable : PacketType { }

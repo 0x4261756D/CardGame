@@ -6,7 +6,7 @@ namespace CardGameUtils.Replay;
 
 #nullable enable
 #pragma warning disable CS8981
-public record Replay(int seed, List<string> cmdline_args, List<ReplayPacket> packets) : Common.PacketTable
+internal record Replay(int seed, List<string> cmdline_args, List<ReplayPacket> packets) : Common.PacketTable
 {
 	public byte[] Serialize()
 	{
@@ -158,7 +158,7 @@ public record Replay(int seed, List<string> cmdline_args, List<ReplayPacket> pac
 		return bytes;
 	}
 }
-public record ReplayPacket(int player, ReplayContent content) : Common.PacketTable
+internal record ReplayPacket(int player, ReplayContent content) : Common.PacketTable
 {
 	public static ReplayPacket DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -207,7 +207,7 @@ public record ReplayPacket(int player, ReplayContent content) : Common.PacketTab
 		return bytes;
 	}
 }
-public interface ReplayContent : Common.PacketUnion
+internal interface ReplayContent : Common.PacketUnion
 {
 	public static ReplayContent DeserializeInternal(ref Span<byte> bytes)
 	{
@@ -227,7 +227,7 @@ public interface ReplayContent : Common.PacketUnion
 		}
 	}
 
-	public record ctos(CardGameUtils.Structs.Duel.CToS_Content value) : ReplayContent
+	internal record ctos(CardGameUtils.Structs.Duel.CToS_Content value) : ReplayContent
 	{
 		public List<byte> SerializeInternal()
 		{
@@ -249,7 +249,7 @@ public interface ReplayContent : Common.PacketUnion
 			return new(value);
 		}
 	}
-	public record stoc(CardGameUtils.Structs.Duel.SToC_Content value) : ReplayContent
+	internal record stoc(CardGameUtils.Structs.Duel.SToC_Content value) : ReplayContent
 	{
 		public List<byte> SerializeInternal()
 		{

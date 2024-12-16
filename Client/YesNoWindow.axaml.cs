@@ -5,7 +5,7 @@ using CardGameUtils.Structs.Duel;
 using System.Threading;
 
 namespace CardGameClient;
-public partial class YesNoWindow : Window
+internal partial class YesNoWindow : Window
 {
 	readonly Stream stream;
 	private bool shouldReallyClose;

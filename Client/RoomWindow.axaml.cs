@@ -16,7 +16,7 @@ using System.Diagnostics;
 
 namespace CardGameClient;
 
-public partial class RoomWindow : Window
+internal partial class RoomWindow : Window
 {
 	private readonly Task networkTask;
 	private readonly TcpClient client;
@@ -266,7 +266,7 @@ public partial class RoomWindow : Window
 		}, priority: DispatcherPriority.Background);
 	}
 }
-public class RoomWindowViewModel : INotifyPropertyChanged
+internal class RoomWindowViewModel : INotifyPropertyChanged
 {
 	public RoomWindowViewModel()
 	{
