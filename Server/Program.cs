@@ -383,6 +383,7 @@ class Program
 			case CToS_Content.additional_cards:
 			{
 				string fullAdditionalCardsPath = Path.Combine(baseDir, config.additional_cards_path);
+				// NOTE: It is really unfortunate that the file has to be read by the core and then, directly afterwards, by the server.
 				LetCoreGenerateAdditionalCards(fullAdditionalCardsPath);
 				if(File.Exists(fullAdditionalCardsPath))
 				{

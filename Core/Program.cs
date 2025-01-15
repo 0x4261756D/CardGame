@@ -5,6 +5,11 @@ using System.Text;
 using System.Text.Json;
 using CardGameUtils;
 using CardGameUtils.Replay;
+using CardGameUtils.Structs.Server;
+using System.Reflection;
+using System.Collections.Generic;
+using System.Security.Cryptography;
+using CardGameUtils.Base;
 using static CardGameUtils.Functions;
 namespace CardGameCore;
 
@@ -175,24 +180,31 @@ class Program
 		throw new Exception($"Could not find executable in {baseDir} to generate version time");
 	}
 
+	// NOTE: This can easily be a bottleneck since it does some not-so-cheap operations.
 	public static void GenerateAdditionalCards(string path)
 	{
-		// if(!File.Exists(path) || JsonSerializer.Deserialize<NetworkingStructs.ServerPackets.AdditionalCardsResponse>(File.ReadAllText(path), GenericConstants.packetSerialization)?.time < versionTime)
-		// {
-		// 	Log("Generating new additional cards");
-		// 	List<CardStruct> cards = [];
-		// 	foreach(Type card in Array.FindAll(Assembly.GetExecutingAssembly().GetTypes(), IsCardSubclass))
-		// 	{
-		// 		Card c = (Card)Activator.CreateInstance(card)!;
-		// 		cards.Add(c.ToStruct(client: true));
-		// 	}
-		// 	File.WriteAllText(path, JsonSerializer.Serialize(new NetworkingStructs.ServerPackets.AdditionalCardsResponse
-		// 	(
-		// 		cards: [.. cards],
-		// 		time: versionTime
-		// 	), GenericConstants.packetSerialization));
-		// }
-		throw new NotImplementedException();
+		List<CardStruct> cards = [.. Array.ConvertAll(Array.FindAll(Assembly.GetExecutingAssembly().GetTypes(), IsCardSubclass), x => ((Card)Activator.CreateInstance(x)!).ToStruct())];
+		if(File.Exists(path))
+		{
+			IncrementalHash hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+			foreach(CardStruct card in cards)
+			{
+				hasher.AppendData(card.Serialize());
+			}
+			byte[] newHash = hasher.GetHashAndReset();
+			List<CardStruct> oldCards = ((SToC_Response_AdditionalCards)SToC_Packet.Deserialize(File.ReadAllBytes(path)).content).cards;
+			foreach(CardStruct card in oldCards)
+			{
+				hasher.AppendData(card.Serialize());
+			}
+			byte[] oldHash = hasher.GetHashAndReset();
+			if(oldHash.AsSpan().SequenceEqual(newHash))
+			{
+				// There was no change since the last request so no new data has to be written.
+				return;
+			}
+		}
+		File.WriteAllBytes(path, new SToC_Packet(new SToC_Content.additional_cards(new(cards: cards, timestamp: (ulong)DateTimeOffset.Now.ToUnixTimeSeconds()))).Serialize());
 	}
 
 	public static readonly Predicate<Type> IsCardSubclass = card =>
