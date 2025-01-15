@@ -1560,7 +1560,8 @@ class DuelCore : Core
 			value = 0;
 			players[player].castCounts[card.Name] = value;
 		}
-		players[player].castCounts[card.Name] = ++value;
+		value += 1;
+		players[player].castCounts[card.Name] = value;
 		ProcessTriggers(castTriggers, card.uid);
 		foreach(Player p in players)
 		{
