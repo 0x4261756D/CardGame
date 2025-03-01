@@ -479,7 +479,7 @@ internal class DeckEditWindowViewModel : INotifyPropertyChanged
 		PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 	}
 
-	private readonly ObservableCollection<PlayerClass> classes = new(Enum.GetValues<PlayerClass>());
+	private readonly ObservableCollection<PlayerClass> classes = [.. Enum.GetValues<PlayerClass>()];
 	public ObservableCollection<PlayerClass> Classes
 	{
 		get => classes;

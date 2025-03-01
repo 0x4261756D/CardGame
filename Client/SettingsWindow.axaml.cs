@@ -61,7 +61,7 @@ internal class SettingsWindowViewModel : INotifyPropertyChanged
 		PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 	}
 
-	private readonly ObservableCollection<ClientConfig.ThemeVariant> themeVariants = new(Enum.GetValues<ClientConfig.ThemeVariant>());
+	private readonly ObservableCollection<ClientConfig.ThemeVariant> themeVariants = [.. Enum.GetValues<ClientConfig.ThemeVariant>()];
 	public ObservableCollection<ClientConfig.ThemeVariant> ThemeVariants
 	{
 		get => themeVariants;
