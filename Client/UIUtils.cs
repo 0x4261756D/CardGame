@@ -195,11 +195,7 @@ internal class UIUtils
 				Functions.Log(e.Message);
 			}
 		}
-		if(DefaultArtwork == null && File.Exists(Path.Combine(Program.config.artwork_path, "default_artwork.png")))
-		{
-			DefaultArtwork = new Bitmap(Path.Combine(Program.config.artwork_path, "default_artwork.png"));
-		}
-		return DefaultArtwork;
+		return null;
 	}
 	public static Viewbox CreateGenericCard(CardStruct c)
 	{
@@ -236,13 +232,14 @@ internal class UIUtils
 		insidePanel.Children.Add(headerBorder);
 		RelativePanel.SetAlignLeftWithPanel(headerBorder, true);
 		RelativePanel.SetAlignRightWithPanel(headerBorder, true);
+		Bitmap? bitmap = FetchArtwork(c.name);
 		Border imageBorder = new()
 		{
 			Child = new Viewbox
 			{
-				Child = new Image
+				Child = bitmap is null ? InterpretNameAsWeirdSVG(c.name) : new Image
 				{
-					Source = FetchArtwork(c.name),
+					Source = bitmap,
 				},
 			},
 			Margin = new Thickness(50, 0),
@@ -345,6 +342,11 @@ internal class UIUtils
 		box.Child = outsideBorder;
 		box.DataContext = c;
 		return box;
+	}
+	public static PathIcon InterpretNameAsWeirdSVG(string name)
+	{
+		(byte r, byte g, byte b) = WeirdSVGInterpreter.IntepretNameAsRGB(name);
+		return new() { Data = StreamGeometry.Parse(WeirdSVGInterpreter.InterpretNameAsWeirdImage(name)), Background = new SolidColorBrush(Color.FromRgb(r, g, b)), Foreground = new SolidColorBrush(Color.FromRgb((byte)(~r + g), (byte)(~g ^ b), (byte)(~b + r))) };
 	}
 	public static List<uint> CardListBoxSelectionToUID(ListBox box)
 	{
