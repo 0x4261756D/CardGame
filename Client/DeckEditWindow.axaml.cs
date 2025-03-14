@@ -59,7 +59,11 @@ internal partial class DeckEditWindow : Window
 	{
 		DecklistPanel.LayoutUpdated -= DecklistPanelInitialized;
 		LoadSidebar("");
-		LoadDeck(DeckSelectBox.SelectedItem!.ToString()!);
+
+		if(DeckSelectBox.SelectedItem is not null)
+		{
+			LoadDeck(DeckSelectBox.SelectedItem!.ToString()!);
+		}
 	}
 
 	public void BackClick(object sender, RoutedEventArgs args)
