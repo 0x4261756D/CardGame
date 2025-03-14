@@ -9,7 +9,7 @@ class CurseofSugoma : Spell
 		Name: "Curse of Sugoma",
 		CardClass: PlayerClass.Cultist,
 		OriginalCost: 1,
-		Text: "{Cast}: Target creature gains +2/-1.\n{Discard}: Target creature gains decaying."
+		Text: "{Cast}: Target allied creature gains +2/-1.\n{Discard}: Target creature gains decaying."
 		)
 	{ }
 
