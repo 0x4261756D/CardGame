@@ -54,7 +54,7 @@ class Program
 			Functions.Log("Please provide a config file with '--config=path/to/config'", severity: Functions.LogSeverity.Error);
 			return;
 		}
-		PlatformServerConfig platformConfig = JsonSerializer.Deserialize<PlatformServerConfig>(File.ReadAllText(configLocation), GenericConstants.platformServerConfigSerialization);
+		PlatformServerConfig platformConfig = JsonSerializer.Deserialize<PlatformServerConfig>(File.ReadAllText(configLocation), PlatformServerConfigSerializationContext.Default.PlatformServerConfig);
 		if(Environment.OSVersion.Platform == PlatformID.Unix)
 		{
 			config = platformConfig.linux;

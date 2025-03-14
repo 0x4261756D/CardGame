@@ -14,14 +14,21 @@ internal partial class SettingsWindow : Window
 	public SettingsWindow()
 	{
 		InitializeComponent();
-		DataContext = new SettingsWindowViewModel();
 		WidthInput.Value = Program.config.width;
 		HeightInput.Value = Program.config.height;
 		ShouldSpawnCoreInput.IsChecked = Program.config.should_spawn_core;
 		ShouldSavePlayerNameInput.IsChecked = Program.config.should_save_player_name;
 		AnimationDelayInput.Value = Program.config.animation_delay_in_ms;
 		CoreArgsInput.Text = Program.config.core_info.Arguments;
+		foreach(ClientConfig.ThemeVariant themeVariant in Enum.GetValues<ClientConfig.ThemeVariant>())
+		{
+			ThemeInput.Items.Add(themeVariant);
+		}
 		ThemeInput.SelectedItem = Program.config.theme;
+		if(ThemeInput.SelectedIndex < 0)
+		{
+			ThemeInput.SelectedIndex = 0;
+		}
 	}
 	public void BackClick(object sender, RoutedEventArgs args)
 	{
@@ -29,7 +36,7 @@ internal partial class SettingsWindow : Window
 		{
 			WindowState = WindowState,
 		}.Show();
-		if(Application.Current != null)
+		if(Application.Current is not null)
 		{
 			Application.Current.RequestedThemeVariant = UIUtils.ConvertThemeVariant((ClientConfig.ThemeVariant?)ThemeInput.SelectedItem);
 		}
@@ -48,22 +55,5 @@ internal partial class SettingsWindow : Window
 		{
 			Application.Current.RequestedThemeVariant = UIUtils.ConvertThemeVariant((ClientConfig.ThemeVariant?)ThemeInput.SelectedItem);
 		}
-	}
-}
-internal class SettingsWindowViewModel : INotifyPropertyChanged
-{
-	public event PropertyChangedEventHandler? PropertyChanged;
-
-#pragma warning disable IDE0051
-	private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
-#pragma warning restore IDE0051
-	{
-		PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-	}
-
-	private readonly ObservableCollection<ClientConfig.ThemeVariant> themeVariants = [.. Enum.GetValues<ClientConfig.ThemeVariant>()];
-	public ObservableCollection<ClientConfig.ThemeVariant> ThemeVariants
-	{
-		get => themeVariants;
 	}
 }

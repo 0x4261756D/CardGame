@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,15 +25,17 @@ internal partial class RoomWindow : Window
 	{
 		this.client = client;
 		this.address = address;
+		this.closed = false;
 		clientMutex = new();
 		networkTask = new Task(HandleNetwork, TaskCreationOptions.LongRunning);
 		networkTask.Start();
-		DataContext = new RoomWindowViewModel();
 		Closed += (sender, args) => CloseRoom();
 		InitializeComponent();
+		LoadDecks();
 		OpponentNameBlock.Text = opponentName;
 		if(DeckSelectBox.ItemCount <= 0)
 		{
+			_ = new ErrorPopup("You have no decks to choose from");
 			CloseRoom();
 		}
 		else
@@ -265,14 +265,6 @@ internal partial class RoomWindow : Window
 			Close();
 		}, priority: DispatcherPriority.Background);
 	}
-}
-internal class RoomWindowViewModel : INotifyPropertyChanged
-{
-	public RoomWindowViewModel()
-	{
-		LoadDecks();
-	}
-
 	public void LoadDecks()
 	{
 		List<string>? names = DeckEditWindow.TrySendAndReceive<CardGameUtils.Structs.Deck.SToC_Content.decklists>(new CardGameUtils.Structs.Deck.CToS_Content.decklists(), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port)?.value.names;
@@ -280,27 +272,10 @@ internal class RoomWindowViewModel : INotifyPropertyChanged
 		{
 			return;
 		}
-		Decknames.Clear();
-		Decknames.AddRange(names);
-	}
-
-	public event PropertyChangedEventHandler? PropertyChanged;
-	private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
-	{
-		PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-	}
-
-	private List<string> decknames = [];
-	public List<string> Decknames
-	{
-		get => decknames;
-		set
+		DeckSelectBox.Items.Clear();
+		foreach(string name in names)
 		{
-			if(value != decknames)
-			{
-				decknames = value;
-				NotifyPropertyChanged();
-			}
+			DeckSelectBox.Items.Add(name);
 		}
 	}
 }

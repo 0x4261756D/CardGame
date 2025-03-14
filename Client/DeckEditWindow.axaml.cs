@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -25,7 +22,14 @@ internal partial class DeckEditWindow : Window
 	public DeckEditWindow()
 	{
 		InitializeComponent();
-		DataContext = new DeckEditWindowViewModel();
+		LoadDecks();
+		foreach(var foo in Enum.GetValues<PlayerClass>())
+		{
+			if(foo != PlayerClass.UNKNOWN)
+			{
+				ClassSelectBox.Items.Add(foo);
+			}
+		}
 		if(DeckSelectBox.SelectedItem == null && DeckSelectBox.ItemCount > 0)
 		{
 			if(Program.config.last_deck_name != null)
@@ -378,7 +382,7 @@ internal partial class DeckEditWindow : Window
 				quest: null
 			)
 		)), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port);
-		((DeckEditWindowViewModel)DataContext!).Decknames.Add(newName);
+		DeckSelectBox.Items.Add(newName);
 		DeckSelectBox.SelectedItem = newName;
 		DeckSizeBlock.Text = "Deck size: 0";
 		NewDeckName.Text = "";
@@ -415,7 +419,7 @@ internal partial class DeckEditWindow : Window
 	public void DeleteDeckClick(object? sender, RoutedEventArgs args)
 	{
 		Send(new CToS_Content.decklist_delete(new((string)DeckSelectBox.SelectedItem!)), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port);
-		_ = ((DeckEditWindowViewModel)DataContext!).Decknames.Remove((string)DeckSelectBox.SelectedItem!);
+		DeckSelectBox.Items.Remove((string)DeckSelectBox.SelectedItem!);
 		DeckSelectBox.SelectedIndex = DeckSelectBox.ItemCount - 1;
 	}
 	public void SidebarTextInput(object? sender, KeyEventArgs args)
@@ -449,52 +453,15 @@ internal partial class DeckEditWindow : Window
 		using NetworkStream stream = client.GetStream();
 		stream.Write(new CToS_Packet(content).Serialize());
 	}
-}
-
-
-internal class DeckEditWindowViewModel : INotifyPropertyChanged
-{
-	public DeckEditWindowViewModel()
-	{
-		LoadDecks();
-	}
-
 	public void LoadDecks()
 	{
 		List<string> names = DeckEditWindow.SendAndReceive<SToC_Content.decklists>(new CToS_Content.decklists(), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port).value.names;
 		names.Sort();
-		Decknames.Clear();
+		DeckSelectBox.Items.Clear();
 		foreach(string name in names)
 		{
-			Decknames.Add(name);
-		}
-		_ = classes.Remove(PlayerClass.UNKNOWN);
-	}
-
-	public event PropertyChangedEventHandler? PropertyChanged;
-
-
-	private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
-	{
-		PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-	}
-
-	private readonly ObservableCollection<PlayerClass> classes = [.. Enum.GetValues<PlayerClass>()];
-	public ObservableCollection<PlayerClass> Classes
-	{
-		get => classes;
-	}
-	private ObservableCollection<string> decknames = [];
-	public ObservableCollection<string> Decknames
-	{
-		get => decknames;
-		set
-		{
-			if(value != decknames)
-			{
-				decknames = value;
-				NotifyPropertyChanged();
-			}
+			DeckSelectBox.Items.Add(name);
 		}
 	}
 }
+

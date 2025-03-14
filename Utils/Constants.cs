@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace CardGameUtils;
+
 
 [JsonSourceGenerationOptions(IncludeFields = true)]
 [JsonSerializable(typeof(PlatformCoreConfig))]
@@ -18,32 +18,9 @@ internal partial class PlatformClientConfigSerializationContext : JsonSerializer
 [JsonSerializable(typeof(PlatformServerConfig))]
 internal partial class PlatformServerConfigSerializationContext : JsonSerializerContext { }
 
-internal class GenericConstants
-{
-	// public const uint PACKET_VERSION = 6;
-
-	public const int SERVER_PORT = 7043;
-
-	public static readonly JsonSerializerOptions platformClientConfigSerialization = new()
-	{
-		TypeInfoResolver = PlatformClientConfigSerializationContext.Default,
-		IncludeFields = true,
-		WriteIndented = true,
-	};
-	public static readonly JsonSerializerOptions platformCoreConfigSerialization = new()
-	{
-		TypeInfoResolver = PlatformCoreConfigSerializationContext.Default,
-		IncludeFields = true,
-	};
-	public static readonly JsonSerializerOptions platformServerConfigSerialization = new()
-	{
-		TypeInfoResolver = PlatformServerConfigSerializationContext.Default,
-		IncludeFields = true,
-	};
-}
-
 internal class GameConstants
 {
+	public const int SERVER_PORT = 7043;
 	public const int MAX_CARD_MULTIPLICITY = 2;
 	public const int DECK_SIZE = 40;
 	public const int START_HAND_SIZE = 5;

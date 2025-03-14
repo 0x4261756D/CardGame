@@ -15,11 +15,11 @@
 		<TextBlock Grid.Row="0" Grid.Column="1">
 			Server Address
 		</TextBlock>
-		<TextBox Grid.Row="1" Grid.Column="1" x:Name="ServerAddressBox" Text="{Binding ServerAddress}"/>
+		<TextBox Grid.Row="1" Grid.Column="1" x:Name="ServerAddressBox"/>
 		<TextBlock Grid.Row="0" Grid.Column="2">
 			Name
 		</TextBlock>
-		<TextBox Grid.Row="1" Grid.Column="2" x:Name="PlayerNameBox" Text="{Binding PlayerName}"/>
+		<TextBox Grid.Row="1" Grid.Column="2" x:Name="PlayerNameBox"/>
 		<Button Grid.Row="0" Grid.Column="3" Click="HostClick">
 			Host
 		</Button>
@@ -29,7 +29,7 @@
 
 		<Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4" BorderBrush="Gray" BorderThickness="2">
 			<ScrollViewer>
-				<ItemsControl x:Name="ServerListBox" ItemsSource="{Binding ServerRooms}">
+				<ItemsControl x:Name="ServerListBox">
 					<ItemsControl.ItemTemplate>
 						<DataTemplate>
 							<Button HorizontalAlignment="Stretch" Click="JoinClick" Content="{Binding}" Padding="10" Margin="5"/>

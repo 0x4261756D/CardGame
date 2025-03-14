@@ -13,7 +13,7 @@
 		<TextBlock>
 			Select your Deck:
 		</TextBlock>
-		<ComboBox Name="DeckSelectBox" ItemsSource="{Binding Decknames}" SelectionChanged="DeckSelectionChanged">
+		<ComboBox Name="DeckSelectBox" SelectionChanged="DeckSelectionChanged">
 			<ComboBox.ItemTemplate>
 				<DataTemplate>
 					<TextBlock Text="{Binding}"/>

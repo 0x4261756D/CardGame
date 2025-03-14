@@ -6,7 +6,7 @@
 		x:Class="CardGameClient.CustomSelectCardsWindow"
 		Title="Select cards" FontFamily="Noto Sans">
 	<Grid ColumnDefinitions="*" RowDefinitions="Auto,Auto,*">
-		<TextBlock Grid.Column="0" Grid.Row="0" Text="{Binding Message}"/>
+		<TextBlock Grid.Column="0" Grid.Row="0" x:Name="MessageBox"/>
 		<ListBox Grid.Column="0" Grid.Row="1" SelectionMode="Multiple,Toggle" x:Name="CardSelectionList" SelectionChanged="CardSelectionChanged">
 			<ListBox.ItemsPanel>
 				<ItemsPanelTemplate>
@@ -14,7 +14,7 @@
 				</ItemsPanelTemplate>
 			</ListBox.ItemsPanel>
 		</ListBox>
-		<Button Grid.Column="0" Grid.Row="2" IsEnabled="{Binding CanConfirm}" Click="ConfirmClick">
+		<Button Grid.Column="0" Grid.Row="2" x:Name="ConfirmButton" Click="ConfirmClick">
 			Confirm
 		</Button>
 	</Grid>

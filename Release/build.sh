@@ -17,7 +17,7 @@ mkdir -p "$name/artworks"
 cp ../Client/artworks/default_artwork.png "$name/artworks"
 mkdir -p "$name/Core"
 cd ../Client/
-dotnet publish -c Release -r linux-x64 --sc true /p:PublishAot=true
+dotnet publish -c Release -r linux-x64 --sc true /p:PublishAot=true /p:TrimMode=link /p:BuiltInComInteropSupport=false
 cp bin/Release/$dotnet_version/linux-x64/publish/* "../Release/$name/"
 cd ../Core/
 dotnet publish -c Release -r linux-x64 --sc true /p:PublishAot=true
@@ -99,6 +99,7 @@ cp bin/Release/$dotnet_version/win-x64/publish/* "../Release/$name/Core"
 cd ../Release
 zip -r "$name.zip" "$name/"
 
+# rm -r "$1_AOT/"
 rm -r "$1_Linux/"
 rm -r "$1_Linux_SelfContained/"
 rm -r "$1_Windows/"

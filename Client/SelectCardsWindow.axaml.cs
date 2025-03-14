@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
-using System.Runtime.CompilerServices;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
@@ -19,6 +17,7 @@ internal partial class SelectCardsWindow : Window
 	private readonly Stream stream;
 	private bool shouldReallyClose;
 	private readonly Action<CardStruct> showCardAction;
+	private uint amount;
 
 	public SelectCardsWindow(string text, uint amount, List<CardStruct> cards, Stream stream, Mutex streamMutex, int playerIndex, Action<CardStruct> showCardAction)
 	{
@@ -28,8 +27,8 @@ internal partial class SelectCardsWindow : Window
 		}
 		this.showCardAction = showCardAction;
 		this.stream = stream;
+		this.amount = amount;
 		_ = streamMutex.WaitOne();
-		DataContext = new SelectedCardViewModel(amount);
 		InitializeComponent();
 		Width = Program.config.width / 2;
 		Height = Program.config.height / 2;
@@ -51,8 +50,8 @@ internal partial class SelectCardsWindow : Window
 			border.PointerEntered += CardPointerEntered;
 			return border;
 		});
-		Message.Text = text;
-		Amount.Text = $"/ {amount}";
+		MessageBlock.Text = text;
+		AmountBlock.Text = $"/ {amount}";
 		Closing += (sender, args) =>
 		{
 			args.Cancel = !shouldReallyClose;
@@ -84,7 +83,8 @@ internal partial class SelectCardsWindow : Window
 			return;
 		}
 		int newCount = ((ListBox)sender).SelectedItems?.Count ?? 0;
-		((SelectedCardViewModel)DataContext!).SelectedCount = newCount;
+		ConfirmButton.IsEnabled = newCount == amount;
+		SelectedCountBlock.Text = $"{newCount}";
 	}
 
 	public void ConfirmClick(object? sender, RoutedEventArgs args)
@@ -92,42 +92,5 @@ internal partial class SelectCardsWindow : Window
 		stream.Write(new CToS_Packet(new CToS_Content.select_cards(new(uids: UIUtils.CardListBoxSelectionToUID(CardSelectionList)))).Serialize());
 		shouldReallyClose = true;
 		Close();
-	}
-}
-
-internal class SelectedCardViewModel : INotifyPropertyChanged
-{
-	public SelectedCardViewModel(uint amount)
-	{
-		Amount = amount;
-		NotifyPropertyChanged("Amount");
-	}
-
-	public event PropertyChangedEventHandler? PropertyChanged;
-	private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
-	{
-		PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-	}
-
-	public readonly uint Amount;
-
-	public bool CanConfirm
-	{
-		get => SelectedCount == Amount;
-	}
-
-	private int selectedCount;
-	public int SelectedCount
-	{
-		get => selectedCount;
-		set
-		{
-			if(selectedCount != value)
-			{
-				selectedCount = value;
-				NotifyPropertyChanged();
-				NotifyPropertyChanged(nameof(CanConfirm));
-			}
-		}
 	}
 }

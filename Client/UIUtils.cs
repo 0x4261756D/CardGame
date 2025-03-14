@@ -97,7 +97,7 @@ internal class UIUtils
 			return;
 		}
 		CardGameUtils.Structs.Server.SToC_Response_Artworks? response = ServerWindow.TrySendAndReceive<CardGameUtils.Structs.Server.SToC_Content.artworks>(new CardGameUtils.Structs.Server.CToS_Content.artworks(new([.. filenames])),
-			Program.config.server_address, GenericConstants.SERVER_PORT)?.value;
+			Program.config.server_address, GameConstants.SERVER_PORT)?.value;
 		if(response is null || response.artworks.Count == 0)
 		{
 			_ = ServersNotSupportingArtworks.Add(Program.config.server_address);
@@ -156,14 +156,6 @@ internal class UIUtils
 		}
 		if(ArtworkCache.TryGetValue(filename, out Bitmap? bitmap))
 		{
-			if(bitmap is null)
-			{
-				if(DefaultArtwork == null && File.Exists(Path.Combine(Program.config.artwork_path, "default_artwork.png")))
-				{
-					DefaultArtwork = new Bitmap(Path.Combine(Program.config.artwork_path, "default_artwork.png"));
-				}
-				return DefaultArtwork;
-			}
 			return bitmap;
 		}
 		Bitmap? fromDisk = TryLoadArtworkFromDisk(filename: filename);
@@ -175,7 +167,7 @@ internal class UIUtils
 		{
 			try
 			{
-				List<CardGameUtils.Structs.Server.Artwork> response = ServerWindow.SendAndReceive<CardGameUtils.Structs.Server.SToC_Content.artworks>(new CardGameUtils.Structs.Server.CToS_Content.artworks(new([filename])), Program.config.server_address, GenericConstants.SERVER_PORT).value.artworks;
+				List<CardGameUtils.Structs.Server.Artwork> response = ServerWindow.SendAndReceive<CardGameUtils.Structs.Server.SToC_Content.artworks>(new CardGameUtils.Structs.Server.CToS_Content.artworks(new([filename])), Program.config.server_address, GameConstants.SERVER_PORT).value.artworks;
 				if(response.Count == 1)
 				{
 					CardGameUtils.Structs.Server.Artwork artwork = response[0];

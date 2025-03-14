@@ -13,10 +13,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<TrimmerRootDescriptor Include="Roots.xml" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<Compile Include="../Utils/**/*.cs" />
 	</ItemGroup>
 
@@ -26,5 +22,10 @@
 		<!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
 		<PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.2.5" />
 		<PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.5" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Preserve Avalonia types for reflection -->
+		<TrimmerRootAssembly Include="Avalonia.Themes.Fluent" />
 	</ItemGroup>
 </Project>

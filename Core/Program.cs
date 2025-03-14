@@ -60,7 +60,7 @@ class Program
 			Log($"Missing a config at {configPath}.", severity: LogSeverity.Error);
 			return;
 		}
-		PlatformCoreConfig? platformConfig = JsonSerializer.Deserialize<PlatformCoreConfig>(File.ReadAllText(Path.GetFullPath(configPath)), GenericConstants.platformCoreConfigSerialization);
+		PlatformCoreConfig? platformConfig = JsonSerializer.Deserialize<PlatformCoreConfig>(File.ReadAllText(Path.GetFullPath(configPath)), PlatformCoreConfigSerializationContext.Default.PlatformCoreConfig);
 		if(platformConfig == null)
 		{
 			Log("Could not parse a platform config", LogSeverity.Error);
@@ -97,7 +97,7 @@ class Program
 						modeSet = true;
 						break;
 					case "players":
-						CoreConfig.PlayerConfig[] players = JsonSerializer.Deserialize<CoreConfig.PlayerConfig[]>(Encoding.UTF8.GetString(Convert.FromBase64String(parameter)), options: GenericConstants.platformCoreConfigSerialization)!;
+						CoreConfig.PlayerConfig[] players = JsonSerializer.Deserialize<CoreConfig.PlayerConfig[]>(Encoding.UTF8.GetString(Convert.FromBase64String(parameter)), jsonTypeInfo: PlatformCoreConfigSerializationContext.Default.PlayerConfigArray)!;
 						if(config.duel_config == null)
 						{
 							config.duel_config = new CoreConfig.DuelConfig(players: players, noshuffle: false);

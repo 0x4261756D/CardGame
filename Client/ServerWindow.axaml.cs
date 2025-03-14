@@ -1,7 +1,5 @@
 using System;
-using System.ComponentModel;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -16,12 +14,17 @@ internal partial class ServerWindow : Window
 {
 	public ServerWindow()
 	{
-		DataContext = new ServerWindowViewModel();
+		Program.config.player_name ??= Convert.ToBase64String(Encoding.UTF8.GetBytes(DateTime.Now.Millisecond + DateTime.Now.ToLongTimeString()));
+		Program.config.server_address ??= "127.0.0.1";
 		InitializeComponent();
+		PlayerNameBox.Text = Program.config.player_name;
+		ServerAddressBox.Text = Program.config.server_address;
 		UpdateRoomList();
 	}
 	public void BackClick(object sender, RoutedEventArgs args)
 	{
+		Program.config.player_name = PlayerNameBox.Text;
+		Program.config.server_address = ServerAddressBox.Text ?? "127.0.0.1";
 		new MainWindow
 		{
 			WindowState = WindowState,
@@ -37,10 +40,14 @@ internal partial class ServerWindow : Window
 		}
 		try
 		{
-			using TcpClient updateClient = new(ServerAddressBox.Text, GenericConstants.SERVER_PORT);
+			using TcpClient updateClient = new(ServerAddressBox.Text, GameConstants.SERVER_PORT);
 			using NetworkStream updateStream = updateClient.GetStream();
 			updateStream.Write(new CToS_Packet(new CToS_Content.rooms()).Serialize());
-			((ServerWindowViewModel)DataContext!).ServerRooms = [.. ReceivePacket<SToC_Content.rooms>(updateStream).value.rooms];
+			ServerListBox.Items.Clear();
+			foreach(string roomName in ReceivePacket<SToC_Content.rooms>(updateStream).value.rooms)
+			{
+				ServerListBox.Items.Add(roomName);
+			}
 		}
 		catch(Exception ex)
 		{
@@ -57,11 +64,12 @@ internal partial class ServerWindow : Window
 		{
 			return;
 		}
-		string playerName = ((ServerWindowViewModel)DataContext!).PlayerName;
+		Program.config.player_name = PlayerNameBox.Text ?? Convert.ToBase64String(Encoding.UTF8.GetBytes(DateTime.Now.Millisecond + DateTime.Now.ToLongTimeString()));
+		Program.config.server_address = ServerAddressBox.Text;
 		TcpClient client;
 		try
 		{
-			client = new(ServerAddressBox.Text, GenericConstants.SERVER_PORT);
+			client = new(ServerAddressBox.Text, GameConstants.SERVER_PORT);
 		}
 		catch(Exception ex)
 		{
@@ -71,7 +79,7 @@ internal partial class ServerWindow : Window
 			}
 			return;
 		}
-		client.GetStream().Write(new CToS_Packet(new CToS_Content.create(new(name: playerName))).Serialize());
+		client.GetStream().Write(new CToS_Packet(new CToS_Content.create(new(name: Program.config.player_name))).Serialize());
 		ErrorOr response = ReceivePacket<SToC_Content.create>(client.GetStream()).value.success;
 		switch(response)
 		{
@@ -108,7 +116,7 @@ internal partial class ServerWindow : Window
 			return;
 		}
 		string targetNameText = (string)((Button)sender).Content!;
-		TcpClient client = new(ServerAddressBox.Text, GenericConstants.SERVER_PORT);
+		TcpClient client = new(ServerAddressBox.Text, GameConstants.SERVER_PORT);
 		client.GetStream().Write(new CToS_Packet(new CToS_Content.join(new
 		(
 			own_name: PlayerNameBox.Text,
@@ -168,67 +176,6 @@ internal partial class ServerWindow : Window
 		{
 			Functions.Log(e.Message, severity: Functions.LogSeverity.Warning);
 			return null;
-		}
-	}
-}
-internal class ServerWindowViewModel : INotifyPropertyChanged
-{
-	public ServerWindowViewModel()
-	{
-		PlayerName ??= Convert.ToBase64String(Encoding.UTF8.GetBytes(DateTime.Now.Millisecond + DateTime.Now.ToLongTimeString()));
-		Program.config.server_address ??= "127.0.0.1";
-	}
-
-	public event PropertyChangedEventHandler? PropertyChanged;
-	private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
-	{
-		PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-	}
-
-	public string ServerAddress
-	{
-		get
-		{
-			Program.config.server_address ??= "127.0.0.1";
-			return Program.config.server_address;
-		}
-		set
-		{
-			if(value != Program.config.server_address)
-			{
-				Program.config.server_address = value;
-				NotifyPropertyChanged();
-			}
-		}
-	}
-
-	public string PlayerName
-	{
-		get
-		{
-			Program.config.player_name ??= Convert.ToBase64String(Encoding.UTF8.GetBytes(DateTime.Now.Millisecond + DateTime.Now.ToLongTimeString()));
-			return Program.config.player_name;
-		}
-		set
-		{
-			if(value != Program.config.player_name)
-			{
-				Program.config.player_name = value;
-				NotifyPropertyChanged();
-			}
-		}
-	}
-	private string[] serverRooms = [];
-	public string[] ServerRooms
-	{
-		get => serverRooms;
-		set
-		{
-			if(value != serverRooms)
-			{
-				serverRooms = value;
-				NotifyPropertyChanged();
-			}
 		}
 	}
 }

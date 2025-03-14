@@ -26,8 +26,9 @@ internal partial class CustomSelectCardsWindow : Window
 		this.stream = stream;
 		_ = streamMutex.WaitOne();
 		this.showCardAction = showCardAction;
-		DataContext = new CustomSelectCardViewModel(text, initialState);
 		InitializeComponent();
+		MessageBox.Text = text;
+		ConfirmButton.IsEnabled = initialState;
 		Closed += (_, _) => streamMutex.ReleaseMutex();
 		Width = Program.config.width / 2;
 		Height = Program.config.height / 2;
@@ -77,41 +78,11 @@ internal partial class CustomSelectCardsWindow : Window
 	public void CardSelectionChanged(object sender, SelectionChangedEventArgs args)
 	{
 		stream.Write(new CToS_Packet(new CToS_Content.select_cards_custom_intermediate(new(uids: UIUtils.CardListBoxSelectionToUID((ListBox)sender)))).Serialize());
-		((CustomSelectCardViewModel)DataContext!).CanConfirm = ReceivePacket<SToC_Content.select_cards_custom_intermediate>((NetworkStream)stream)!.value.is_valid;
+		ConfirmButton.IsEnabled = ReceivePacket<SToC_Content.select_cards_custom_intermediate>((NetworkStream)stream)!.value.is_valid;
 	}
 
 	public static T ReceivePacket<T>(NetworkStream stream) where T : SToC_Content
 	{
 		return (T)SToC_Packet.Deserialize(stream).content;
-	}
-}
-internal class CustomSelectCardViewModel : INotifyPropertyChanged
-{
-	public CustomSelectCardViewModel(string message, bool initialState)
-	{
-		Message = message;
-		NotifyPropertyChanged("Message");
-		CanConfirm = initialState;
-	}
-
-	public event PropertyChangedEventHandler? PropertyChanged;
-	private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
-	{
-		PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-	}
-
-	public readonly string Message;
-	private bool canConfirm;
-	public bool CanConfirm
-	{
-		get => canConfirm;
-		set
-		{
-			if(value != canConfirm)
-			{
-				canConfirm = value;
-				NotifyPropertyChanged();
-			}
-		}
 	}
 }

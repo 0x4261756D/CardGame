@@ -18,7 +18,6 @@ internal partial class ReplaysWindow : Window
 	public ReplaysWindow()
 	{
 		InitializeComponent();
-		DataContext = new ReplaysViewModel();
 		Width = Program.config.width / 5;
 		Topmost = true;
 	}
@@ -43,7 +42,7 @@ internal partial class ReplaysWindow : Window
 			for(; actionIndex < replay.packets.Count; actionIndex++)
 			{
 				ReplayPacket action = replay.packets[actionIndex];
-				((ReplaysViewModel)DataContext!).ActionList.Insert
+				ActionListBox.Items.Insert
 				(
 					0,
 					$"{(IsFieldUpdateForCurrentPlayer(action) ? "*" : "")}{actionIndex}: Player {action.player}: {(action.content is ReplayContent.ctos ? "<-" : "->")} {(action.content is ReplayContent.ctos ctos ? ctos.value.GetType() : ((ReplayContent.stoc)action.content).value.GetType())}"
@@ -56,7 +55,7 @@ internal partial class ReplaysWindow : Window
 
 	private bool IsFieldUpdateForCurrentPlayer(ReplayPacket packet)
 	{
-		return packet.player == (((ReplaysViewModel)DataContext!).IsFirstPlayer ? 0 : 1) && packet.content is ReplayContent.stoc stoc && (stoc.value is SToC_Content.field_update || stoc.value is SToC_Content.show_info);
+		return packet.player == (FirstPlayerBox.IsChecked!.Value ? 0 : 1) && packet.content is ReplayContent.stoc stoc && (stoc.value is SToC_Content.field_update || stoc.value is SToC_Content.show_info);
 	}
 
 	public void StartClick(object sender, RoutedEventArgs args)
@@ -73,7 +72,7 @@ internal partial class ReplaysWindow : Window
 			return;
 		}
 		actionIndex = 0;
-		((ReplaysViewModel)DataContext!).ActionList.Clear();
+		ActionListBox.Items.Clear();
 		window?.Close();
 		window = new DuelWindow();
 		window.Show(this);
@@ -88,7 +87,9 @@ internal partial class ReplaysWindow : Window
 		ReplayPacket action = replay.packets[actionIndex];
 		while(!IsFieldUpdateForCurrentPlayer(action))
 		{
-			{ ((ReplaysViewModel)DataContext!).ActionList.Insert(0, $"  {actionIndex}: Player {action.player}: {(action.content is ReplayContent.ctos ? "<-" : "->")} {(action.content is ReplayContent.ctos ctos ? ctos.value.GetType() : ((ReplayContent.stoc)action.content).value.GetType())}"); }
+			{
+				ActionListBox.Items.Insert(0, $"  {actionIndex}: Player {action.player}: {(action.content is ReplayContent.ctos ? "<-" : "->")} {(action.content is ReplayContent.ctos ctos ? ctos.value.GetType() : ((ReplayContent.stoc)action.content).value.GetType())}");
+			}
 			actionIndex++;
 			if(actionIndex >= replay.packets.Count - 1)
 			{
@@ -96,7 +97,9 @@ internal partial class ReplaysWindow : Window
 			}
 			action = replay.packets[actionIndex];
 		}
-		{ ((ReplaysViewModel)DataContext!).ActionList.Insert(0, $"* {actionIndex}: Player {action.player}: {(action.content is ReplayContent.ctos ? "<-" : "->")} {(action.content is ReplayContent.ctos ctos ? ctos.value.GetType() : ((ReplayContent.stoc)action.content).value.GetType())}"); }
+		{
+			ActionListBox.Items.Insert(0, $"* {actionIndex}: Player {action.player}: {(action.content is ReplayContent.ctos ? "<-" : "->")} {(action.content is ReplayContent.ctos ctos ? ctos.value.GetType() : ((ReplayContent.stoc)action.content).value.GetType())}");
+		}
 		EnqueueFieldUpdateOrInfo(((ReplayContent.stoc)action.content).value);
 		window.UpdateField();
 		actionIndex++;
@@ -109,11 +112,11 @@ internal partial class ReplaysWindow : Window
 			return;
 		}
 		actionIndex -= 2;
-		((ReplaysViewModel)DataContext!).ActionList.RemoveAt(0);
+		ActionListBox.Items.RemoveAt(0);
 		ReplayPacket action = replay.packets[actionIndex];
 		while(!IsFieldUpdateForCurrentPlayer(action))
 		{
-			((ReplaysViewModel)DataContext!).ActionList.RemoveAt(0);
+			ActionListBox.Items.RemoveAt(0);
 			if(action.content is ReplayContent.stoc stoc && stoc.value is SToC_Content.game_result)
 			{
 				window.Close();
@@ -154,35 +157,5 @@ internal partial class ReplaysWindow : Window
 			window!.EnqueueFieldUpdateOrInfo(new DuelWindow.IFieldUpdateOrInfo.Info(((SToC_Content.show_info)content).value));
 		}
 
-	}
-}
-
-internal class ReplaysViewModel : INotifyPropertyChanged
-{
-	public event PropertyChangedEventHandler? PropertyChanged;
-
-	private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
-	{
-		PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-	}
-
-	private bool isFirstPlayer = true;
-	public bool IsFirstPlayer
-	{
-		get => isFirstPlayer;
-		set
-		{
-			if(isFirstPlayer != value)
-			{
-				isFirstPlayer = value;
-				NotifyPropertyChanged();
-			}
-		}
-	}
-
-	private readonly ObservableCollection<string> actionList = [];
-	public ObservableCollection<string> ActionList
-	{
-		get => actionList;
 	}
 }

@@ -44,7 +44,7 @@ class Program
 		if(File.Exists(configPath))
 		{
 			couldReadConfig = true;
-			platformConfig = JsonSerializer.Deserialize<PlatformClientConfig>(File.ReadAllText(configPath), GenericConstants.platformClientConfigSerialization)!;
+			platformConfig = JsonSerializer.Deserialize<PlatformClientConfig>(File.ReadAllText(configPath), PlatformClientConfigSerializationContext.Default.PlatformClientConfig)!;
 			if(Environment.OSVersion.Platform == PlatformID.Unix)
 			{
 				config = platformConfig.linux!;
@@ -112,7 +112,8 @@ class Program
 			{
 				platformConfig.windows = config;
 			}
-			File.WriteAllText(configPath, JsonSerializer.Serialize(platformConfig, options: GenericConstants.platformClientConfigSerialization).Replace("  ", "\t"));
+
+			File.WriteAllText(configPath, JsonSerializer.Serialize(platformConfig, jsonTypeInfo: PlatformClientConfigSerializationContext.Default.PlatformClientConfig));
 		}
 	}
 }
