@@ -70,7 +70,6 @@ internal class UIUtils
 	}
 
 	private static readonly Dictionary<string, Bitmap?> ArtworkCache = [];
-	private static Bitmap? DefaultArtwork;
 	private static readonly HashSet<string> ServersNotSupportingArtworks = [];
 	public static void CacheArtworkBatchFromServer(List<string> names)
 	{

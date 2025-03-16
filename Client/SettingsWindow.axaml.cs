@@ -19,7 +19,7 @@ internal partial class SettingsWindow : Window
 		CoreArgsInput.Text = Program.config.core_info.Arguments;
 		foreach(ClientConfig.ThemeVariant themeVariant in Enum.GetValues<ClientConfig.ThemeVariant>())
 		{
-			ThemeInput.Items.Add(themeVariant);
+			_ = ThemeInput.Items.Add(themeVariant);
 		}
 		ThemeInput.SelectedItem = Program.config.theme;
 		if(ThemeInput.SelectedIndex < 0)

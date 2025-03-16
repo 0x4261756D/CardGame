@@ -215,7 +215,7 @@ internal partial class RoomWindow : Window
 		DeckSelectBox.Items.Clear();
 		foreach(string name in names)
 		{
-			DeckSelectBox.Items.Add(name);
+			_ = DeckSelectBox.Items.Add(name);
 		}
 	}
 }

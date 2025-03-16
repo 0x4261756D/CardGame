@@ -27,7 +27,7 @@ internal partial class DeckEditWindow : Window
 		{
 			if(foo != PlayerClass.UNKNOWN)
 			{
-				ClassSelectBox.Items.Add(foo);
+				_ = ClassSelectBox.Items.Add(foo);
 			}
 		}
 		if(DeckSelectBox.SelectedItem == null && DeckSelectBox.ItemCount > 0)
@@ -386,7 +386,7 @@ internal partial class DeckEditWindow : Window
 				quest: null
 			)
 		)), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port);
-		DeckSelectBox.Items.Add(newName);
+		_ = DeckSelectBox.Items.Add(newName);
 		DeckSelectBox.SelectedItem = newName;
 		DeckSizeBlock.Text = "Deck size: 0";
 		NewDeckName.Text = "";
@@ -423,7 +423,7 @@ internal partial class DeckEditWindow : Window
 	public void DeleteDeckClick(object? sender, RoutedEventArgs args)
 	{
 		Send(new CToS_Content.decklist_delete(new((string)DeckSelectBox.SelectedItem!)), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port);
-		DeckSelectBox.Items.Remove((string)DeckSelectBox.SelectedItem!);
+		_ = DeckSelectBox.Items.Remove((string)DeckSelectBox.SelectedItem!);
 		DeckSelectBox.SelectedIndex = DeckSelectBox.ItemCount - 1;
 	}
 	public void SidebarTextInput(object? sender, KeyEventArgs args)

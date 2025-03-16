@@ -44,7 +44,7 @@ class Program
 		if(File.Exists(configPath))
 		{
 			couldReadConfig = true;
-			platformConfig = JsonSerializer.Deserialize<PlatformClientConfig>(File.ReadAllText(configPath), PlatformClientConfigSerializationContext.Default.PlatformClientConfig)!;
+			platformConfig = JsonSerializer.Deserialize(File.ReadAllText(configPath), PlatformClientConfigSerializationContext.Default.PlatformClientConfig)!;
 			if(Environment.OSVersion.Platform == PlatformID.Unix)
 			{
 				config = platformConfig.linux!;
