@@ -17,8 +17,9 @@ namespace CardGameClient;
 internal partial class RoomWindow : Window
 {
 	private readonly Task networkTask;
+	// This client is owned by this window, it is only passed in to handle potential errors in ServerWindow instead.
 	private readonly TcpClient client;
-	private readonly Mutex clientMutex;
+	private readonly CancellationTokenSource cts = new();
 	private readonly string address;
 	public bool closed;
 	public RoomWindow(string address, TcpClient client, string? opponentName = null)
@@ -26,7 +27,6 @@ internal partial class RoomWindow : Window
 		this.client = client;
 		this.address = address;
 		this.closed = false;
-		clientMutex = new();
 		networkTask = new Task(HandleNetwork, TaskCreationOptions.LongRunning);
 		networkTask.Start();
 		Closed += (sender, args) => CloseRoom();
@@ -59,43 +59,6 @@ internal partial class RoomWindow : Window
 			}
 		}
 	}
-	public SToC_Content? TryReceivePacket(NetworkStream stream, int timeoutInMs)
-	{
-		if(clientMutex.WaitOne(timeoutInMs))
-		{
-			try
-			{
-				Task task = Task.Run(() => { while(!stream.DataAvailable) { } return; });
-				int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
-				SToC_Content? ret = i == 0 ? SToC_Packet.Deserialize(stream).content : null;
-				clientMutex.ReleaseMutex();
-				return ret;
-			}
-			catch(Exception e)
-			{
-				clientMutex.ReleaseMutex();
-				Functions.Log(e.Message, severity: Functions.LogSeverity.Warning);
-				return null;
-			}
-		}
-		return null;
-	}
-
-	public static T? TrySendAndReceive<T>(CToS_Content content, string address, int port) where T : SToC_Content
-	{
-		try
-		{
-			using TcpClient c = new(address, port);
-			using NetworkStream stream = c.GetStream();
-			stream.Write(new CToS_Packet(content).Serialize());
-			return (T)SToC_Packet.Deserialize(stream).content;
-		}
-		catch(Exception ex)
-		{
-			new ErrorPopup(ex.Message).Show();
-			return default;
-		}
-	}
 
 	private async void HandleNetwork()
 	{
@@ -103,7 +66,15 @@ internal partial class RoomWindow : Window
 		{
 			if(client.Connected)
 			{
-				SToC_Content? content = await Task.Run(() => TryReceivePacket(client.GetStream(), 100)).ConfigureAwait(false);
+				SToC_Content content;
+				try
+				{
+					content = (await SToC_Packet.DeserializeAsync(client.GetStream(), cts.Token)).content;
+				}
+				catch(OperationCanceledException)
+				{
+					break;
+				}
 				if(content is not null)
 				{
 					await Dispatcher.UIThread.InvokeAsync(() => HandlePacket(content));
@@ -128,7 +99,8 @@ internal partial class RoomWindow : Window
 				{
 					case SToC_Response_Start.success_but_waiting:
 					{
-						Functions.Log("Unexpected success_but_waiting received");
+						TryStartButton.IsEnabled = false;
+						TryStartButton.Content = "Waiting";
 					}
 					break;
 					case SToC_Response_Start.success success:
@@ -170,15 +142,12 @@ internal partial class RoomWindow : Window
 	{
 		if(!closed)
 		{
+			cts.Cancel();
 			networkTask.Dispose();
-			if(clientMutex.WaitOne(1000))
+			NetworkStream stream = client.GetStream();
+			if(stream.Socket.Connected)
 			{
-				NetworkStream stream = client.GetStream();
-				if(stream.Socket.Connected)
-				{
-					stream.Write(new CToS_Packet(new CToS_Content.leave()).Serialize());
-				}
-				clientMutex.ReleaseMutex();
+				stream.Write(new CToS_Packet(new CToS_Content.leave()).Serialize());
 			}
 			client.Close();
 			closed = true;
@@ -205,41 +174,12 @@ internal partial class RoomWindow : Window
 		}
 		try
 		{
-			Functions.Log($"Before entering mutex after {watch.ElapsedMilliseconds} ms.");
-			_ = clientMutex.WaitOne();
-			Functions.Log($"Entered mutex after {watch.ElapsedMilliseconds} ms.");
 			NetworkStream s = client.GetStream();
 			s.Write(new CToS_Packet(new CToS_Content.start(new
 			(
 				decklist: deck,
 				no_shuffle: NoShuffleBox.IsChecked ?? false
 			))).Serialize());
-			Functions.Log($"Written start packet after {watch.ElapsedMilliseconds} ms.");
-			SToC_Response_Start content = ((SToC_Content.start)SToC_Packet.Deserialize(s).content).value;
-			Functions.Log($"Received start response after {watch.ElapsedMilliseconds} ms.");
-			clientMutex.ReleaseMutex();
-			Functions.Log($"Exited mutex after {watch.ElapsedMilliseconds} ms.");
-			switch(content)
-			{
-				case SToC_Response_Start.success success:
-				{
-					StartGame(success.value.port, success.value.id);
-				}
-				break;
-				case SToC_Response_Start.success_but_waiting:
-				{
-					((Button)sender).IsEnabled = false;
-					((Button)sender).Content = "Waiting";
-				}
-				break;
-				case SToC_Response_Start.failure failure:
-				{
-					new ErrorPopup(failure.value).Show();
-				}
-				break;
-				default:
-					throw new NotImplementedException();
-			}
 		}
 		catch(Exception ex)
 		{

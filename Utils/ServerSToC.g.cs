@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace CardGameUtils.Structs.Server;
 
@@ -36,6 +38,17 @@ internal record SToC_Packet(SToC_Content content) : Common.PacketTable
 		Span<byte> bytes = new byte[size];
 		stream.ReadExactly(bytes);
 		return DeserializeImpl(ref bytes);
+	}
+	public static async Task<SToC_Packet> DeserializeAsync(Stream stream, CancellationToken token)
+	{
+		byte[] sizeBytes = new byte[4];
+		await stream.ReadExactlyAsync(sizeBytes.AsMemory(), token);
+		Span<byte> sizeSpan = sizeBytes.AsSpan();
+		uint size = Common.Common.DeserializeN32(ref sizeSpan);
+		byte[] bytes = new byte[size];
+		await stream.ReadExactlyAsync(bytes.AsMemory(), token);
+		Span<byte> byteSpan = bytes.AsSpan();
+		return DeserializeImpl(ref byteSpan);
 	}
 	private static SToC_Packet DeserializeImpl(ref Span<byte> bytes)
 	{

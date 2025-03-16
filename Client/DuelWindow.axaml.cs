@@ -15,6 +15,7 @@ using CardGameUtils;
 using CardGameUtils.Base;
 using CardGameUtils.Structs.Duel;
 using static CardGameUtils.Functions;
+using System.Collections.Concurrent;
 
 namespace CardGameClient;
 
@@ -23,8 +24,9 @@ internal partial class DuelWindow : Window
 	private readonly int playerIndex;
 	private readonly TcpClient client;
 	private readonly Stream stream;
-	private readonly Mutex streamMutex;
+	private readonly BlockingCollection<SToC_Content> packetContents = new(new ConcurrentQueue<SToC_Content>(), 10);
 	private readonly Task networkingTask;
+	CancellationTokenSource cts = new();
 	private readonly Flyout optionsFlyout = new();
 	internal interface IFieldUpdateOrInfo
 	{
@@ -32,7 +34,7 @@ internal partial class DuelWindow : Window
 		internal record Info(SToC_Broadcast_ShowInfo Value) : IFieldUpdateOrInfo;
 	}
 	readonly Queue<IFieldUpdateOrInfo> fieldUpdateQueue = new();
-	private Task? fieldUpdateTask;
+	private Task fieldUpdateTask;
 	private bool closing;
 	private bool shouldEnablePassButtonAfterUpdate;
 	private Window? windowToShowAfterUpdate;
@@ -44,8 +46,8 @@ internal partial class DuelWindow : Window
 		InitializeComponent();
 		client = new TcpClient();
 		stream = new MemoryStream();
-		streamMutex = new Mutex();
 		networkingTask = new Task(() => { });
+		fieldUpdateTask = new Task(HandleFieldUpdates, TaskCreationOptions.LongRunning);
 		OppField.LayoutUpdated += FieldInitialized;
 		OwnField.LayoutUpdated += FieldInitialized;
 	}
@@ -55,9 +57,10 @@ internal partial class DuelWindow : Window
 		InitializeComponent();
 		this.client = client;
 		stream = client.GetStream();
-		streamMutex = new Mutex();
 		networkingTask = new Task(HandleNetwork, TaskCreationOptions.LongRunning);
+		fieldUpdateTask = new Task(HandleFieldUpdates, TaskCreationOptions.LongRunning);
 		networkingTask.Start();
+		fieldUpdateTask.Start();
 		Closed += (sender, args) =>
 		{
 			Cleanup();
@@ -84,6 +87,53 @@ internal partial class DuelWindow : Window
 		panel.LayoutUpdated -= FieldInitialized;
 	}
 
+	private async void HandleFieldUpdates()
+	{
+		bool hasPassed = false;
+		while(!closing)
+		{
+			if(fieldUpdateQueue.Count > 0)
+			{
+				hasPassed = false;
+				await Dispatcher.UIThread.InvokeAsync(() =>
+				{
+					optionsFlyout.Hide();
+					PassButton.IsEnabled = false;
+				});
+				_ = await Task.Delay(Program.config.animation_delay_in_ms).ContinueWith((_) => Dispatcher.UIThread.InvokeAsync(UpdateField));
+			}
+			else
+			{
+				if(shouldEnablePassButtonAfterUpdate)
+				{
+					await Dispatcher.UIThread.InvokeAsync(() =>
+					{
+						if(!hasPassed && (KeepPassingBox.IsChecked ?? false))
+						{
+							if(stream.CanWrite)
+							{
+								PassClick(null, new RoutedEventArgs());
+								hasPassed = true;
+							}
+						}
+						else
+						{
+							PassButton.IsEnabled = true;
+						}
+					});
+				}
+				if(windowToShowAfterUpdate is not null)
+				{
+					await Dispatcher.UIThread.InvokeAsync(() =>
+					{
+						windowToShowAfterUpdate.Show();
+						windowToShowAfterUpdate = null;
+					});
+				}
+			}
+			await Task.Delay(10);
+		}
+	}
 	private void SurrenderClick(object? sender, RoutedEventArgs args)
 	{
 		new ServerWindow().Show();
@@ -94,35 +144,14 @@ internal partial class DuelWindow : Window
 	{
 		if(client.Connected)
 		{
-			_ = streamMutex.WaitOne();
 			stream.Write(new CToS_Packet(content).Serialize());
-			streamMutex.ReleaseMutex();
 		}
 		else
 		{
 			new ErrorPopup("Stream was closed").Show(this);
 		}
 	}
-	public SToC_Content? TryReceivePacket(NetworkStream stream, int timeoutInMs)
-	{
-		try
-		{
-			if(streamMutex.WaitOne(timeoutInMs))
-			{
-				Task task = Task.Run(() => { while(!stream.DataAvailable) { } });
-				int i = Task.WaitAny(task, Task.Delay(timeoutInMs));
-				SToC_Content? ret = i == 0 ? SToC_Packet.Deserialize(stream).content : null;
-				streamMutex.ReleaseMutex();
-				return ret;
-			}
-			return null;
-		}
-		catch(Exception e)
-		{
-			Log(e.Message, severity: LogSeverity.Warning);
-			return null;
-		}
-	}
+
 	private void PassClick(object? sender, RoutedEventArgs args)
 	{
 		TrySend(new CToS_Content.pass());
@@ -130,65 +159,36 @@ internal partial class DuelWindow : Window
 	private async void HandleNetwork()
 	{
 		Log("Socketthread started");
-		bool hasPassed = false;
 		while(!closing)
 		{
 			if(client.Connected)
 			{
-				SToC_Content? content = await Task.Run(() => TryReceivePacket((NetworkStream)stream, 100)).ConfigureAwait(false);
-				if(content != null && await Dispatcher.UIThread.InvokeAsync(() => HandlePacket(content)))
+				SToC_Content content;
+				try
+				{
+					content = (await SToC_Packet.DeserializeAsync(stream, cts.Token)).content;
+				}
+				catch(OperationCanceledException)
 				{
 					return;
 				}
-				if(fieldUpdateQueue.Count > 0)
+				catch(EndOfStreamException)
 				{
-					hasPassed = false;
-					if(fieldUpdateTask == null || fieldUpdateTask.IsCompleted)
-					{
-						await Dispatcher.UIThread.InvokeAsync(() =>
-						{
-							optionsFlyout.Hide();
-							PassButton.IsEnabled = false;
-						});
-						fieldUpdateTask = Task.Delay(Program.config.animation_delay_in_ms).ContinueWith((_) => Dispatcher.UIThread.InvokeAsync(UpdateField));
-					}
+					return;
 				}
-				else
+				Log($"Received content: {content.GetType()}");
+				if(await HandlePacket(content))
 				{
-					if(shouldEnablePassButtonAfterUpdate)
-					{
-						await Dispatcher.UIThread.InvokeAsync(() =>
-						{
-							if(!hasPassed && (KeepPassingBox.IsChecked ?? false))
-							{
-								if(stream.CanWrite)
-								{
-									PassClick(null, new RoutedEventArgs());
-									hasPassed = true;
-								}
-							}
-							else
-							{
-								PassButton.IsEnabled = true;
-							}
-						});
-					}
-					if(windowToShowAfterUpdate != null)
-					{
-						await Dispatcher.UIThread.InvokeAsync(() =>
-						{
-							windowToShowAfterUpdate.Show();
-							windowToShowAfterUpdate = null;
-						});
-					}
+					return;
 				}
 			}
-			Thread.Sleep(10);
+			await Task.Delay(10);
 		}
 	}
 
-	private bool HandlePacket(SToC_Content content)
+	private async Task<bool> HandlePacket(SToC_Content content)
 	{
+		Log($"HandlePacket: {content.GetType()}");
 		switch(content)
 		{
 			case SToC_Content.field_update request:
@@ -204,40 +204,46 @@ internal partial class DuelWindow : Window
 			case SToC_Content.yes_no request:
 			{
 				Log("Received a yesno requets", severity: LogSeverity.Error);
-				windowToShowAfterUpdate = new YesNoWindow(request.value.question, stream, streamMutex);
+				_ = await Dispatcher.UIThread.InvokeAsync(() => windowToShowAfterUpdate = new YesNoWindow(request.value.question, stream));
 			}
 			break;
 			case SToC_Content.select_cards_custom r:
 			{
 				SToC_Request_SelectCardsCustom request = r.value;
-				windowToShowAfterUpdate = new CustomSelectCardsWindow(request.description!, request.cards, request.initial_state, stream, streamMutex, playerIndex, ShowCard);
+				_ = await Dispatcher.UIThread.InvokeAsync(() => windowToShowAfterUpdate = new CustomSelectCardsWindow(request.description!, request.cards, request.initial_state, stream, packetContents, playerIndex, ShowCard));
 			}
 			break;
 			case SToC_Content.get_actions request:
 			{
-				UpdateCardOptions(request.value);
+				await Dispatcher.UIThread.InvokeAsync(() => UpdateCardOptions(request.value));
 			}
 			break;
 			case SToC_Content.select_zone request:
 			{
-				windowToShowAfterUpdate = new SelectZoneWindow(request.value.options, stream, streamMutex);
+				_ = await Dispatcher.UIThread.InvokeAsync(() => windowToShowAfterUpdate = new SelectZoneWindow(request.value.options, stream));
 			}
 			break;
 			case SToC_Content.game_result request:
 			{
-				windowToShowAfterUpdate = new GameResultWindow(this, request.value);
+				_ = await Dispatcher.UIThread.InvokeAsync(() => windowToShowAfterUpdate = new GameResultWindow(this, request.value));
 			}
 			break;
 			case SToC_Content.select_cards r:
 			{
 				SToC_Request_SelectCards request = r.value;
-				windowToShowAfterUpdate = new SelectCardsWindow(request.description, request.amount, request.cards, stream, streamMutex, playerIndex, ShowCard);
+				_ = await Dispatcher.UIThread.InvokeAsync(() => windowToShowAfterUpdate = new SelectCardsWindow(request.description, request.amount, request.cards, stream, playerIndex, ShowCard));
 			}
 			break;
 			case SToC_Content.show_cards r:
 			{
 				SToC_Response_ShowCards request = r.value;
-				windowToShowAfterUpdate = new ViewCardsWindow(cards: request.cards, message: request.description, showCardAction: ShowCard);
+				_ = await Dispatcher.UIThread.InvokeAsync(() => windowToShowAfterUpdate = new ViewCardsWindow(cards: request.cards, message: request.description, showCardAction: ShowCard));
+			}
+			break;
+			case SToC_Content.select_cards_custom_intermediate:
+			{
+				Log("Adding to packetContents");
+				packetContents.Add(content);
 			}
 			break;
 			default:
@@ -649,13 +655,12 @@ internal partial class DuelWindow : Window
 			return;
 		}
 		closing = true;
+		cts.Cancel();
 		if(client.Connected)
 		{
 			try
 			{
-				_ = streamMutex.WaitOne();
 				stream.Write(new CToS_Packet(new CToS_Content.surrender()).Serialize());
-				streamMutex.ReleaseMutex();
 			}
 			catch(Exception e)
 			{
@@ -663,6 +668,7 @@ internal partial class DuelWindow : Window
 			}
 		}
 		networkingTask.Dispose();
+		fieldUpdateTask.Dispose();
 		client.Close();
 	}
 }

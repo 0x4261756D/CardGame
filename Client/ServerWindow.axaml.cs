@@ -46,7 +46,7 @@ internal partial class ServerWindow : Window
 			ServerListBox.Items.Clear();
 			foreach(string roomName in ReceivePacket<SToC_Content.rooms>(updateStream).value.rooms)
 			{
-				ServerListBox.Items.Add(roomName);
+				_ = ServerListBox.Items.Add(roomName);
 			}
 		}
 		catch(Exception ex)

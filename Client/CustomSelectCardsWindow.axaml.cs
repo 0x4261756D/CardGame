@@ -1,10 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
-using System.Net.Sockets;
-using System.Runtime.CompilerServices;
-using System.Threading;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
@@ -12,6 +8,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using CardGameUtils.Base;
 using CardGameUtils.Structs.Duel;
+using System.Collections.Concurrent;
 
 namespace CardGameClient;
 
@@ -20,16 +17,16 @@ internal partial class CustomSelectCardsWindow : Window
 	private readonly Stream stream;
 	private bool shouldReallyClose;
 	private readonly Action<CardStruct> showCardAction;
+	private readonly BlockingCollection<SToC_Content> packetContents;
 
-	public CustomSelectCardsWindow(string text, List<CardStruct> cards, bool initialState, Stream stream, Mutex streamMutex, int playerIndex, Action<CardStruct> showCardAction)
+	public CustomSelectCardsWindow(string text, List<CardStruct> cards, bool initialState, Stream stream, BlockingCollection<SToC_Content> packetContents, int playerIndex, Action<CardStruct> showCardAction)
 	{
 		this.stream = stream;
-		_ = streamMutex.WaitOne();
 		this.showCardAction = showCardAction;
+		this.packetContents = packetContents;
 		InitializeComponent();
 		MessageBox.Text = text;
 		ConfirmButton.IsEnabled = initialState;
-		Closed += (_, _) => streamMutex.ReleaseMutex();
 		Width = Program.config.width / 2;
 		Height = Program.config.height / 2;
 		CardSelectionList.MaxHeight = Program.config.height / 3;
@@ -78,11 +75,6 @@ internal partial class CustomSelectCardsWindow : Window
 	public void CardSelectionChanged(object sender, SelectionChangedEventArgs args)
 	{
 		stream.Write(new CToS_Packet(new CToS_Content.select_cards_custom_intermediate(new(uids: UIUtils.CardListBoxSelectionToUID((ListBox)sender)))).Serialize());
-		ConfirmButton.IsEnabled = ReceivePacket<SToC_Content.select_cards_custom_intermediate>((NetworkStream)stream)!.value.is_valid;
-	}
-
-	public static T ReceivePacket<T>(NetworkStream stream) where T : SToC_Content
-	{
-		return (T)SToC_Packet.Deserialize(stream).content;
+		ConfirmButton.IsEnabled = ((SToC_Content.select_cards_custom_intermediate)(packetContents.Take())).value.is_valid;
 	}
 }

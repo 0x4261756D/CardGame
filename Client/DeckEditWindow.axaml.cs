@@ -431,7 +431,18 @@ internal partial class DeckEditWindow : Window
 		TextBox? tb = (TextBox?)sender;
 		LoadSidebar(tb?.Text ?? "");
 	}
+	public void LoadDecks()
+	{
+		List<string> names = SendAndReceive<SToC_Content.decklists>(new CToS_Content.decklists(), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port).value.names;
+		names.Sort();
+		DeckSelectBox.Items.Clear();
+		foreach(string name in names)
+		{
+			_ = DeckSelectBox.Items.Add(name);
+		}
+	}
 
+	// NOTE: These don't need to synchronize anything since they create their own streams
 	public static T? TrySendAndReceive<T>(CToS_Content content, string address, int port) where T : SToC_Content
 	{
 		try
@@ -456,16 +467,6 @@ internal partial class DeckEditWindow : Window
 		using TcpClient client = new(address, port);
 		using NetworkStream stream = client.GetStream();
 		stream.Write(new CToS_Packet(content).Serialize());
-	}
-	public void LoadDecks()
-	{
-		List<string> names = DeckEditWindow.SendAndReceive<SToC_Content.decklists>(new CToS_Content.decklists(), Program.config.deck_edit_url.address, Program.config.deck_edit_url.port).value.names;
-		names.Sort();
-		DeckSelectBox.Items.Clear();
-		foreach(string name in names)
-		{
-			DeckSelectBox.Items.Add(name);
-		}
 	}
 }
 

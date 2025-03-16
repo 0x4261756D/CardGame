@@ -27,7 +27,7 @@
 			Your opponent:
 		</TextBlock>
 		<TextBlock x:Name="OpponentNameBlock"></TextBlock>
-		<Button Click="TryStartClick">
+		<Button x:Name="TryStartButton" Click="TryStartClick">
 			Try to start
 		</Button>
 	</StackPanel>
